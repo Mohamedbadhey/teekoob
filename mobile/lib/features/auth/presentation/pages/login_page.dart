@@ -1,0 +1,358 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
+import 'package:teekoob/core/services/localization_service.dart';
+import 'package:teekoob/features/auth/bloc/auth_bloc.dart';
+import 'package:teekoob/features/auth/presentation/widgets/password_field.dart';
+
+class LoginPage extends StatefulWidget {
+  const LoginPage({super.key});
+
+  @override
+  State<LoginPage> createState() => _LoginPageState();
+}
+
+class _LoginPageState extends State<LoginPage> {
+  final _formKey = GlobalKey<FormState>();
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  bool _isPasswordVisible = false;
+  bool _rememberMe = false;
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  void _handleLogin() {
+    if (_formKey.currentState!.validate()) {
+      context.read<AuthBloc>().add(LoginRequested(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+      ));
+    }
+  }
+
+  void _handleForgotPassword() {
+    _showForgotPasswordDialog();
+  }
+
+  void _showForgotPasswordDialog() {
+    final emailController = TextEditingController();
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(LocalizationService.getLocalizedText(
+          englishText: 'Forgot Password',
+          somaliText: 'Furaha La Illaaway',
+        )),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(LocalizationService.getLocalizedText(
+              englishText: 'Enter your email address to receive a password reset link.',
+              somaliText: 'Geli iimaylkaaga si aad u hesho linkiga dib u dejinta furaha.',
+            )),
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: emailController,
+              decoration: InputDecoration(
+                labelText: LocalizationService.getEmailLabel,
+                border: const OutlineInputBorder(),
+              ),
+              keyboardType: TextInputType.emailAddress,
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return LocalizationService.getLocalizedText(
+                    englishText: 'Email is required',
+                    somaliText: 'Iimaylka waa loo baahan yahay',
+                  );
+                }
+                if (!context.read<AuthBloc>().validateEmail(value)) {
+                  return LocalizationService.getLocalizedText(
+                    englishText: 'Please enter a valid email',
+                    somaliText: 'Fadlan geli iimayl sax ah',
+                  );
+                }
+                return null;
+              },
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(LocalizationService.getCancelText),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (emailController.text.isNotEmpty) {
+                context.read<AuthBloc>().add(
+                  ForgotPasswordRequested(email: emailController.text.trim()),
+                );
+                Navigator.of(context).pop();
+              }
+            },
+            child: Text(LocalizationService.getLocalizedText(
+              englishText: 'Send Reset Link',
+              somaliText: 'Dir Linkiga Dib U Dejinta',
+            )),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: BlocListener<AuthBloc, AuthState>(
+        listener: (context, state) {
+          if (state is AuthSuccess) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(state.message),
+                backgroundColor: Theme.of(context).colorScheme.primary,
+              ),
+            );
+            if (state.user != null) {
+              context.go('/home');
+            }
+          } else if (state is AuthError) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(state.message),
+                backgroundColor: Theme.of(context).colorScheme.error,
+              ),
+            );
+          }
+        },
+        child: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // App Logo
+                    Container(
+                      width: 100,
+                      height: 100,
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.primary,
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
+                            blurRadius: 20,
+                            offset: const Offset(0, 10),
+                          ),
+                        ],
+                      ),
+                      child: Icon(
+                        Icons.book,
+                        size: 50,
+                        color: Theme.of(context).colorScheme.onPrimary,
+                      ),
+                    ),
+                    
+                    const SizedBox(height: 32),
+                    
+                    // Welcome Text
+                    Text(
+                      LocalizationService.getLocalizedText(
+                        englishText: 'Welcome Back!',
+                        somaliText: 'Ku Soo Dhowow!',
+                      ),
+                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    
+                    const SizedBox(height: 8),
+                    
+                    Text(
+                      LocalizationService.getLocalizedText(
+                        englishText: 'Sign in to continue reading',
+                        somaliText: 'Gal si aad u sii akhrin',
+                      ),
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    
+                    const SizedBox(height: 48),
+                    
+                    // Email Field
+                    TextFormField(
+                      controller: _emailController,
+                      decoration: InputDecoration(
+                        labelText: LocalizationService.getEmailLabel,
+                        hintText: LocalizationService.getLocalizedText(
+                          englishText: 'Enter your email',
+                          somaliText: 'Geli iimaylkaaga',
+                        ),
+                        prefixIcon: const Icon(Icons.email_outlined),
+                        border: const OutlineInputBorder(),
+                      ),
+                      keyboardType: TextInputType.emailAddress,
+                      textInputAction: TextInputAction.next,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return LocalizationService.getLocalizedText(
+                            englishText: 'Email is required',
+                            somaliText: 'Iimaylka waa loo baahan yahay',
+                          );
+                        }
+                        if (!context.read<AuthBloc>().validateEmail(value)) {
+                          return LocalizationService.getLocalizedText(
+                            englishText: 'Please enter a valid email',
+                            somaliText: 'Fadlan geli iimayl sax ah',
+                          );
+                        }
+                        return null;
+                      },
+                    ),
+                    
+                    const SizedBox(height: 16),
+                    
+                    // Password Field
+                    PasswordField(
+                      controller: _passwordController,
+                      labelText: LocalizationService.getPasswordLabel,
+                      hintText: LocalizationService.getLocalizedText(
+                        englishText: 'Enter your password',
+                        somaliText: 'Geli furahaaga',
+                      ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return LocalizationService.getLocalizedText(
+                            englishText: 'Password is required',
+                            somaliText: 'Furaha waa loo baahan yahay',
+                          );
+                        }
+                        return null;
+                      },
+                    ),
+                    
+                    const SizedBox(height: 16),
+                    
+                    // Remember Me & Forgot Password
+                    Row(
+                      children: [
+                        Checkbox(
+                          value: _rememberMe,
+                          onChanged: (value) {
+                            setState(() {
+                              _rememberMe = value ?? false;
+                            });
+                          },
+                        ),
+                        Text(LocalizationService.getLocalizedText(
+                          englishText: 'Remember me',
+                          somaliText: 'I xasuus',
+                        )),
+                        const Spacer(),
+                        TextButton(
+                          onPressed: _handleForgotPassword,
+                          child: Text(LocalizationService.getLocalizedText(
+                            englishText: 'Forgot Password?',
+                            somaliText: 'Furaha La Illaaway?',
+                          )),
+                        ),
+                      ],
+                    ),
+                    
+                    const SizedBox(height: 24),
+                    
+                    // Login Button
+                    BlocBuilder<AuthBloc, AuthState>(
+                      builder: (context, state) {
+                        return ElevatedButton(
+                          onPressed: state is AuthLoading ? null : _handleLogin,
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: state is AuthLoading
+                              ? const SizedBox(
+                                  height: 20,
+                                  width: 20,
+                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                )
+                              : Text(
+                                  LocalizationService.getLoginText,
+                                  style: const TextStyle(fontSize: 16),
+                                ),
+                        );
+                      },
+                    ),
+                    
+                    const SizedBox(height: 24),
+                    
+                    // Divider
+                    Row(
+                      children: [
+                        const Expanded(child: Divider()),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: Text(
+                            LocalizationService.getLocalizedText(
+                              englishText: 'OR',
+                              somaliText: 'AMA',
+                            ),
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                            ),
+                          ),
+                        ),
+                        const Expanded(child: Divider()),
+                      ],
+                    ),
+                    
+                    const SizedBox(height: 24),
+                    
+                    // Register Link
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          LocalizationService.getLocalizedText(
+                            englishText: "Don't have an account?",
+                            somaliText: 'Ma haysataa akoon?',
+                          ),
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                        TextButton(
+                          onPressed: () => context.go('/register'),
+                          child: Text(
+                            LocalizationService.getRegisterText,
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.primary,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
