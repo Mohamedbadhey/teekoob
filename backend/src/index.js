@@ -88,8 +88,19 @@ try {
       // Allow requests with no origin (like mobile apps or curl requests)
       if(!origin) return callback(null, true);
       
-      // Allow localhost with any port
+      // Allow localhost with any port (development)
       if(origin.startsWith('http://localhost:')) {
+        return callback(null, true);
+      }
+      
+      // Allow Railway domains
+      if(origin.includes('.railway.app')) {
+        return callback(null, true);
+      }
+      
+      // Allow custom domains from environment
+      const allowedOrigins = process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',') : [];
+      if(allowedOrigins.includes(origin)) {
         return callback(null, true);
       }
       
