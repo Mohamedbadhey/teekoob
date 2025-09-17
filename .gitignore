@@ -178,6 +178,7 @@ mobile/android/app/release/
 *.sqlite
 *.sqlite3
 *.db
+*.sql
 
 # Logs
 logs/
