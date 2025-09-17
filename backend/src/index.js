@@ -129,18 +129,19 @@ try {
   app.use(express.urlencoded({ extended: true, limit: '50mb' }));
   console.log('✅ URL encoded parser added');
   
-  // Serve static files from uploads directory
-  const uploadsPath = path.join(__dirname, '../../admin/uploads');
+  // Serve static files from uploads directory (Railway persistent volume)
+  const uploadsPath = process.env.RAILWAY_VOLUME_MOUNT_PATH || path.join(__dirname, '../uploads');
   console.log('🔍 Uploads directory path:', uploadsPath);
   console.log('🔍 __dirname:', __dirname);
   console.log('🔍 Full uploads path:', path.resolve(uploadsPath));
   
-  // Check if directory exists
+  // Check if directory exists, create if not
   const fs = require('fs');
-  if (fs.existsSync(uploadsPath)) {
-    console.log('✅ Uploads directory exists');
+  if (!fs.existsSync(uploadsPath)) {
+    fs.mkdirSync(uploadsPath, { recursive: true });
+    console.log('✅ Created uploads directory:', uploadsPath);
   } else {
-    console.log('❌ Uploads directory does NOT exist');
+    console.log('✅ Uploads directory exists');
   }
   
   app.use('/uploads', express.static(uploadsPath));

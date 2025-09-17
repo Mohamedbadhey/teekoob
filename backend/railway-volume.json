@@ -1,0 +1,9 @@
+{
+  "volumes": [
+    {
+      "name": "uploads",
+      "mountPath": "/app/uploads",
+      "size": "1GB"
+    }
+  ]
+}
