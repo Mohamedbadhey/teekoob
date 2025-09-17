@@ -3,12 +3,10 @@ import 'package:go_router/go_router.dart';
 import 'package:teekoob/core/models/book_model.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:teekoob/features/player/services/audio_state_manager.dart';
-// ignore: avoid_web_libraries_in_flutter
-import 'dart:html' as html;
-// ignore: avoid_web_libraries_in_flutter
-import 'dart:js' as js;
-// ignore: avoid_web_libraries_in_flutter
-import 'dart:ui_web' as ui;
+import 'package:url_launcher/url_launcher.dart';
+import 'package:path_provider/path_provider.dart';
+import 'dart:io';
+import 'dart:typed_data';
 
 class BookReadPage extends StatefulWidget {
   const BookReadPage({super.key});
@@ -59,31 +57,14 @@ class _BookReadPageState extends State<BookReadPage> {
         print('📄 BookReadPage: Raw ebookUrl: $ebookUrl');
         print('📄 BookReadPage: ebookUrl type: ${ebookUrl.runtimeType}');
         
-        // For web, we'll use the full URL
-        if (kIsWeb) {
-          _pdfUrl = 'http://localhost:3000$ebookUrl';
-          print('🔗 BookReadPage: PDF URL ready: $_pdfUrl');
-          print('🌐 BookReadPage: Running on web - kIsWeb: $kIsWeb');
-          
-          // Test if URL is accessible
-          js.context.callMethod('eval', ['''
-            console.log('🔍 Testing PDF URL accessibility');
-            fetch('$_pdfUrl')
-              .then(response => {
-                console.log('✅ PDF URL response:', response);
-                console.log('✅ PDF URL status:', response.status);
-                console.log('✅ PDF URL headers:', response.headers);
-              })
-              .catch(error => {
-                console.error('❌ PDF URL error:', error);
-              });
-          ''']);
-        } else {
-          // For mobile, we'll use the relative path
-          _pdfUrl = ebookUrl;
-          print('📱 BookReadPage: PDF path ready: $_pdfUrl');
-          print('📱 BookReadPage: Running on mobile - kIsWeb: $kIsWeb');
-        }
+        // For mobile, we'll use the full Railway URL
+        _pdfUrl = 'https://teekoob-production.up.railway.app$ebookUrl';
+        print('🔗 BookReadPage: PDF URL ready: $_pdfUrl');
+        print('📱 BookReadPage: Running on mobile - kIsWeb: $kIsWeb');
+        
+        // Test if URL is accessible (mobile version)
+        print('🔍 Testing PDF URL accessibility: $_pdfUrl');
+        print('📄 PDF URL will be opened in external viewer');
         
         setState(() {
           print('🔄 BookReadPage: setState called - _pdfUrl updated to: $_pdfUrl');
@@ -401,17 +382,26 @@ Note: We attempted to extract text from the PDF but were unable to. We've provid
     );
   }
 
-  void _openPdfInNewTab() {
+  void _openPdfInNewTab() async {
     if (_pdfUrl != null) {
-      // For web, open PDF directly in the browser
+      // For mobile, open PDF in external app
       print('Opening PDF directly: $_pdfUrl');
-      if (kIsWeb) {
-        // Use dart:html to open PDF in new tab
-        html.window.open(_pdfUrl!, '_blank');
-      } else {
-        // For mobile, show a message
+      try {
+        final uri = Uri.parse(_pdfUrl!);
+        if (await canLaunchUrl(uri)) {
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Cannot open PDF. Please check your internet connection.'),
+            ),
+          );
+        }
+      } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('PDF content not available for mobile viewing.')),
+          SnackBar(
+            content: Text('Error opening PDF: $e'),
+          ),
         );
       }
     }
@@ -935,194 +925,54 @@ Note: We attempted to extract text from the PDF but were unable to. We've provid
   }
 
   Widget _buildPdfFrame() {
-    print('🔗 _buildPdfFrame: Creating PDF frame');
+    print('🔗 _buildPdfFrame: Creating PDF frame for mobile');
     print('🔗 _buildPdfFrame: PDF URL: $_pdfUrl');
-    print('🔗 _buildPdfFrame: Running on web: $kIsWeb');
     
-    if (kIsWeb && _pdfUrl != null) {
-      // Create a unique ID for this PDF viewer
-      final String elementId = 'pdf-viewer-${_pdfUrl!.hashCode}';
-      print('🔗 _buildPdfFrame: Element ID: $elementId');
-      
-      // Register the view factory if not already registered
-      if (!_registeredViewTypes.contains(elementId)) {
-        print('🔧 _buildPdfFrame: Registering view factory for $elementId');
-        // Register the view factory
-        ui.platformViewRegistry.registerViewFactory(elementId, (int viewId) {
-          print('🔧 View factory called for $elementId with viewId: $viewId');
-          
-          // Create a container div for custom styling
-          final container = html.DivElement()
-            ..id = elementId
-            ..style.width = '100%'
-            ..style.height = '100%'
-            ..style.overflow = 'hidden'
-            ..style.backgroundColor = 'white'
-            ..style.position = 'relative';
-
-          // Create the iframe with custom styling
-          final iframe = html.IFrameElement()
-            ..src = _pdfUrl!
-            ..style.width = '100%'
-            ..style.height = '100%'
-            ..style.border = 'none'
-            ..style.position = 'absolute'
-            ..style.top = '0'
-            ..style.left = '0'
-            ..style.right = '0'
-            ..style.bottom = '0'
-            ..style.overflow = 'hidden'
-            ..setAttribute('type', 'application/pdf')
-            ..setAttribute('frameborder', '0')
-            ..setAttribute('scrolling', 'auto');
-
-          // Add custom CSS to hide toolbar and other controls
-          final style = html.StyleElement()
-            ..text = '''
-              @media screen {
-                #${elementId} {
-                  overflow: hidden !important;
-                  border-radius: 8px;
-                }
-                #${elementId} iframe {
-                  width: 100% !important;
-                  height: 100% !important;
-                  border: none !important;
-                }
-                /* Hide toolbar and other controls */
-                #${elementId} iframe + div,
-                #${elementId} .toolbar,
-                #${elementId} #toolbarContainer,
-                #${elementId} #toolbarViewer,
-                #${elementId} #secondaryToolbar,
-                #${elementId} .findbar,
-                #${elementId} .secondaryToolbar,
-                #${elementId} #sidebarContainer,
-                #${elementId} #overlayContainer,
-                #${elementId} #printContainer,
-                #${elementId} #download,
-                #${elementId} #viewBookmark,
-                #${elementId} #secondaryPresentationMode,
-                #${elementId} #presentationMode,
-                #${elementId} #openFile,
-                #${elementId} #print,
-                #${elementId} #download,
-                #${elementId} #viewBookmark,
-                #${elementId} .verticalToolbarSeparator,
-                #${elementId} .horizontalToolbarSeparator,
-                #${elementId} .findbar,
-                #${elementId} .toolbar {
-                  display: none !important;
-                  visibility: hidden !important;
-                  width: 0 !important;
-                  height: 0 !important;
-                  position: absolute !important;
-                  top: -9999px !important;
-                  left: -9999px !important;
-                  z-index: -1 !important;
-                }
-                #${elementId} #viewerContainer {
-                  top: 0 !important;
-                  padding-top: 0 !important;
-                }
-              }
-            ''';
-
-          container.children.add(style);
-          container.children.add(iframe);
-          
-          // Add JavaScript to further clean up the viewer
-          js.context.callMethod('eval', ['''
-            setTimeout(() => {
-              const iframe = document.querySelector('#${elementId} iframe');
-              if (iframe) {
-                iframe.onload = () => {
-                  const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-                  if (iframeDoc) {
-                    // Create and inject custom CSS
-                    const style = iframeDoc.createElement('style');
-                    style.textContent = `
-                      #toolbarContainer, #toolbarViewer, #secondaryToolbar,
-                      #sidebarContainer, #overlayContainer, #printContainer,
-                      #download, #viewBookmark, .toolbar, .findbar,
-                      .secondaryToolbar, .verticalToolbarSeparator,
-                      .horizontalToolbarSeparator {
-                        display: none !important;
-                        visibility: hidden !important;
-                      }
-                      #viewerContainer {
-                        top: 0 !important;
-                        padding-top: 0 !important;
-                      }
-                      #viewer {
-                        margin: 0 !important;
-                        padding: 0 !important;
-                      }
-                      #viewer .page {
-                        margin: 0 auto !important;
-                        border: none !important;
-                      }
-                    `;
-                    iframeDoc.head.appendChild(style);
-                  }
-                };
-              }
-            }, 100);
-          ''']);
-          
-          return container;
-            
-          print('🔧 Created iframe with URL: $_pdfUrl');
-          
-          // Add event listeners
-          iframe.onLoad.listen((event) {
-            print('✅ Iframe loaded successfully');
-          });
-          
-          iframe.onError.listen((event) {
-            print('❌ Error loading iframe: $event');
-          });
-          
-          container.children.add(iframe);
-          return container;
-        });
-        _registeredViewTypes.add(elementId);
-        print('✅ View factory registered for $elementId');
-      } else {
-        print('ℹ️ View factory already registered for $elementId');
-      }
-
-      print('🔗 _buildPdfFrame: Creating Flutter container with HtmlElementView');
-      print('🔗 _buildPdfFrame: Using view type: $elementId');
-      
+    if (_pdfUrl != null) {
       return Container(
         width: double.infinity,
         height: double.infinity,
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Colors.grey[100],
           borderRadius: BorderRadius.circular(8),
           border: Border.all(color: Colors.grey[300]!),
         ),
-        clipBehavior: Clip.antiAlias,
-        child: HtmlElementView(
-          viewType: elementId,
-          onPlatformViewCreated: (int id) {
-            print('✅ HtmlElementView created with ID: $id');
-            // Check if the element exists in DOM after view creation
-            js.context.callMethod('eval', ['''
-              console.log('🔍 Checking view after creation');
-              var container = document.getElementById('$elementId');
-              console.log('🔍 Container after view creation:', container);
-              console.log('🔍 Iframe after view creation:', container ? container.querySelector('iframe') : null);
-            ''']);
-          },
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.picture_as_pdf,
+              size: 64,
+              color: Colors.red[400],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'PDF Viewer',
+              style: Theme.of(context).textTheme.headlineSmall,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Tap the button below to open the PDF in an external viewer',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: _openPdfInNewTab,
+              icon: const Icon(Icons.open_in_new),
+              label: const Text('Open PDF'),
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              ),
+            ),
+          ],
         ),
       );
     } else {
       return Container(
         color: Colors.grey[100],
         child: const Center(
-          child: Text('PDF frame not available'),
+          child: Text('PDF not available'),
         ),
       );
     }
@@ -1189,14 +1039,26 @@ Note: We attempted to extract text from the PDF but were unable to. We've provid
 
 
 
-  void _downloadPdf() {
+  void _downloadPdf() async {
     if (_pdfUrl != null) {
-      // For web, create a download link
-      if (kIsWeb) {
-        final anchor = html.AnchorElement(href: _pdfUrl!)
-          ..setAttribute('download', '${_book?.title ?? 'book'}.pdf')
-          ..click();
-        // The anchor element is used for download functionality
+      // For mobile, open PDF in external app (which can be downloaded)
+      try {
+        final uri = Uri.parse(_pdfUrl!);
+        if (await canLaunchUrl(uri)) {
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Cannot open PDF for download. Please check your internet connection.'),
+            ),
+          );
+        }
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error opening PDF: $e'),
+          ),
+        );
       }
     }
   }
