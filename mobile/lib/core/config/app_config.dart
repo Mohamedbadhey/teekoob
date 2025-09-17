@@ -1,10 +1,10 @@
 class AppConfig {
   // Base URL for API endpoints
-  static const String baseUrl = 'http://localhost:3000/api/v1';
+  static const String baseUrl = 'https://teekoob-production.up.railway.app/api/v1';
   static const String apiVersion = 'v1';
   
   // Base URL for media files (images, audio, etc.)
-  static const String mediaBaseUrl = 'http://localhost:3000';
+  static const String mediaBaseUrl = 'https://teekoob-production.up.railway.app';
   
   // App Information
   static const String appName = 'Teekoob';
