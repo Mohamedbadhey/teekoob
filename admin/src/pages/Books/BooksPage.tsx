@@ -133,6 +133,7 @@ interface BookFormData {
   is_featured: boolean;
   is_new_release: boolean;
   is_premium: boolean;
+  ebook_content: string;  // New field for text content
 }
 
 const BooksPage: React.FC = () => {
@@ -172,14 +173,14 @@ const BooksPage: React.FC = () => {
     page_count: undefined,
     is_featured: false,
     is_new_release: false,
-    is_premium: false
+    is_premium: false,
+    ebook_content: ''  // Initialize ebook content field
   });
 
   // File upload state
   const [uploadedFiles, setUploadedFiles] = useState<{
     cover?: File;
     audio?: File;
-    ebook?: File;
     sample?: File;
   }>({});
 
@@ -1177,9 +1178,6 @@ const BooksPage: React.FC = () => {
       }
       if (uploadedFiles.audio) {
         formDataToSend.append('audioFile', uploadedFiles.audio);
-      }
-      if (uploadedFiles.ebook) {
-        formDataToSend.append('ebookFile', uploadedFiles.ebook);
       }
       if (uploadedFiles.sample) {
         formDataToSend.append('sampleText', uploadedFiles.sample);

@@ -55,6 +55,7 @@ interface BookFormData {
   is_featured: boolean
   is_new_release: boolean
   is_popular: boolean
+  ebook_content: string  // New field for text content
 }
 
 const BookFormPage: React.FC = () => {
@@ -86,11 +87,11 @@ const BookFormPage: React.FC = () => {
     is_featured: false,
     is_new_release: false,
     is_popular: false,
+    ebook_content: '',  // Initialize ebook content field
   })
 
   const [files, setFiles] = useState<{
     coverImage?: File
-    ebookFile?: File
     audioFile?: File
     sampleText?: File
     sampleAudio?: File
@@ -98,7 +99,6 @@ const BookFormPage: React.FC = () => {
 
   const [existingFiles, setExistingFiles] = useState<{
     coverImage?: string
-    ebookFile?: string
     audioFile?: string
     sampleText?: string
     sampleAudio?: string
@@ -608,12 +608,17 @@ const BookFormPage: React.FC = () => {
                 existingFile={existingFiles.coverImage}
               />
             </Grid>
-            <Grid item xs={12} md={6}>
-              <FileUploadField
-                fieldName="ebookFile"
-                label="eBook File (PDF/EPUB)"
-                accept=".pdf,.epub"
-                existingFile={existingFiles.ebookFile}
+            <Grid item xs={12}>
+              <TextField
+                name="ebook_content"
+                label="Ebook Content (Text)"
+                multiline
+                rows={10}
+                fullWidth
+                value={formData.ebook_content}
+                onChange={handleInputChange}
+                placeholder="Enter the full text content of the ebook here..."
+                helperText="Enter the complete text content of the book. This will be displayed to users instead of a PDF file."
               />
             </Grid>
             <Grid item xs={12} md={6}>

@@ -173,7 +173,7 @@ router.get('/', asyncHandler(async (req, res) => {
       .select(
         'id', 'title', 'title_somali', 'description', 'description_somali',
         'authors', 'authors_somali', 'language', 'format', 'cover_image_url',
-        'audio_url', 'ebook_url', 'sample_url', 'duration', 'page_count',
+        'audio_url', 'ebook_content', 'sample_url', 'duration', 'page_count',
         'rating', 'review_count', 'is_featured', 'is_new_release', 'is_premium',
         'metadata', 'created_at', 'updated_at'
       );
@@ -236,7 +236,7 @@ router.get('/', asyncHandler(async (req, res) => {
       format: book.format,
       coverImageUrl: book.cover_image_url,
       audioUrl: book.audio_url,
-      ebookUrl: book.ebook_url,
+      ebookContent: book.ebook_content,  // Changed from ebookUrl to ebookContent
       sampleUrl: book.sample_url,
       duration: book.duration,
       pageCount: book.page_count,
@@ -279,7 +279,7 @@ router.get('/:id', asyncHandler(async (req, res) => {
       .select(
         'id', 'title', 'title_somali', 'description', 'description_somali',
         'authors', 'authors_somali', 'language', 'format', 'cover_image_url',
-        'audio_url', 'ebook_url', 'sample_url', 'duration', 'page_count',
+        'audio_url', 'ebook_content', 'sample_url', 'duration', 'page_count',
         'rating', 'review_count', 'is_featured', 'is_new_release', 'is_premium',
         'metadata', 'created_at', 'updated_at'
       )
@@ -311,6 +311,7 @@ router.get('/:id', asyncHandler(async (req, res) => {
       // categoryNames: categories.map(cat => cat.name),
       categories: [], // Temporary empty array
       categoryNames: [], // Temporary empty array
+      ebookContent: book.ebook_content,  // Changed from ebookUrl to ebookContent
       isFeatured: Boolean(book.is_featured),
       isNewRelease: Boolean(book.is_new_release),
       isPremium: Boolean(book.is_premium),
@@ -355,9 +356,6 @@ router.put('/:id', asyncHandler(async (req, res) => {
       if (files['audioFile'] && files['audioFile'][0]) {
         updateData.audio_url = files['audioFile'][0].path;
       }
-      if (files['ebookFile'] && files['ebookFile'][0]) {
-        updateData.ebook_url = files['ebookFile'][0].path;
-      }
       if (files['sampleFile'] && files['sampleFile'][0]) {
         updateData.sample_url = files['sampleFile'][0].path;
       }
@@ -389,7 +387,7 @@ router.put('/:id', asyncHandler(async (req, res) => {
       format: updatedBook.format,
       coverImageUrl: updatedBook.cover_image_url,
       audioUrl: updatedBook.audio_url,
-      ebookUrl: updatedBook.ebook_url,
+      ebookContent: updatedBook.ebook_content,  // Changed from ebookUrl to ebookContent
       sampleUrl: updatedBook.sample_url,
       duration: updatedBook.duration,
       pageCount: updatedBook.page_count,
@@ -801,7 +799,7 @@ router.get('/random/list', asyncHandler(async (req, res) => {
       format: book.format,
       coverImageUrl: book.cover_image_url,
       audioUrl: book.audio_url,
-      ebookUrl: book.ebook_url,
+      ebookContent: book.ebook_content,  // Changed from ebookUrl to ebookContent
       sampleUrl: book.sample_url,
       duration: book.duration,
       pageCount: book.page_count,

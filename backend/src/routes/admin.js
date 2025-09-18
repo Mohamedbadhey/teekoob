@@ -174,7 +174,6 @@ router.get('/books/:id', asyncHandler(async (req, res) => {
 // Create new book
 router.post('/books', upload.fields([
   { name: 'coverImage', maxCount: 1 },
-  { name: 'ebookFile', maxCount: 1 },
   { name: 'audioFile', maxCount: 1 },
   { name: 'sampleText', maxCount: 1 },
   { name: 'sampleAudio', maxCount: 1 }
@@ -195,7 +194,8 @@ router.post('/books', upload.fields([
       page_count,
       is_featured,
       is_new_release,
-      is_premium
+      is_premium,
+      ebook_content  // New field for text content
     } = req.body;
     
     // Use authors if provided, otherwise fall back to author
@@ -242,7 +242,7 @@ router.post('/books', upload.fields([
       format,
       cover_image_url: fileUrls.coverImage || null,
       audio_url: fileUrls.audioFile || null,
-      ebook_url: fileUrls.ebookFile || null,
+      ebook_content: ebook_content || null,  // Store text content instead of PDF URL
       sample_url: fileUrls.sampleText || null,
       page_count: page_count ? parseInt(page_count) : null,
       duration: duration ? parseInt(duration) : null,
@@ -289,7 +289,6 @@ router.post('/books', upload.fields([
 // Update book
 router.put('/books/:id', upload.fields([
   { name: 'coverImage', maxCount: 1 },
-  { name: 'ebookFile', maxCount: 1 },
   { name: 'audioFile', maxCount: 1 },
   { name: 'sampleText', maxCount: 1 },
   { name: 'sampleAudio', maxCount: 1 }
@@ -313,9 +312,8 @@ router.put('/books/:id', upload.fields([
         const file = req.files[fieldName][0];
         const fieldMap = {
           coverImage: 'cover_image_url',
-          ebookFile: 'ebook_file_url',
-          audioFile: 'audio_file_url',
-          sampleText: 'sample_text_url',
+          audioFile: 'audio_url',
+          sampleText: 'sample_url',
           sampleAudio: 'sample_audio_url'
         };
         

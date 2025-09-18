@@ -4,9 +4,7 @@ import 'package:teekoob/core/models/book_model.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:teekoob/features/player/services/audio_state_manager.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:path_provider/path_provider.dart';
-import 'dart:io';
-import 'dart:typed_data';
+import 'package:webview_flutter/webview_flutter.dart';
 
 class BookReadPage extends StatefulWidget {
   const BookReadPage({super.key});
@@ -19,15 +17,12 @@ class _BookReadPageState extends State<BookReadPage> {
   Book? _book;
   String? _pdfUrl;
   bool _showPdfContent = false;
-  
-  // Track registered view types to avoid duplicate registration
-  static final Set<String> _registeredViewTypes = {};
 
   @override
   void initState() {
     super.initState();
-    _loadPdfContent();
-    // Automatically show PDF content
+    _loadEbookContent();
+    // Automatically show ebook content
     _showPdfContent = true;
   }
 
@@ -35,45 +30,34 @@ class _BookReadPageState extends State<BookReadPage> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     _book = GoRouterState.of(context).extra as Book?;
-    _loadPdfContent();
+    _loadEbookContent();
   }
 
-  void _loadPdfContent() {
-    print('🔍 BookReadPage: _loadPdfContent called');
+  void _loadEbookContent() {
+    print('🔍 BookReadPage: _loadEbookContent called');
     print('📚 BookReadPage: _book is null: ${_book == null}');
     
     if (_book != null) {
-      print('🔍 BookReadPage: Loading PDF content...');
+      print('🔍 BookReadPage: Loading ebook content...');
       print('📚 BookReadPage: Book data: $_book');
       
-      final ebookUrl = _book!.ebookUrl;
-      print('🔗 BookReadPage: ebookUrl: $ebookUrl');
-      print('🔗 BookReadPage: ebookUrl type: ${ebookUrl.runtimeType}');
-      print('🔗 BookReadPage: ebookUrl is null: ${ebookUrl == null}');
-      print('🔗 BookReadPage: ebookUrl is empty: ${ebookUrl?.isEmpty}');
+      final ebookContent = _book!.ebookContent;
+      print('📖 BookReadPage: ebookContent: ${ebookContent?.substring(0, 100)}...');
+      print('📖 BookReadPage: ebookContent type: ${ebookContent.runtimeType}');
+      print('📖 BookReadPage: ebookContent is null: ${ebookContent == null}');
+      print('📖 BookReadPage: ebookContent is empty: ${ebookContent?.isEmpty}');
       
-      if (ebookUrl != null && ebookUrl.isNotEmpty) {
-        print('✅ BookReadPage: PDF found, loading content...');
-        print('📄 BookReadPage: Raw ebookUrl: $ebookUrl');
-        print('📄 BookReadPage: ebookUrl type: ${ebookUrl.runtimeType}');
-        
-        // For mobile, we'll use the full Railway URL
-        _pdfUrl = 'https://teekoob-production.up.railway.app$ebookUrl';
-        print('🔗 BookReadPage: PDF URL ready: $_pdfUrl');
-        print('📱 BookReadPage: Running on mobile - kIsWeb: $kIsWeb');
-        
-        // Test if URL is accessible (mobile version)
-        print('🔍 Testing PDF URL accessibility: $_pdfUrl');
-        print('📄 PDF URL will be opened in external viewer');
-        
+      if (ebookContent != null && ebookContent.isNotEmpty) {
+        print('✅ BookReadPage: Ebook content found, loading...');
         setState(() {
-          print('🔄 BookReadPage: setState called - _pdfUrl updated to: $_pdfUrl');
+          _showPdfContent = true;
+          print('🔄 BookReadPage: setState called - _showPdfContent set to true');
         });
       } else {
-        print('❌ BookReadPage: No PDF URL found');
+        print('❌ BookReadPage: No ebook content found');
         setState(() {
-          _pdfUrl = null;
-          print('🔄 BookReadPage: setState called - _pdfUrl set to null');
+          _showPdfContent = false;
+          print('🔄 BookReadPage: setState called - _showPdfContent set to false');
         });
       }
     } else {
@@ -288,10 +272,9 @@ Note: We attempted to extract text from the PDF but were unable to. We've provid
 
   Widget _buildEbookContent(BuildContext context, Book book) {
     print('📖 _buildEbookContent: Called');
-    print('🔗 _buildEbookContent: _pdfUrl: $_pdfUrl');
     print('📱 _buildEbookContent: kIsWeb: $kIsWeb');
     print('📚 _buildEbookContent: book.title: ${book.title}');
-    print('📄 _buildEbookContent: book.ebookUrl: ${book.ebookUrl}');
+    print('📄 _buildEbookContent: book.ebookContent: ${book.ebookContent?.substring(0, 100)}...');
     
     return Column(
       children: [
@@ -305,7 +288,7 @@ Note: We attempted to extract text from the PDF but were unable to. We've provid
         
         // Ebook Content
         Expanded(
-          child: _pdfUrl == null
+          child: book.ebookContent == null || book.ebookContent!.isEmpty
               ? const Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -327,18 +310,74 @@ Note: We attempted to extract text from the PDF but were unable to. We've provid
                     ],
                   ),
                 )
-              : _buildPdfViewer(context, book),
+              : _buildTextContentViewer(context, book),
         ),
       ],
     );
   }
 
+  Widget _buildTextContentViewer(BuildContext context, Book book) {
+    return Container(
+      width: double.infinity,
+      height: double.infinity,
+      color: Colors.white,
+      child: Column(
+        children: [
+          // Content Header
+          Container(
+            padding: const EdgeInsets.all(16),
+            color: Colors.grey[50],
+            child: Row(
+              children: [
+                Icon(
+                  Icons.article,
+                  color: Colors.blue[600],
+                  size: 20,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Ebook Content',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey[700],
+                      fontSize: 16,
+                    ),
+                  ),
+                ),
+                Text(
+                  '${book.ebookContent!.length} characters',
+                  style: TextStyle(
+                    color: Colors.grey[500],
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          
+          // Text Content
+          Expanded(
+            child: Container(
+              padding: const EdgeInsets.all(20),
+              child: SingleChildScrollView(
+                child: SelectableText(
+                  book.ebookContent!,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    height: 1.6,
+                    color: Colors.black87,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildPdfOpener() {
-    // Automatically trigger PDF viewing
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _viewPdfInApp();
-    });
-    
     // Show loading indicator while PDF loads
     return Container(
       width: double.infinity,
@@ -390,8 +429,8 @@ Note: We attempted to extract text from the PDF but were unable to. We've provid
         final uri = Uri.parse(_pdfUrl!);
         if (await canLaunchUrl(uri)) {
           await launchUrl(uri, mode: LaunchMode.externalApplication);
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Cannot open PDF. Please check your internet connection.'),
             ),
@@ -407,22 +446,6 @@ Note: We attempted to extract text from the PDF but were unable to. We've provid
     }
   }
 
-  void _viewPdfInApp() {
-    print('🎯 _viewPdfInApp: Called');
-    print('🔗 _viewPdfInApp: _pdfUrl: $_pdfUrl');
-    print('📱 _viewPdfInApp: kIsWeb: $kIsWeb');
-    print('🔄 _viewPdfInApp: Current _showPdfContent: $_showPdfContent');
-    
-    if (_pdfUrl != null) {
-      print('✅ _viewPdfInApp: PDF URL available, setting _showPdfContent to true');
-      setState(() {
-        _showPdfContent = true;
-        print('🔄 _viewPdfInApp: setState called - _showPdfContent set to true');
-      });
-    } else {
-      print('❌ _viewPdfInApp: No PDF URL available');
-    }
-  }
 
   Widget _buildPdfViewer(BuildContext context, Book book) {
     print('🏗️ _buildPdfViewer: Called');
@@ -933,36 +956,133 @@ Note: We attempted to extract text from the PDF but were unable to. We've provid
         width: double.infinity,
         height: double.infinity,
         decoration: BoxDecoration(
-          color: Colors.grey[100],
+          color: Colors.white,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(color: Colors.grey[300]!),
         ),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.picture_as_pdf,
-              size: 64,
-              color: Colors.red[400],
+            // PDF Viewer Header
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.grey[50],
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(8),
+                  topRight: Radius.circular(8),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.picture_as_pdf,
+                    color: Colors.red[600],
+                    size: 24,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'PDF Viewer',
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Text(
+                          'Tap to open in external app',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: _openPdfInNewTab,
+                    icon: const Icon(Icons.open_in_new),
+                    tooltip: 'Open in external app',
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(height: 16),
-            Text(
-              'PDF Viewer',
-              style: Theme.of(context).textTheme.headlineSmall,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Tap the button below to open the PDF in an external viewer',
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton.icon(
-              onPressed: _openPdfInNewTab,
-              icon: const Icon(Icons.open_in_new),
-              label: const Text('Open PDF'),
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            // PDF Preview Area
+            Expanded(
+              child: Container(
+                margin: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.grey[100],
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.grey[300]!),
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.picture_as_pdf,
+                      size: 80,
+                      color: Colors.red[400],
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'PDF Document',
+                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Tap the button below to open the PDF',
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    ElevatedButton.icon(
+                      onPressed: _viewPdfInApp,
+                      icon: const Icon(Icons.visibility),
+                      label: const Text('View in App'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red[600],
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        OutlinedButton.icon(
+                          onPressed: _openPdfInNewTab,
+                          icon: const Icon(Icons.open_in_new),
+                          label: const Text('External'),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                        ),
+                        OutlinedButton.icon(
+                          onPressed: _downloadPdf,
+                          icon: const Icon(Icons.download),
+                          label: const Text('Download'),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
           ],
@@ -972,7 +1092,25 @@ Note: We attempted to extract text from the PDF but were unable to. We've provid
       return Container(
         color: Colors.grey[100],
         child: const Center(
-          child: Text('PDF not available'),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.error_outline,
+                size: 64,
+                color: Colors.grey,
+              ),
+              SizedBox(height: 16),
+              Text(
+                'PDF not available',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey,
+                ),
+              ),
+            ],
+          ),
         ),
       );
     }
@@ -1061,6 +1199,153 @@ Note: We attempted to extract text from the PDF but were unable to. We've provid
         );
       }
     }
+  }
+
+  void _viewPdfInApp() {
+    if (_pdfUrl != null) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => _PdfViewerPage(pdfUrl: _pdfUrl!),
+        ),
+      );
+    }
+  }
+}
+
+// PDF Viewer Page using WebView
+class _PdfViewerPage extends StatefulWidget {
+  final String pdfUrl;
+
+  const _PdfViewerPage({required this.pdfUrl});
+
+  @override
+  State<_PdfViewerPage> createState() => _PdfViewerPageState();
+}
+
+class _PdfViewerPageState extends State<_PdfViewerPage> {
+  late final WebViewController _controller;
+  bool _isLoading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeWebView();
+  }
+
+  void _initializeWebView() {
+    _controller = WebViewController();
+    
+    // Only set JavaScript mode on mobile platforms
+    if (!kIsWeb) {
+      _controller.setJavaScriptMode(JavaScriptMode.unrestricted);
+    }
+    
+    _controller.setNavigationDelegate(
+      NavigationDelegate(
+        onPageStarted: (String url) {
+          setState(() {
+            _isLoading = true;
+            _error = null;
+          });
+        },
+        onPageFinished: (String url) {
+          setState(() {
+            _isLoading = false;
+          });
+        },
+        onWebResourceError: (WebResourceError error) {
+          setState(() {
+            _isLoading = false;
+            _error = 'Failed to load PDF: ${error.description}';
+          });
+        },
+      ),
+    );
+    
+    _controller.loadRequest(Uri.parse(widget.pdfUrl));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('PDF Viewer'),
+        backgroundColor: Colors.red[600],
+        foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            onPressed: () async {
+              final uri = Uri.parse(widget.pdfUrl);
+              if (await canLaunchUrl(uri)) {
+                await launchUrl(uri, mode: LaunchMode.externalApplication);
+              }
+            },
+            icon: const Icon(Icons.open_in_new),
+            tooltip: 'Open in external app',
+          ),
+        ],
+      ),
+      body: Stack(
+        children: [
+          if (_error != null)
+            Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.error_outline,
+                    size: 64,
+                    color: Colors.red[400],
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Error Loading PDF',
+                    style: Theme.of(context).textTheme.headlineSmall,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    _error!,
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      setState(() {
+                        _error = null;
+                        _isLoading = true;
+                      });
+                      _initializeWebView();
+                    },
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('Retry'),
+                  ),
+                ],
+              ),
+            )
+          else
+            WebViewWidget(controller: _controller),
+          if (_isLoading && _error == null)
+            Container(
+              color: Colors.white,
+              child: const Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    CircularProgressIndicator(),
+                    SizedBox(height: 16),
+                    Text('Loading PDF...'),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
   }
 }
 
