@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -92,8 +92,7 @@ interface Book {
   format: 'ebook' | 'audiobook' | 'both';
   cover_image_url?: string;
   audio_url?: string;
-  ebook_url?: string;
-  sample_url?: string;
+  ebook_content?: string;
   duration?: number;
   page_count?: number;
   rating?: number;
@@ -156,6 +155,17 @@ const BooksPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState(0);
   const [activeStep, setActiveStep] = useState(0);
   const [expandedFilters, setExpandedFilters] = useState(false);
+  const [dataGridKey, setDataGridKey] = useState(0);
+
+  // Force DataGrid to re-render when screen size changes
+  useEffect(() => {
+    const handleResize = () => {
+      setDataGridKey(prev => prev + 1);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Form state
   const [formData, setFormData] = useState<BookFormData>({
@@ -181,7 +191,6 @@ const BooksPage: React.FC = () => {
   const [uploadedFiles, setUploadedFiles] = useState<{
     cover?: File;
     audio?: File;
-    sample?: File;
   }>({});
 
   // Fetch books with enhanced query
@@ -203,6 +212,15 @@ const BooksPage: React.FC = () => {
     queryFn: () => getBookStats(),
     staleTime: 60000,
   });
+
+  // Force DataGrid to re-render after initial load to fix scroll issues
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDataGridKey(prev => prev + 1);
+    }, 100);
+
+    return () => clearTimeout(timer);
+  }, [booksData]);
 
   // Mutations
   const updateBookStatusMutation = useMutation({
@@ -260,17 +278,12 @@ const BooksPage: React.FC = () => {
           setUploadedFiles(prev => ({ ...prev, cover: file }));
         } else if (file.type.startsWith('audio/')) {
           setUploadedFiles(prev => ({ ...prev, audio: file }));
-        } else if (file.type === 'application/pdf' || file.type === 'application/epub+zip') {
-          setUploadedFiles(prev => ({ ...prev, ebook: file }));
         }
       });
     },
     accept: {
       'image/*': ['.jpeg', '.jpg', '.png', '.webp', '.gif'],
-      'audio/*': ['.mp3', '.wav', '.m4a', '.aac', '.ogg', '.flac', '.webm'],
-      'application/pdf': ['.pdf'],
-      'application/epub+zip': ['.epub'],
-      'text/plain': ['.txt']
+      'audio/*': ['.mp3', '.wav', '.m4a', '.aac', '.ogg', '.flac', '.webm']
     }
   });
 
@@ -279,13 +292,13 @@ const BooksPage: React.FC = () => {
     {
       field: 'cover',
       headerName: 'Cover',
-      width: isMobile ? 80 : 100,
+      width: isMobile ? 80 : 120,
       renderCell: (params) => (
         <Avatar
           variant="rounded"
           src={params.row.cover_image_url}
           alt={params.row.title}
-          sx={{ width: isMobile ? 50 : 60, height: isMobile ? 65 : 80 }}
+          sx={{ width: isMobile ? 50 : 70, height: isMobile ? 65 : 90 }}
         >
           <BookIcon />
         </Avatar>
@@ -294,7 +307,8 @@ const BooksPage: React.FC = () => {
     {
       field: 'title',
       headerName: 'Title',
-      width: isMobile ? 200 : 250,
+      width: isMobile ? 200 : 300,
+      flex: isMobile ? 0 : 1,
       renderCell: (params) => (
         <Box>
           <Typography variant="body2" fontWeight="medium" noWrap>
@@ -311,25 +325,17 @@ const BooksPage: React.FC = () => {
     {
       field: 'authors',
       headerName: 'Authors',
-      width: isMobile ? 120 : 150,
-      valueGetter: (params) => {
-        try {
-          const authors = JSON.parse(params.row.authors);
-          return Array.isArray(authors) ? authors.join(', ') : params.row.authors;
-        } catch {
-          return params.row.authors;
-        }
-      },
+      width: isMobile ? 120 : 180,
       renderCell: (params) => (
         <Typography variant="body2" noWrap>
-          {params.value}
+          {params.row.authors}
         </Typography>
       ),
     },
     {
       field: 'genre',
       headerName: 'Genre',
-      width: isMobile ? 100 : 120,
+      width: isMobile ? 100 : 140,
       renderCell: (params) => (
         <Chip 
           label={params.row.genre} 
@@ -355,7 +361,7 @@ const BooksPage: React.FC = () => {
     {
       field: 'format',
       headerName: 'Format',
-      width: isMobile ? 80 : 100,
+      width: isMobile ? 80 : 120,
       renderCell: (params) => (
         <Box display="flex" alignItems="center">
           {params.row.format === 'audiobook' ? <AudioIcon /> : <PdfIcon />}
@@ -368,10 +374,10 @@ const BooksPage: React.FC = () => {
     {
       field: 'rating',
       headerName: 'Rating',
-      width: isMobile ? 120 : 150,
+      width: isMobile ? 120 : 160,
       renderCell: (params) => (
         <Box>
-          <Rating value={params.row.rating || 0} readOnly size="small" />
+          <Rating value={parseFloat(params.row.rating) || 0} readOnly size="small" />
           <Typography variant="caption" display="block">
             {params.row.review_count || 0} reviews
           </Typography>
@@ -381,7 +387,7 @@ const BooksPage: React.FC = () => {
     {
       field: 'features',
       headerName: 'Features',
-      width: isMobile ? 120 : 150,
+      width: isMobile ? 120 : 180,
       renderCell: (params) => (
         <Box>
           {params.row.is_featured && (
@@ -418,13 +424,13 @@ const BooksPage: React.FC = () => {
     {
       field: 'createdAt',
       headerName: 'Added',
-      width: isMobile ? 100 : 120,
+      width: isMobile ? 100 : 130,
       valueGetter: (params) => format(new Date(params.row.created_at), 'MMM dd, yyyy'),
     },
     {
       field: 'actions',
       headerName: 'Actions',
-      width: isMobile ? 150 : 200,
+      width: isMobile ? 150 : 220,
       type: 'actions',
       getActions: (params) => [
         <GridActionsCellItem
@@ -802,6 +808,18 @@ const BooksPage: React.FC = () => {
             <Grid item xs={12}>
               <TextField
                 fullWidth
+                label="E-Book Content"
+                multiline
+                rows={6}
+                value={formData.ebook_content}
+                onChange={(e) => setFormData(prev => ({ ...prev, ebook_content: e.target.value }))}
+                placeholder="Enter the full text content of the e-book here..."
+                helperText="The complete text content of the book for reading"
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
                 label="Metadata (JSON)"
                 multiline
                 rows={3}
@@ -851,7 +869,7 @@ const BooksPage: React.FC = () => {
                   {isDragActive ? 'Drop files here' : 'Upload Files'}
                 </Typography>
                 <Typography variant="body2" color="textSecondary">
-                  Supported: Images (JPG, PNG, WebP, GIF), Audio (MP3, WAV, M4A, AAC, OGG, FLAC), Documents (PDF, EPUB), Text (TXT)
+                  Supported: Images (JPG, PNG, WebP, GIF), Audio (MP3, WAV, M4A, AAC, OGG, FLAC)
                 </Typography>
               </Box>
 
@@ -889,25 +907,9 @@ const BooksPage: React.FC = () => {
                   <Grid item xs={12} sm={6}>
                     <TextField
                       fullWidth
-                      label="E-Book URL"
-                      defaultValue={selectedBook.ebook_url}
-                      helperText="Current e-book file URL"
-                    />
-                  </Grid>
-                  <Grid item xs={12} sm={6}>
-                    <TextField
-                      fullWidth
                       label="Audio URL"
                       defaultValue={selectedBook.audio_url}
                       helperText="Current audio file URL"
-                    />
-                  </Grid>
-                  <Grid item xs={12} sm={6}>
-                    <TextField
-                      fullWidth
-                      label="Sample URL"
-                      defaultValue={selectedBook.sample_url}
-                      helperText="Current sample file URL"
                     />
                   </Grid>
                 </Grid>
@@ -1071,7 +1073,8 @@ const BooksPage: React.FC = () => {
       page_count: undefined,
       is_featured: false,
       is_new_release: false,
-      is_premium: false
+      is_premium: false,
+      ebook_content: ''
     });
     setUploadedFiles({});
     setActiveStep(0);
@@ -1099,9 +1102,10 @@ const BooksPage: React.FC = () => {
       format: book.format,
       duration: book.duration,
       page_count: book.page_count,
-      is_featured: book.is_featured,
-      is_new_release: book.is_new_release,
-      is_premium: book.is_premium
+      is_featured: Boolean(book.is_featured),
+      is_new_release: Boolean(book.is_new_release),
+      is_premium: Boolean(book.is_premium),
+      ebook_content: book.ebook_content || ''
     });
     setShowBookDialog(true);
     setActiveStep(0);
@@ -1151,7 +1155,6 @@ const BooksPage: React.FC = () => {
         title_somali: 'title_somali',
         description: 'description',
         description_somali: 'description_somali',
-        author: 'authors',  // Map 'author' field to 'authors' for backend
         authors: 'authors',
         authors_somali: 'authors_somali',
         genre: 'genre',
@@ -1162,7 +1165,8 @@ const BooksPage: React.FC = () => {
         page_count: 'page_count',
         is_featured: 'is_featured',
         is_new_release: 'is_new_release',
-        is_premium: 'is_premium'
+        is_premium: 'is_premium',
+        ebook_content: 'ebook_content'
       };
 
       Object.entries(formData).forEach(([key, value]) => {
@@ -1178,9 +1182,6 @@ const BooksPage: React.FC = () => {
       }
       if (uploadedFiles.audio) {
         formDataToSend.append('audioFile', uploadedFiles.audio);
-      }
-      if (uploadedFiles.sample) {
-        formDataToSend.append('sampleText', uploadedFiles.sample);
       }
 
 
@@ -1212,7 +1213,11 @@ const BooksPage: React.FC = () => {
   }
 
   return (
-    <Box sx={{ p: isMobile ? 1 : 3 }}>
+    <Box sx={{ 
+      p: isMobile ? 1 : 3, 
+      minHeight: '100vh',
+      overflow: 'auto'
+    }}>
       <Box display="flex" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
         <Typography variant={isMobile ? "h5" : "h4"}>Book Management</Typography>
         <Button
@@ -1228,8 +1233,9 @@ const BooksPage: React.FC = () => {
       {renderBookStats()}
       {renderFilters()}
 
-      <Card>
+      <Card sx={{ mt: 3 }}>
         <DataGrid
+          key={dataGridKey}
           rows={booksData?.books || []}
           columns={columns}
           loading={isLoading}
@@ -1257,6 +1263,12 @@ const BooksPage: React.FC = () => {
             '& .MuiDataGrid-cell': {
               borderBottom: '1px solid',
               borderColor: 'divider',
+            },
+            '& .MuiDataGrid-main': {
+              overflow: 'auto',
+            },
+            '& .MuiDataGrid-virtualScroller': {
+              overflow: 'auto',
             },
           }}
         />

@@ -136,6 +136,7 @@ const BookFormPage: React.FC = () => {
         is_featured: bookData.is_featured || false,
         is_new_release: bookData.is_new_release || false,
         is_popular: bookData.is_popular || false,
+        ebook_content: bookData.ebook_content || '',
       })
 
       setExistingFiles({

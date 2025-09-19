@@ -304,8 +304,8 @@ router.get('/:id', asyncHandler(async (req, res) => {
     // Process book data
     const processedBook = {
       ...book,
-      authors: book.authors ? JSON.parse(book.authors) : [],
-      authorsSomali: book.authorsSomali ? JSON.parse(book.authorsSomali) : [],
+      authors: book.authors || '',
+      authorsSomali: book.authors_somali || '',
       // TODO: Uncomment when categories table is created
       // categories: categories.map(cat => cat.id),
       // categoryNames: categories.map(cat => cat.name),
@@ -379,8 +379,8 @@ router.put('/:id', asyncHandler(async (req, res) => {
       titleSomali: updatedBook.title_somali,
       description: updatedBook.description,
       descriptionSomali: updatedBook.description_somali,
-      authors: updatedBook.authors ? JSON.parse(updatedBook.authors) : [],
-      authorsSomali: updatedBook.authors_somali ? JSON.parse(updatedBook.authors_somali) : [],
+      authors: updatedBook.authors || '',
+      authorsSomali: updatedBook.authors_somali || '',
       categories: updatedBook.genre ? [updatedBook.genre] : [],
       categoryNames: updatedBook.genre_somali ? [updatedBook.genre_somali] : [],
       language: updatedBook.language,
@@ -583,10 +583,8 @@ router.get('/:id/recommendations', asyncHandler(async (req, res) => {
 
     // If current book has authors, also filter by similar authors
     if (currentBook.authors) {
-      const authors = JSON.parse(currentBook.authors);
-      if (authors.length > 0) {
-        recommendationsQuery = recommendationsQuery.whereRaw('JSON_OVERLAPS(authors, ?)', [JSON.stringify(authors)]);
-      }
+      // Authors are now stored as simple strings, so we can do a LIKE search
+      recommendationsQuery = recommendationsQuery.where('authors', 'like', `%${currentBook.authors}%`);
     }
 
     const recommendations = await recommendationsQuery

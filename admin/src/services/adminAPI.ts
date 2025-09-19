@@ -12,22 +12,48 @@ export const getBooks = async (params?: {
   featured?: boolean
 }) => {
   try {
-    // Use the working public book endpoints instead of the failing admin endpoints
-    let response;
+    // Use the admin books endpoint
+    const response = await api.get('/admin/books', { params })
     
-    if (params?.featured) {
-      response = await api.get('/books/featured/list')
-    } else if (params?.search) {
-      // For search, we'll get all books and filter client-side for now
-      response = await api.get('/books')
-    } else {
-      response = await api.get('/books', { params })
+    // Transform the response to match frontend expectations
+    const transformedBooks = response.data.books?.map((book: any) => ({
+      id: book.id,
+      title: book.title,
+      title_somali: book.title_somali,
+      description: book.description,
+      description_somali: book.description_somali,
+      authors: book.authors, // Already in correct format from backend
+      authors_somali: book.authors_somali, // Already in correct format from backend
+      genre: book.genre,
+      genre_somali: book.genre_somali,
+      language: book.language,
+      format: book.format,
+      cover_image_url: book.cover_image_url,
+      audio_url: book.audio_url,
+      duration: book.duration,
+      page_count: book.page_count,
+      rating: book.rating,
+      review_count: book.review_count,
+      is_featured: book.is_featured,
+      is_new_release: book.is_new_release,
+      is_premium: book.is_premium,
+      metadata: book.metadata,
+      created_at: book.created_at,
+      updated_at: book.updated_at
+    })) || []
+    
+    return {
+      books: transformedBooks,
+      pagination: response.data.pagination || {
+        page: 1,
+        limit: 20,
+        total: 0,
+        totalPages: 0
+      }
     }
-    
-    return response.data
   } catch (error) {
     console.error('Error fetching books:', error)
-    // Return fallback data if public endpoints fail
+    // Return fallback data if admin endpoint fails
     return {
       books: [],
       pagination: {
@@ -42,8 +68,8 @@ export const getBooks = async (params?: {
 
 export const getBook = async (id: string) => {
   try {
-    // Use the working public book endpoint
-    const response = await api.get(`/books/${id}`)
+    // Use the admin book endpoint to get raw data without JSON parsing
+    const response = await api.get(`/admin/books/${id}`)
     return response.data
   } catch (error) {
     console.error('Error fetching book:', error)

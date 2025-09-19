@@ -122,16 +122,41 @@ router.get('/books', asyncHandler(async (req, res) => {
   const books = await query
     .select('*')
     .orderBy('created_at', 'desc')
-    .limit(limit)
+    .limit(parseInt(limit))
     .offset(offset);
   
+  // Process books to ensure proper data types and full URLs
+  const baseUrl = process.env.RAILWAY_PUBLIC_DOMAIN 
+    ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}/api/v1`
+    : `${req.protocol}://${req.get('host')}/api/v1`;
+    
+  const processedBooks = books.map(book => ({
+    ...book,
+    authors: book.authors || '',
+    authors_somali: book.authors_somali || '',
+    is_featured: Boolean(book.is_featured),
+    is_new_release: Boolean(book.is_new_release),
+    is_premium: Boolean(book.is_premium),
+    rating: book.rating ? parseFloat(book.rating) : 0,
+    review_count: book.review_count ? parseInt(book.review_count) : 0,
+    page_count: book.page_count ? parseInt(book.page_count) : null,
+    duration: book.duration ? parseInt(book.duration) : null,
+    // Convert relative URLs to full URLs
+    cover_image_url: book.cover_image_url && book.cover_image_url.startsWith('/uploads/') 
+      ? `${baseUrl}${book.cover_image_url}` 
+      : book.cover_image_url,
+    audio_url: book.audio_url && book.audio_url.startsWith('/uploads/') 
+      ? `${baseUrl}${book.audio_url}` 
+      : book.audio_url
+  }));
+  
   res.json({
-    books,
+    books: processedBooks,
     pagination: {
       page: parseInt(page),
       limit: parseInt(limit),
-      total: totalCount.count,
-      totalPages: Math.ceil(totalCount.count / limit)
+      total: parseInt(totalCount.count),
+      totalPages: Math.ceil(parseInt(totalCount.count) / parseInt(limit))
     }
   });
 }));
@@ -159,7 +184,23 @@ router.get('/books/:id', asyncHandler(async (req, res) => {
     }
     
     console.log('✅ Admin: Successfully fetched book:', book.title);
-    res.json(book);
+    
+    // Convert relative URLs to full URLs
+    const baseUrl = process.env.RAILWAY_PUBLIC_DOMAIN 
+      ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}/api/v1`
+      : `${req.protocol}://${req.get('host')}/api/v1`;
+    
+    const processedBook = {
+      ...book,
+      cover_image_url: book.cover_image_url && book.cover_image_url.startsWith('/uploads/') 
+        ? `${baseUrl}${book.cover_image_url}` 
+        : book.cover_image_url,
+      audio_url: book.audio_url && book.audio_url.startsWith('/uploads/') 
+        ? `${baseUrl}${book.audio_url}` 
+        : book.audio_url
+    };
+    
+    res.json(processedBook);
   } catch (error) {
     console.error('💥 Admin: Error fetching book:', error);
     console.error('💥 Admin: Error stack:', error.stack);
@@ -174,9 +215,7 @@ router.get('/books/:id', asyncHandler(async (req, res) => {
 // Create new book
 router.post('/books', upload.fields([
   { name: 'coverImage', maxCount: 1 },
-  { name: 'audioFile', maxCount: 1 },
-  { name: 'sampleText', maxCount: 1 },
-  { name: 'sampleAudio', maxCount: 1 }
+  { name: 'audioFile', maxCount: 1 }
 ]), asyncHandler(async (req, res) => {
       const {
       title,
@@ -220,10 +259,13 @@ router.post('/books', upload.fields([
     const fileUrls = {};
     if (req.files) {
       // TODO: Upload files to S3 and get URLs
-      // For now, we'll store local paths
+      // Store full URLs for uploaded files
       Object.keys(req.files).forEach(fieldName => {
         const file = req.files[fieldName][0];
-        fileUrls[fieldName] = `/uploads/${file.filename}`;
+        const baseUrl = process.env.RAILWAY_PUBLIC_DOMAIN 
+          ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}/api/v1`
+          : `${req.protocol}://${req.get('host')}/api/v1`;
+        fileUrls[fieldName] = `${baseUrl}/uploads/${file.filename}`;
       });
     }
     
@@ -234,8 +276,8 @@ router.post('/books', upload.fields([
       title_somali: title_somali || null,
       description,
       description_somali: description_somali || null,
-      authors: finalAuthors ? JSON.stringify(finalAuthors.split(',').map(a => a.trim())) : null,
-      authors_somali: authors_somali ? JSON.stringify(authors_somali.split(',').map(a => a.trim())) : (finalAuthors ? JSON.stringify(finalAuthors.split(',').map(a => a.trim())) : null),
+      authors: finalAuthors || null,
+      authors_somali: authors_somali || null,
       genre,
       genre_somali: genre_somali || genre,
       language,
@@ -243,7 +285,6 @@ router.post('/books', upload.fields([
       cover_image_url: fileUrls.coverImage || null,
       audio_url: fileUrls.audioFile || null,
       ebook_content: ebook_content || null,  // Store text content instead of PDF URL
-      sample_url: fileUrls.sampleText || null,
       page_count: page_count ? parseInt(page_count) : null,
       duration: duration ? parseInt(duration) : null,
       is_featured: is_featured === 'true' || is_featured === true,
@@ -289,12 +330,15 @@ router.post('/books', upload.fields([
 // Update book
 router.put('/books/:id', upload.fields([
   { name: 'coverImage', maxCount: 1 },
-  { name: 'audioFile', maxCount: 1 },
-  { name: 'sampleText', maxCount: 1 },
-  { name: 'sampleAudio', maxCount: 1 }
+  { name: 'audioFile', maxCount: 1 }
 ]), asyncHandler(async (req, res) => {
   const { id } = req.params;
   const updateData = req.body;
+  
+  // Debug: Log what we're receiving
+  console.log('🔍 Admin Update Book - Received data:');
+  console.log('Authors:', updateData.authors, '(type:', typeof updateData.authors, ')');
+  console.log('Authors Somali:', updateData.authors_somali, '(type:', typeof updateData.authors_somali, ')');
   
   // Check if book exists
   const existingBook = await db('books').where('id', id).first();
@@ -312,24 +356,29 @@ router.put('/books/:id', upload.fields([
         const file = req.files[fieldName][0];
         const fieldMap = {
           coverImage: 'cover_image_url',
-          audioFile: 'audio_url',
-          sampleText: 'sample_url',
-          sampleAudio: 'sample_audio_url'
+          audioFile: 'audio_url'
         };
         
         if (fieldMap[fieldName]) {
-          updateData[fieldMap[fieldName]] = `/uploads/${file.filename}`;
+          const baseUrl = process.env.RAILWAY_PUBLIC_DOMAIN 
+            ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}/api/v1`
+            : `${req.protocol}://${req.get('host')}/api/v1`;
+          updateData[fieldMap[fieldName]] = `${baseUrl}/uploads/${file.filename}`;
         }
       });
     }
     
-    // Process authors fields to ensure they're in JSON format
+    // Process authors fields as simple strings
     if (updateData.authors) {
-      updateData.authors = JSON.stringify(updateData.authors.split(',').map(a => a.trim()));
+      console.log('🔍 Before processing - Authors:', updateData.authors, '(type:', typeof updateData.authors, ')');
+      updateData.authors = updateData.authors;
+      console.log('🔍 After processing - Authors:', updateData.authors, '(type:', typeof updateData.authors, ')');
     }
     
     if (updateData.authors_somali) {
-      updateData.authors_somali = JSON.stringify(updateData.authors_somali.split(',').map(a => a.trim()));
+      console.log('🔍 Before processing - Authors Somali:', updateData.authors_somali, '(type:', typeof updateData.authors_somali, ')');
+      updateData.authors_somali = updateData.authors_somali;
+      console.log('🔍 After processing - Authors Somali:', updateData.authors_somali, '(type:', typeof updateData.authors_somali, ')');
     }
     
     // Process boolean fields
@@ -353,6 +402,11 @@ router.put('/books/:id', upload.fields([
     if (updateData.duration !== undefined) {
       updateData.duration = parseInt(updateData.duration) || null;
     }
+    
+    // Debug: Log what we're about to save to database
+    console.log('🔍 About to save to database:');
+    console.log('Authors field:', updateData.authors, '(type:', typeof updateData.authors, ')');
+    console.log('Authors Somali field:', updateData.authors_somali, '(type:', typeof updateData.authors_somali, ')');
     
     // Update book
     await db('books')
