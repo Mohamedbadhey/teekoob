@@ -23,10 +23,10 @@ class Book {
   final String? descriptionSomali;
 
   @HiveField(5)
-  final List<String>? authors;
+  final String? authors;
 
   @HiveField(6)
-  final List<String>? authorsSomali;
+  final String? authorsSomali;
 
   @HiveField(7)
   final List<String>? categories; // New: category IDs
@@ -117,7 +117,7 @@ class Book {
   // Computed properties
   String get displayTitle => titleSomali?.isNotEmpty == true ? titleSomali! : title;
   String get displayDescription => descriptionSomali?.isNotEmpty == true ? descriptionSomali! : (description ?? '');
-  String get displayAuthors => authors?.isNotEmpty == true ? authors!.join(', ') : '';
+  String get displayAuthors => authors ?? '';
   String get displayCategories => categoryNames?.isNotEmpty == true ? categoryNames!.join(', ') : '';
 
   // Factory constructor from JSON
@@ -134,16 +134,8 @@ class Book {
         titleSomali: json['titleSomali'],
         description: json['description'],
         descriptionSomali: json['descriptionSomali'],
-        authors: json['authors'] != null 
-            ? (json['authors'] is String 
-                ? List<String>.from(jsonDecode(json['authors']))
-                : List<String>.from(json['authors']))
-            : null,
-        authorsSomali: json['authorsSomali'] != null 
-            ? (json['authorsSomali'] is String 
-                ? List<String>.from(jsonDecode(json['authorsSomali']))
-                : List<String>.from(json['authorsSomali']))
-            : null,
+        authors: json['authors']?.toString(),
+        authorsSomali: json['authorsSomali']?.toString(),
         categories: json['categories'] != null 
             ? (json['categories'] is String 
                 ? List<String>.from(jsonDecode(json['categories']))
@@ -253,8 +245,8 @@ class Book {
     String? titleSomali,
     String? description,
     String? descriptionSomali,
-    List<String>? authors,
-    List<String>? authorsSomali,
+    String? authors,
+    String? authorsSomali,
     List<String>? categories,
     List<String>? categoryNames,
     String? language,

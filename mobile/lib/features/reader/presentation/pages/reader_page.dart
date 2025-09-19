@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:teekoob/core/services/localization_service.dart';
+import 'package:teekoob/core/models/book_model.dart';
+import 'package:teekoob/features/reader/bloc/reader_bloc.dart';
+import 'package:teekoob/features/reader/services/reader_service.dart';
+import 'package:teekoob/core/services/storage_service.dart';
 
 class ReaderPage extends StatefulWidget {
   final String bookId;
@@ -23,6 +28,29 @@ class _ReaderPageState extends State<ReaderPage> {
   bool _isFullScreen = false;
   int _currentPage = 1;
   int _totalPages = 100;
+  Book? _book;
+  String? _bookContent;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadBook();
+  }
+
+  void _loadBook() async {
+    try {
+      final storageService = StorageService();
+      final book = storageService.getBook(widget.bookId);
+      if (book != null) {
+        setState(() {
+          _book = book;
+          _bookContent = book.ebookContent;
+        });
+      }
+    } catch (e) {
+      print('Error loading book: $e');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -68,7 +96,7 @@ class _ReaderPageState extends State<ReaderPage> {
       foregroundColor: _textColor,
       elevation: 0,
       title: Text(
-        LocalizationService.getLocalizedText(
+        _book?.title ?? LocalizationService.getLocalizedText(
           englishText: 'Reader',
           somaliText: 'Akhrinta',
         ),
@@ -162,21 +190,61 @@ class _ReaderPageState extends State<ReaderPage> {
   }
 
   Widget _buildBookContent() {
+    if (_bookContent == null || _bookContent!.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.book_outlined,
+              size: 64,
+              color: _textColor.withOpacity(0.5),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              LocalizationService.getLocalizedText(
+                englishText: 'No content available',
+                somaliText: 'Waxba ma jiraan',
+              ),
+              style: TextStyle(
+                color: _textColor.withOpacity(0.7),
+                fontSize: _fontSize,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              LocalizationService.getLocalizedText(
+                englishText: 'This book does not have text content yet.',
+                somaliText: 'Buuggan ma laha wax qoraal ah.',
+              ),
+              style: TextStyle(
+                color: _textColor.withOpacity(0.5),
+                fontSize: _fontSize - 2,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      );
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'The Beginning',
-          style: TextStyle(
-            color: _textColor,
-            fontSize: _fontSize + 4,
-            fontWeight: FontWeight.bold,
-            height: _lineHeight,
+        if (_book?.title != null) ...[
+          Text(
+            _book!.title,
+            style: TextStyle(
+              color: _textColor,
+              fontSize: _fontSize + 4,
+              fontWeight: FontWeight.bold,
+              height: _lineHeight,
+            ),
           ),
-        ),
-        const SizedBox(height: 16),
+          const SizedBox(height: 16),
+        ],
         Text(
-          _getSampleText(),
+          _bookContent!,
           style: TextStyle(
             color: _textColor,
             fontSize: _fontSize,
@@ -489,17 +557,4 @@ class _ReaderPageState extends State<ReaderPage> {
     }
   }
 
-  String _getSampleText() {
-    return '''
-Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
-
-Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
-
-Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo.
-
-Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed quia consequuntur magni dolores eos qui ratione voluptatem sequi nesciunt. Neque porro quisquam est, qui dolorem ipsum quia dolor sit amet, consectetur, adipisci velit.
-
-At vero eos et accusamus et iusto odio dignissimos ducimus qui blanditiis praesentium voluptatum deleniti atque corrupti quos dolores et quas molestias excepturi sint occaecati cupiditate non provident, similique sunt in culpa qui officia deserunt mollitia animi, id est laborum et dolorum fuga.
-''';
-  }
 }

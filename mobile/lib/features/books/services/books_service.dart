@@ -155,8 +155,8 @@ class BooksService {
       (book.titleSomali?.toLowerCase().contains(queryLower) ?? false) ||
       (book.description?.toLowerCase().contains(queryLower) ?? false) ||
       (book.descriptionSomali?.toLowerCase().contains(queryLower) ?? false) ||
-      (book.authors?.any((author) => author.toLowerCase().contains(queryLower)) ?? false) ||
-      (book.authorsSomali?.any((author) => author.toLowerCase().contains(queryLower)) ?? false) ||
+      (book.authors?.toLowerCase().contains(queryLower) ?? false) ||
+      (book.authorsSomali?.toLowerCase().contains(queryLower) ?? false) ||
       (book.categoryNames?.any((category) => category.toLowerCase().contains(queryLower)) ?? false)
     ).toList();
   }
@@ -317,8 +317,8 @@ class BooksService {
   List<Book> getBooksByAuthor(String author) {
     final allBooks = _storageService.getBooks();
     return allBooks.where((book) => 
-      (book.authors?.any((auth) => auth.toLowerCase().contains(author.toLowerCase())) ?? false) ||
-      (book.authorsSomali?.any((auth) => auth.toLowerCase().contains(author.toLowerCase())) ?? false)
+      (book.authors?.toLowerCase().contains(author.toLowerCase()) ?? false) ||
+      (book.authorsSomali?.toLowerCase().contains(author.toLowerCase()) ?? false)
     ).toList();
   }
 

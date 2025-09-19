@@ -264,7 +264,7 @@ class _BookDetailPageState extends State<BookDetailPage> {
         ),
         const SizedBox(height: 8),
         Text(
-          book?.authors != null && book!.authors!.isNotEmpty ? book!.authors!.first : 'Unknown Author',
+          book?.authors ?? 'Unknown Author',
           style: TextStyle(
             fontSize: 16,
             color: Colors.grey[600],
@@ -493,7 +493,7 @@ class _BookDetailPageState extends State<BookDetailPage> {
         if (book?.authors != null && book!.authors!.isNotEmpty)
           _buildTextBlock(
             title: 'Author',
-            content: 'Written by ${book!.authors!.join(', ')}',
+            content: 'Written by ${book!.authors!}',
           ),
         
         if (book?.authors != null && book!.authors!.isNotEmpty)
@@ -503,7 +503,7 @@ class _BookDetailPageState extends State<BookDetailPage> {
         if (book?.authorsSomali != null && book!.authorsSomali!.isNotEmpty)
           _buildTextBlock(
             title: 'Qoraaga',
-            content: 'Qoray ${book!.authorsSomali!.join(', ')}',
+            content: 'Qoray ${book!.authorsSomali!}',
           ),
         
         // Genre/Category Section

@@ -340,7 +340,7 @@ class BookCard extends StatelessWidget {
                     // Author name
                     if (book.authors != null && book.authors!.isNotEmpty)
                       Text(
-                        book.authors!.first,
+                        book.authors!,
                         style: TextStyle(
                           color: const Color(0xFF3B82F6),
                           fontSize: _getResponsiveFontSize(cardWidth, 0.07), // Slightly smaller

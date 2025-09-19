@@ -295,8 +295,8 @@ router.get('/:id/books', asyncHandler(async (req, res) => {
     // Process books
     const processedBooks = books.map(book => ({
       ...book,
-      authors: book.authors ? JSON.parse(book.authors) : [],
-      authorsSomali: book.authorsSomali ? JSON.parse(book.authorsSomali) : [],
+      authors: book.authors || '',
+      authorsSomali: book.authors_somali || '',
       categories: [category.id],
       categoryNames: [category.name],
       isFeatured: Boolean(book.isFeatured),

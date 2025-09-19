@@ -18,13 +18,18 @@ class ReaderService {
   // Get book content
   Future<String> getBookContent(Book book) async {
     try {
-      // Try to get from local storage first
-      final localContent = _storageService.getBook(book.id)?.description;
-      if (localContent != null && localContent.isNotEmpty) {
-        return localContent;
+      // First, try to get the ebook content (text content)
+      if (book.ebookContent != null && book.ebookContent!.isNotEmpty) {
+        return book.ebookContent!;
       }
 
-      // Try to get from network
+      // Try to get from local storage
+      final localBook = _storageService.getBook(book.id);
+      if (localBook?.ebookContent != null && localBook!.ebookContent!.isNotEmpty) {
+        return localBook.ebookContent!;
+      }
+
+      // Try to get from network if ebookUrl exists (for PDF files)
       if (book.ebookUrl != null) {
         final response = await _networkService.get(book.ebookUrl!);
         if (response.statusCode == 200) {

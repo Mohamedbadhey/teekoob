@@ -22,8 +22,8 @@ class BookAdapter extends TypeAdapter<Book> {
       titleSomali: fields[2] as String?,
       description: fields[3] as String?,
       descriptionSomali: fields[4] as String?,
-      authors: (fields[5] as List?)?.cast<String>(),
-      authorsSomali: (fields[6] as List?)?.cast<String>(),
+      authors: fields[5] as String?,
+      authorsSomali: fields[6] as String?,
       categories: (fields[7] as List?)?.cast<String>(),
       categoryNames: (fields[8] as List?)?.cast<String>(),
       language: fields[9] as String,
@@ -32,23 +32,24 @@ class BookAdapter extends TypeAdapter<Book> {
       audioUrl: fields[12] as String?,
       ebookUrl: fields[13] as String?,
       sampleUrl: fields[14] as String?,
-      duration: fields[15] as int?,
-      pageCount: fields[16] as int?,
-      rating: fields[17] as double?,
-      reviewCount: fields[18] as int?,
-      isFeatured: fields[19] as bool,
-      isNewRelease: fields[20] as bool,
-      isPremium: fields[21] as bool,
-      metadata: (fields[22] as Map?)?.cast<String, dynamic>(),
-      createdAt: fields[23] as DateTime,
-      updatedAt: fields[24] as DateTime,
+      ebookContent: fields[15] as String?,
+      duration: fields[16] as int?,
+      pageCount: fields[17] as int?,
+      rating: fields[18] as double?,
+      reviewCount: fields[19] as int?,
+      isFeatured: fields[20] as bool,
+      isNewRelease: fields[21] as bool,
+      isPremium: fields[22] as bool,
+      metadata: (fields[23] as Map?)?.cast<String, dynamic>(),
+      createdAt: fields[24] as DateTime,
+      updatedAt: fields[25] as DateTime,
     );
   }
 
   @override
   void write(BinaryWriter writer, Book obj) {
     writer
-      ..writeByte(25)
+      ..writeByte(26)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -80,24 +81,26 @@ class BookAdapter extends TypeAdapter<Book> {
       ..writeByte(14)
       ..write(obj.sampleUrl)
       ..writeByte(15)
-      ..write(obj.duration)
+      ..write(obj.ebookContent)
       ..writeByte(16)
-      ..write(obj.pageCount)
+      ..write(obj.duration)
       ..writeByte(17)
-      ..write(obj.rating)
+      ..write(obj.pageCount)
       ..writeByte(18)
-      ..write(obj.reviewCount)
+      ..write(obj.rating)
       ..writeByte(19)
-      ..write(obj.isFeatured)
+      ..write(obj.reviewCount)
       ..writeByte(20)
-      ..write(obj.isNewRelease)
+      ..write(obj.isFeatured)
       ..writeByte(21)
-      ..write(obj.isPremium)
+      ..write(obj.isNewRelease)
       ..writeByte(22)
-      ..write(obj.metadata)
+      ..write(obj.isPremium)
       ..writeByte(23)
-      ..write(obj.createdAt)
+      ..write(obj.metadata)
       ..writeByte(24)
+      ..write(obj.createdAt)
+      ..writeByte(25)
       ..write(obj.updatedAt);
   }
 

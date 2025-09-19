@@ -134,8 +134,8 @@ router.get('/language/:language', asyncHandler(async (req, res) => {
     // Process books
     const processedBooks = books.map(book => ({
       ...book,
-      authors: book.authors ? JSON.parse(book.authors) : [],
-      authorsSomali: book.authorsSomali ? JSON.parse(book.authorsSomali) : [],
+      authors: book.authors || '',
+      authorsSomali: book.authors_somali || '',
       isFeatured: Boolean(book.isFeatured),
       isNewRelease: Boolean(book.isNewRelease),
       isPremium: Boolean(book.isPremium),
@@ -185,8 +185,8 @@ router.get('/', asyncHandler(async (req, res) => {
           .orWhere('title_somali', 'like', `%${search}%`)
           .orWhere('description', 'like', `%${search}%`)
           .orWhere('description_somali', 'like', `%${search}%`)
-          .orWhereRaw('JSON_SEARCH(books.authors, "one", ?)', [`%${search}%`])
-          .orWhereRaw('JSON_SEARCH(books.authors_somali, "one", ?)', [`%${search}%`]);
+          .orWhere('authors', 'like', `%${search}%`)
+          .orWhere('authors_somali', 'like', `%${search}%`);
       });
     }
 
@@ -199,7 +199,7 @@ router.get('/', asyncHandler(async (req, res) => {
 
     // Apply author filter
     if (author) {
-      query = query.whereRaw('JSON_SEARCH(books.authors, "one", ?)', [`%${author}%`]);
+      query = query.where('authors', 'like', `%${author}%`);
     }
 
     // Apply language filter
@@ -230,8 +230,8 @@ router.get('/', asyncHandler(async (req, res) => {
       titleSomali: book.title_somali,
       description: book.description,
       descriptionSomali: book.description_somali,
-      authors: book.authors ? JSON.parse(book.authors) : [],
-      authorsSomali: book.authors_somali ? JSON.parse(book.authors_somali) : [],
+      authors: book.authors || '',
+      authorsSomali: book.authors_somali || '',
       language: book.language,
       format: book.format,
       coverImageUrl: book.cover_image_url,
@@ -595,8 +595,8 @@ router.get('/:id/recommendations', asyncHandler(async (req, res) => {
     // Process recommendations
     const processedRecommendations = recommendations.map(book => ({
       ...book,
-      authors: book.authors ? JSON.parse(book.authors) : [],
-      authorsSomali: book.authorsSomali ? JSON.parse(book.authorsSomali) : [],
+      authors: book.authors || '',
+      authorsSomali: book.authors_somali || '',
       isFeatured: Boolean(book.is_featured),
       isNewRelease: Boolean(book.is_new_release),
       isPremium: Boolean(book.is_premium),
@@ -660,8 +660,8 @@ router.get('/featured/list', asyncHandler(async (req, res) => {
       titleSomali: book.title_somali,
       description: book.description,
       descriptionSomali: book.description_somali,
-      authors: book.authors ? JSON.parse(book.authors) : [],
-      authorsSomali: book.authors_somali ? JSON.parse(book.authors_somali) : [],
+      authors: book.authors || '',
+      authorsSomali: book.authors_somali || '',
       categories: book.genre ? [book.genre] : [],
       categoryNames: book.genre_somali ? [book.genre_somali] : [],
       language: book.language,
@@ -720,8 +720,8 @@ router.get('/new-releases/list', asyncHandler(async (req, res) => {
       titleSomali: book.title_somali,
       description: book.description,
       descriptionSomali: book.description_somali,
-      authors: book.authors ? JSON.parse(book.authors) : [],
-      authorsSomali: book.authors_somali ? JSON.parse(book.authors_somali) : [],
+      authors: book.authors || '',
+      authorsSomali: book.authors_somali || '',
       categories: book.genre ? [book.genre] : [],
       categoryNames: book.genre_somali ? [book.genre_somali] : [],
       language: book.language,
@@ -789,8 +789,8 @@ router.get('/random/list', asyncHandler(async (req, res) => {
       titleSomali: book.title_somali,
       description: book.description,
       descriptionSomali: book.description_somali,
-      authors: book.authors ? JSON.parse(book.authors) : [],
-      authorsSomali: book.authors_somali ? JSON.parse(book.authors_somali) : [],
+      authors: book.authors || '',
+      authorsSomali: book.authors_somali || '',
       categories: book.genre ? [book.genre] : [],
       categoryNames: book.genre_somali ? [book.genre_somali] : [],
       language: book.language,
