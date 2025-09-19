@@ -209,6 +209,13 @@ router.get('/books/:id', asyncHandler(async (req, res) => {
   } catch (error) {
     console.error('💥 Admin: Error fetching book:', error);
     console.error('💥 Admin: Error stack:', error.stack);
+    console.error('🔍 Detailed error info:', {
+      message: error.message,
+      code: error.code,
+      errno: error.errno,
+      sqlState: error.sqlState,
+      sqlMessage: error.sqlMessage
+    });
     res.status(500).json({
       error: 'Internal server error while fetching book',
       code: 'INTERNAL_ERROR',
@@ -433,9 +440,17 @@ router.put('/books/:id', upload.fields([
     
   } catch (error) {
     logger.error('Book update failed:', error);
+    console.error('🔍 Detailed error info:', {
+      message: error.message,
+      code: error.code,
+      errno: error.errno,
+      sqlState: error.sqlState,
+      sqlMessage: error.sqlMessage
+    });
     res.status(500).json({ 
       error: 'Failed to update book',
-      code: 'BOOK_UPDATE_FAILED'
+      code: 'BOOK_UPDATE_FAILED',
+      details: error.message
     });
   }
 }));
