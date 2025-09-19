@@ -127,8 +127,10 @@ router.get('/books', asyncHandler(async (req, res) => {
   
   // Process books to ensure proper data types and full URLs
   const baseUrl = process.env.RAILWAY_PUBLIC_DOMAIN 
-    ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}/api/v1`
-    : `${req.protocol}://${req.get('host')}/api/v1`;
+    ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`
+    : `${req.protocol}://${req.get('host')}`;
+    
+  console.log('🔍 Base URL for file serving:', baseUrl);
     
   const processedBooks = books.map(book => ({
     ...book,
@@ -187,8 +189,11 @@ router.get('/books/:id', asyncHandler(async (req, res) => {
     
     // Convert relative URLs to full URLs
     const baseUrl = process.env.RAILWAY_PUBLIC_DOMAIN 
-      ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}/api/v1`
-      : `${req.protocol}://${req.get('host')}/api/v1`;
+      ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`
+      : `${req.protocol}://${req.get('host')}`;
+      
+    console.log('🔍 Single book - Base URL:', baseUrl);
+    console.log('🔍 Single book - Original cover_image_url:', book.cover_image_url);
     
     const processedBook = {
       ...book,
@@ -263,8 +268,8 @@ router.post('/books', upload.fields([
       Object.keys(req.files).forEach(fieldName => {
         const file = req.files[fieldName][0];
         const baseUrl = process.env.RAILWAY_PUBLIC_DOMAIN 
-          ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}/api/v1`
-          : `${req.protocol}://${req.get('host')}/api/v1`;
+          ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`
+          : `${req.protocol}://${req.get('host')}`;
         fileUrls[fieldName] = `${baseUrl}/uploads/${file.filename}`;
       });
     }
@@ -361,8 +366,8 @@ router.put('/books/:id', upload.fields([
         
         if (fieldMap[fieldName]) {
           const baseUrl = process.env.RAILWAY_PUBLIC_DOMAIN 
-            ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}/api/v1`
-            : `${req.protocol}://${req.get('host')}/api/v1`;
+            ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`
+            : `${req.protocol}://${req.get('host')}`;
           updateData[fieldMap[fieldName]] = `${baseUrl}/uploads/${file.filename}`;
         }
       });
@@ -401,6 +406,10 @@ router.put('/books/:id', upload.fields([
     
     if (updateData.duration !== undefined) {
       updateData.duration = parseInt(updateData.duration) || null;
+    }
+    
+    if (updateData.rating !== undefined) {
+      updateData.rating = parseFloat(updateData.rating) || 0;
     }
     
     // Debug: Log what we're about to save to database
