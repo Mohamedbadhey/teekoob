@@ -32,8 +32,19 @@ router.get('/', asyncHandler(async (req, res) => {
     query = query.where('b.language', language);
   }
   
-  // Get total count for pagination
-  const countQuery = query.clone();
+  // Get total count for pagination - create a separate count query to avoid SQL mode issues
+  let countQuery = db('user_library as ul')
+    .join('books as b', 'ul.book_id', 'b.id')
+    .where('ul.user_id', userId);
+  
+  // Apply the same filters to the count query
+  if (status) {
+    countQuery = countQuery.where('ul.status', status);
+  }
+  if (language) {
+    countQuery = countQuery.where('b.language', language);
+  }
+  
   const totalCount = await countQuery.count('* as count').first();
   
   // Get books with user progress

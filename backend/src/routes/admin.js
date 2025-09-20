@@ -114,8 +114,42 @@ router.get('/books', asyncHandler(async (req, res) => {
     query = query.where('is_featured', featured === 'true');
   }
   
-  // Get total count
-  const countQuery = query.clone();
+  // Get total count - create a separate count query to avoid SQL mode issues
+  let countQuery = db('books');
+  
+  // Apply the same filters to the count query
+  if (search) {
+    countQuery = countQuery.where(function() {
+      this.where('title', 'like', `%${search}%`)
+        .orWhere('title_somali', 'like', `%${search}%`)
+        .orWhere('description', 'like', `%${search}%`)
+        .orWhere('description_somali', 'like', `%${search}%`)
+        .orWhere('authors', 'like', `%${search}%`)
+        .orWhere('authors_somali', 'like', `%${search}%`);
+    });
+  }
+  if (genre) {
+    countQuery = countQuery.where('genre', 'like', `%${genre}%`);
+  }
+  if (author) {
+    countQuery = countQuery.where('authors', 'like', `%${author}%`);
+  }
+  if (language) {
+    countQuery = countQuery.where('language', language);
+  }
+  if (format) {
+    countQuery = countQuery.where('format', format);
+  }
+  if (isFeatured !== undefined) {
+    countQuery = countQuery.where('is_featured', isFeatured);
+  }
+  if (isNewRelease !== undefined) {
+    countQuery = countQuery.where('is_new_release', isNewRelease);
+  }
+  if (isPremium !== undefined) {
+    countQuery = countQuery.where('is_premium', isPremium);
+  }
+  
   const totalCount = await countQuery.count('* as count').first();
   
   // Get books
