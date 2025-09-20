@@ -42,7 +42,6 @@ class _BookReadPageState extends State<BookReadPage> {
       print('📚 BookReadPage: Book data: $_book');
       
       final ebookContent = _book!.ebookContent;
-      print('📖 BookReadPage: ebookContent: ${ebookContent?.substring(0, 100)}...');
       print('📖 BookReadPage: ebookContent type: ${ebookContent.runtimeType}');
       print('📖 BookReadPage: ebookContent is null: ${ebookContent == null}');
       print('📖 BookReadPage: ebookContent is empty: ${ebookContent?.isEmpty}');
@@ -274,7 +273,6 @@ Note: We attempted to extract text from the PDF but were unable to. We've provid
     print('📖 _buildEbookContent: Called');
     print('📱 _buildEbookContent: kIsWeb: $kIsWeb');
     print('📚 _buildEbookContent: book.title: ${book.title}');
-    print('📄 _buildEbookContent: book.ebookContent: ${book.ebookContent?.substring(0, 100)}...');
     
     return Column(
       children: [
@@ -298,50 +296,13 @@ Note: We attempted to extract text from the PDF but were unable to. We've provid
 
   Widget _buildFallbackContent(BuildContext context, Book book) {
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.book_outlined,
-            size: 64,
-            color: Colors.grey,
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'No ebook content available for this book.',
-            style: TextStyle(
-              color: Colors.grey,
-              fontSize: 16,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'Book ID: ${book.id}',
-            style: TextStyle(
-              color: Colors.grey[500],
-              fontSize: 12,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Ebook content field: ${book.ebookContent == null ? 'null' : 'empty'}',
-            style: TextStyle(
-              color: Colors.grey[500],
-              fontSize: 12,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 24),
-          ElevatedButton(
-            onPressed: () {
-              // Try to refresh the book data
-              _loadEbookContent();
-            },
-            child: Text('Refresh Content'),
-          ),
-        ],
+      child: Text(
+        'There is no data',
+        style: TextStyle(
+          color: Colors.grey,
+          fontSize: 16,
+        ),
+        textAlign: TextAlign.center,
       ),
     );
   }
@@ -351,58 +312,18 @@ Note: We attempted to extract text from the PDF but were unable to. We've provid
       width: double.infinity,
       height: double.infinity,
       color: Colors.white,
-      child: Column(
-        children: [
-          // Content Header
-          Container(
-            padding: const EdgeInsets.all(16),
-            color: Colors.grey[50],
-            child: Row(
-              children: [
-                Icon(
-                  Icons.article,
-                  color: Colors.blue[600],
-                  size: 20,
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'Ebook Content',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      color: Colors.grey[700],
-                      fontSize: 16,
-                    ),
-                  ),
-                ),
-                Text(
-                  '${book.ebookContent!.length} characters',
-                  style: TextStyle(
-                    color: Colors.grey[500],
-                    fontSize: 12,
-                  ),
-                ),
-              ],
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        child: SingleChildScrollView(
+          child: Text(
+            book.ebookContent!,
+            style: const TextStyle(
+              fontSize: 16,
+              height: 1.6,
+              color: Colors.black87,
             ),
           ),
-          
-          // Text Content
-          Expanded(
-            child: Container(
-              padding: const EdgeInsets.all(20),
-              child: SingleChildScrollView(
-                child: SelectableText(
-                  book.ebookContent!,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    height: 1.6,
-                    color: Colors.black87,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }

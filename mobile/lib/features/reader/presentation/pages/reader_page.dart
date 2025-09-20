@@ -46,8 +46,6 @@ class _ReaderPageState extends State<ReaderPage> {
       print('📖 ReaderPage: Book found in storage: ${book != null}');
       if (book != null) {
         print('📚 ReaderPage: Book title: ${book.title}');
-        print('📝 ReaderPage: Ebook content length: ${book.ebookContent?.length ?? 0}');
-        print('📝 ReaderPage: Ebook content preview: ${book.ebookContent?.substring(0, 100) ?? 'null'}');
         setState(() {
           _book = book;
           _bookContent = book.ebookContent;
@@ -66,7 +64,6 @@ class _ReaderPageState extends State<ReaderPage> {
           final fetchedBook = await booksService.getBookById(widget.bookId);
           if (fetchedBook != null) {
             print('✅ ReaderPage: Successfully fetched book from API');
-            print('📝 ReaderPage: API ebook content length: ${fetchedBook.ebookContent?.length ?? 0}');
             setState(() {
               _book = fetchedBook;
               _bookContent = fetchedBook.ebookContent;
@@ -103,9 +100,6 @@ class _ReaderPageState extends State<ReaderPage> {
         Expanded(
           child: _buildReaderContent(),
         ),
-        
-        // Bottom Controls
-        _buildBottomControls(),
       ],
     );
   }
@@ -159,39 +153,10 @@ class _ReaderPageState extends State<ReaderPage> {
   }
 
   Widget _buildReaderContent() {
-    return GestureDetector(
-      onTapUp: (details) {
-        final screenWidth = MediaQuery.of(context).size.width;
-        final tapX = details.localPosition.dx;
-        
-        if (tapX < screenWidth / 3) {
-          _previousPage();
-        } else if (tapX > screenWidth * 2 / 3) {
-          _nextPage();
-        }
-      },
-      child: Container(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          children: [
-            // Page Header
-            _buildPageHeader(),
-            
-            const SizedBox(height: 24),
-            
-            // Book Content
-            Expanded(
-              child: SingleChildScrollView(
-                child: _buildBookContent(),
-              ),
-            ),
-            
-            const SizedBox(height: 24),
-            
-            // Page Footer
-            _buildPageFooter(),
-          ],
-        ),
+    return Container(
+      padding: const EdgeInsets.all(24),
+      child: SingleChildScrollView(
+        child: _buildBookContent(),
       ),
     );
   }
@@ -223,67 +188,24 @@ class _ReaderPageState extends State<ReaderPage> {
   Widget _buildBookContent() {
     if (_bookContent == null || _bookContent!.isEmpty) {
       return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.book_outlined,
-              size: 64,
-              color: _textColor.withOpacity(0.5),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              LocalizationService.getLocalizedText(
-                englishText: 'No content available',
-                somaliText: 'Waxba ma jiraan',
-              ),
-              style: TextStyle(
-                color: _textColor.withOpacity(0.7),
-                fontSize: _fontSize,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              LocalizationService.getLocalizedText(
-                englishText: 'This book does not have text content yet.',
-                somaliText: 'Buuggan ma laha wax qoraal ah.',
-              ),
-              style: TextStyle(
-                color: _textColor.withOpacity(0.5),
-                fontSize: _fontSize - 2,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
+        child: Text(
+          'There is no data',
+          style: TextStyle(
+            color: _textColor.withOpacity(0.7),
+            fontSize: _fontSize,
+          ),
         ),
       );
     }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (_book?.title != null) ...[
-          Text(
-            _book!.title,
-            style: TextStyle(
-              color: _textColor,
-              fontSize: _fontSize + 4,
-              fontWeight: FontWeight.bold,
-              height: _lineHeight,
-            ),
-          ),
-          const SizedBox(height: 16),
-        ],
-        Text(
-          _bookContent!,
-          style: TextStyle(
-            color: _textColor,
-            fontSize: _fontSize,
-            height: _lineHeight,
-            fontFamily: _selectedFont,
-          ),
-        ),
-      ],
+    return Text(
+      _bookContent!,
+      style: TextStyle(
+        color: _textColor,
+        fontSize: _fontSize,
+        height: _lineHeight,
+        fontFamily: _selectedFont,
+      ),
     );
   }
 

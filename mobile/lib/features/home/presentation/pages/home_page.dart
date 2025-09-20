@@ -17,11 +17,13 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   List<Book> _featuredBooks = [];
   List<Book> _newReleases = [];
+  List<Book> _recentBooks = [];
   List<Book> _randomBooks = [];
   List<Book> _filteredBooks = [];
   List<Category> _categories = [];
   bool _isLoadingFeatured = false;
   bool _isLoadingNewReleases = false;
+  bool _isLoadingRecentBooks = false;
   bool _isLoadingRandomBooks = false;
   bool _isLoadingCategories = false;
   String? _selectedLanguage;
@@ -48,6 +50,9 @@ class _HomePageState extends State<HomePage> {
     
     // Load new releases (for new releases section)
     context.read<BooksBloc>().add(const LoadNewReleases(limit: 10));
+    
+    // Load recent books (sorted by date - most recent first)
+    context.read<BooksBloc>().add(const LoadRecentBooks(limit: 6));
     
     // Load random books for recommendations
     context.read<BooksBloc>().add(const LoadRandomBooks(limit: 5));
@@ -119,6 +124,13 @@ class _HomePageState extends State<HomePage> {
           });
           print('🏠 HomePage: New releases loaded: ${state.books.length}');
           print('📚 HomePage: New release titles: ${state.books.map((b) => b.title).toList()}');
+        } else if (state is RecentBooksLoaded) {
+          setState(() {
+            _recentBooks = state.books;
+            _isLoadingRecentBooks = false;
+          });
+          print('🏠 HomePage: Recent books loaded: ${state.books.length}');
+          print('📚 HomePage: Recent book titles: ${state.books.map((b) => b.title).toList()}');
         } else if (state is RandomBooksLoaded) {
           print('🏠 HomePage: RandomBooksLoaded state received with ${state.books.length} books');
           print('📚 HomePage: Book titles: ${state.books.map((b) => b.title).toList()}');
@@ -481,7 +493,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildRecentBooksSection() {
-    print('Building Recent Books Section - _newReleases: ${_newReleases.length}, _isLoadingNewReleases: $_isLoadingNewReleases');
+    print('Building Recent Books Section - _recentBooks: ${_recentBooks.length}, _isLoadingRecentBooks: $_isLoadingRecentBooks');
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20),
       child: Column(
@@ -497,10 +509,10 @@ class _HomePageState extends State<HomePage> {
           ),
           const SizedBox(height: 16),
           
-          if (_isLoadingNewReleases)
+          if (_isLoadingRecentBooks)
             _buildLoadingGrid()
-          else if (_newReleases.isNotEmpty)
-            _buildBooksGrid(_newReleases)
+          else if (_recentBooks.isNotEmpty)
+            _buildBooksGrid(_recentBooks)
           else
             _buildEmptyState('No recent books available'),
         ],
@@ -744,10 +756,7 @@ class _HomePageState extends State<HomePage> {
                   
                   return BookCard(
                     book: book,
-                    onTap: () {
-                      // TODO: Navigate to book details
-                      print('📚 Book tapped: ${book.title}');
-                    },
+                    onTap: () => _navigateToBookDetail(book),
                     showLibraryActions: true,
                     isInLibrary: isInLibrary,
                     isFavorite: isFavorite,

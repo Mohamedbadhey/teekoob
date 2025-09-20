@@ -244,9 +244,9 @@ router.get('/language/:language', asyncHandler(async (req, res) => {
 router.get('/', asyncHandler(async (req, res) => {
   try {
     console.log('🔍 Books endpoint called with query:', req.query);
-    const { page = 1, limit = 20, search, genre, author, language, format } = req.query;
+    const { page = 1, limit = 20, search, genre, author, language, format, sortBy = 'created_at', sortOrder = 'desc' } = req.query;
     const offset = (page - 1) * limit;
-    console.log('📊 Books endpoint params:', { page, limit, offset, search, genre, author, language, format });
+    console.log('📊 Books endpoint params:', { page, limit, offset, search, genre, author, language, format, sortBy, sortOrder });
 
     let query = db('books')
       .select(
@@ -323,10 +323,19 @@ router.get('/', asyncHandler(async (req, res) => {
     const totalPages = Math.ceil(total / limit);
     console.log('📊 Total:', total, 'Total pages:', totalPages);
 
-    // Apply pagination
-    console.log('📚 Getting books with pagination...');
+    // Apply sorting and pagination
+    console.log('📚 Getting books with sorting and pagination...');
+    console.log('🔄 Sorting by:', sortBy, 'Order:', sortOrder);
+    
+    // Validate sortBy parameter to prevent SQL injection
+    const allowedSortFields = ['created_at', 'updated_at', 'title', 'rating', 'review_count', 'page_count', 'duration'];
+    const validSortBy = allowedSortFields.includes(sortBy) ? sortBy : 'created_at';
+    const validSortOrder = ['asc', 'desc'].includes(sortOrder.toLowerCase()) ? sortOrder.toLowerCase() : 'desc';
+    
+    console.log('✅ Using validated sort:', validSortBy, validSortOrder);
+    
     const books = await query
-      .orderBy('created_at', 'desc')
+      .orderBy(validSortBy, validSortOrder)
       .limit(parseInt(limit))
       .offset(offset);
     console.log('📚 Retrieved books:', books.length);
@@ -902,6 +911,76 @@ router.get('/new-releases/list', asyncHandler(async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Failed to fetch new releases'
+    });
+  }
+}));
+
+// Get recent books (sorted by creation date)
+router.get('/recent/list', asyncHandler(async (req, res) => {
+  try {
+    const { limit = 10 } = req.query;
+    console.log('🔍 Recent books endpoint called with limit:', limit);
+    
+    const recentBooks = await db('books')
+      .select(
+        'id', 'title', 'title_somali', 'description', 'description_somali',
+        'authors', 'authors_somali', 'genre', 'genre_somali', 'language', 'format', 
+        'cover_image_url', 'audio_url', 'ebook_content', 'sample_url', 'duration', 
+        'page_count', 'rating', 'review_count', 'is_featured', 'is_new_release', 
+        'is_premium', 'metadata', 'created_at', 'updated_at'
+      )
+      .orderBy('created_at', 'desc') // Most recent first
+      .limit(parseInt(limit));
+
+    console.log('📚 Database query returned', recentBooks.length, 'recent books');
+    console.log('📖 Recent book titles:', recentBooks.map(b => b.title));
+    console.log('📅 Recent book dates:', recentBooks.map(b => b.created_at));
+
+    // Process books to handle JSON fields
+    const processedBooks = recentBooks.map(book => ({
+      id: book.id,
+      title: book.title,
+      titleSomali: book.title_somali,
+      description: book.description,
+      descriptionSomali: book.description_somali,
+      authors: book.authors || '',
+      authorsSomali: book.authors_somali || '',
+      categories: book.genre ? [book.genre] : [],
+      categoryNames: book.genre_somali ? [book.genre_somali] : [],
+      language: book.language,
+      format: book.format,
+      coverImageUrl: book.cover_image_url,
+      audioUrl: book.audio_url,
+      ebookContent: book.ebook_content,
+      sampleUrl: book.sample_url,
+      duration: book.duration,
+      pageCount: book.page_count,
+      rating: book.rating,
+      reviewCount: book.review_count,
+      isFeatured: Boolean(book.is_featured),
+      isNewRelease: Boolean(book.is_new_release),
+      isPremium: Boolean(book.is_premium),
+      metadata: book.metadata,
+      createdAt: book.created_at,
+      updatedAt: book.updated_at,
+    }));
+
+    console.log('✅ Processed', processedBooks.length, 'recent books for response');
+    console.log('📱 Sending response with', processedBooks.length, 'recent books');
+    console.log('🔍 First recent book data:', processedBooks[0]);
+    console.log('📅 First recent book created at:', processedBooks[0]?.createdAt);
+
+    res.json({
+      success: true,
+      recentBooks: processedBooks,
+      total: processedBooks.length
+    });
+  } catch (error) {
+    console.error('💥 Error in recent books endpoint:', error);
+    logger.error('Error fetching recent books:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch recent books'
     });
   }
 }));

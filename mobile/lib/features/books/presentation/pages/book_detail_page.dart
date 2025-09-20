@@ -53,7 +53,12 @@ class _BookDetailPageState extends State<BookDetailPage> {
       if (fetchedBook != null) {
         print('📖 BookDetailPage: Book title: ${fetchedBook.title}');
         print('📝 BookDetailPage: Ebook content length: ${fetchedBook.ebookContent?.length ?? 0}');
-        print('📝 BookDetailPage: Ebook content preview: ${fetchedBook.ebookContent?.substring(0, 100) ?? 'null'}');
+        if (fetchedBook.ebookContent?.isNotEmpty == true) {
+          final content = fetchedBook.ebookContent!;
+          print('📝 BookDetailPage: Ebook content preview: ${content.substring(0, content.length > 100 ? 100 : content.length)}...');
+        } else {
+          print('📝 BookDetailPage: Ebook content is empty');
+        }
         
         setState(() {
           book = fetchedBook;

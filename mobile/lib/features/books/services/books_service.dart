@@ -92,7 +92,13 @@ class BooksService {
       if (response.statusCode == 200) {
         final bookData = response.data as Map<String, dynamic>;
         print('📚 BooksService: API book data keys: ${bookData.keys.toList()}');
-        print('📝 BooksService: API ebookContent: ${bookData['ebookContent']?.toString().substring(0, 100)}...');
+        final ebookContent = bookData['ebookContent']?.toString() ?? '';
+        print('📝 BooksService: API ebookContent length: ${ebookContent.length}');
+        if (ebookContent.isNotEmpty) {
+          print('📝 BooksService: API ebookContent preview: ${ebookContent.substring(0, ebookContent.length > 100 ? 100 : ebookContent.length)}...');
+        } else {
+          print('📝 BooksService: API ebookContent is empty');
+        }
         print('📅 BooksService: API book updated at: ${bookData['updatedAt']}');
         
         final book = Book.fromJson(bookData);
@@ -254,6 +260,43 @@ class BooksService {
       }
     } catch (e) {
       print('💥 getNewReleases: Error occurred: $e');
+      return [];
+    }
+  }
+
+  // Get recent books (sorted by creation date)
+  Future<List<Book>> getRecentBooks({int limit = 10}) async {
+    try {
+      print('🔍 getRecentBooks: Fetching $limit recent books from API...');
+      final response = await _networkService.get('/books/recent/list', queryParameters: {'limit': limit});
+
+      if (response.statusCode == 200) {
+        print('✅ getRecentBooks: API response status: ${response.statusCode}');
+        print('📊 getRecentBooks: Response data keys: ${response.data.keys.toList()}');
+        
+        final booksData = response.data['recentBooks'] as List;
+        print('📚 getRecentBooks: Found ${booksData.length} books in response');
+        print('📖 getRecentBooks: Book titles: ${booksData.map((b) => b['title']).toList()}');
+        print('📅 getRecentBooks: Book dates: ${booksData.map((b) => b['createdAt']).toList()}');
+        
+        final books = booksData.map((json) {
+          print('🔧 getRecentBooks: Processing book: ${json['title']} (${json['createdAt']})');
+          return Book.fromJson(json);
+        }).toList();
+        
+        print('✅ getRecentBooks: Successfully parsed ${books.length} books');
+        print('📚 getRecentBooks: Final book titles: ${books.map((b) => b.title).toList()}');
+        
+        // DO NOT cache recent books - always fetch fresh
+        print('🚫 getRecentBooks: Not caching books - always fetch fresh');
+        
+        return books;
+      } else {
+        print('❌ getRecentBooks: API returned status ${response.statusCode}');
+        return [];
+      }
+    } catch (e) {
+      print('💥 getRecentBooks: Error occurred: $e');
       return [];
     }
   }

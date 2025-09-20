@@ -80,6 +80,15 @@ class LoadRandomBooks extends BooksEvent {
   List<Object?> get props => [limit];
 }
 
+class LoadRecentBooks extends BooksEvent {
+  final int limit;
+
+  const LoadRecentBooks({this.limit = 10});
+
+  @override
+  List<Object?> get props => [limit];
+}
+
 class SearchBooks extends BooksEvent {
   final String query;
   final int limit;
@@ -321,6 +330,19 @@ class RandomBooksLoaded extends BooksState {
   List<Object?> get props => [books, total];
 }
 
+class RecentBooksLoaded extends BooksState {
+  final List<Book> books;
+  final int total;
+
+  const RecentBooksLoaded({
+    required this.books,
+    required this.total,
+  });
+
+  @override
+  List<Object?> get props => [books, total];
+}
+
 class SearchResultsLoaded extends BooksState {
   final List<Book> books;
   final String query;
@@ -438,6 +460,7 @@ class BooksBloc extends Bloc<BooksEvent, BooksState> {
     on<LoadBookById>(_onLoadBookById);
     on<LoadFeaturedBooks>(_onLoadFeaturedBooks);
     on<LoadNewReleases>(_onLoadNewReleases);
+    on<LoadRecentBooks>(_onLoadRecentBooks);
     on<LoadRandomBooks>(_onLoadRandomBooks);
     on<SearchBooks>(_onSearchBooks);
     on<LoadBooksByGenre>(_onLoadBooksByGenre);
@@ -553,6 +576,26 @@ class BooksBloc extends Bloc<BooksEvent, BooksState> {
       emit(NewReleasesLoaded(books: books, total: books.length));
     } catch (e) {
       emit(BooksError('Failed to load new releases: $e'));
+    }
+  }
+
+  Future<void> _onLoadRecentBooks(
+    LoadRecentBooks event,
+    Emitter<BooksState> emit,
+  ) async {
+    try {
+      print('🎯 _onLoadRecentBooks: Starting to load ${event.limit} recent books...');
+      emit(const BooksLoading());
+      
+      final books = await _booksService.getRecentBooks(limit: event.limit);
+      print('📚 _onLoadRecentBooks: Service returned ${books.length} books');
+      print('📖 _onLoadRecentBooks: Book titles: ${books.map((b) => b.title).toList()}');
+
+      emit(RecentBooksLoaded(books: books, total: books.length));
+      print('✅ _onLoadRecentBooks: Emitted RecentBooksLoaded state with ${books.length} books');
+    } catch (e) {
+      print('💥 _onLoadRecentBooks: Error occurred: $e');
+      emit(BooksError('Failed to load recent books: $e'));
     }
   }
 
