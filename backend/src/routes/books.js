@@ -7,6 +7,83 @@ const logger = require('../utils/logger');
 
 const router = express.Router();
 
+// Test database connection
+router.get('/test', asyncHandler(async (req, res) => {
+  try {
+    console.log('🔍 Testing database connection...');
+    const result = await db.raw('SELECT 1 as test');
+    console.log('✅ Database test result:', result);
+    res.json({
+      success: true,
+      message: 'Database connection working',
+      result: result[0]
+    });
+  } catch (error) {
+    console.error('❌ Database test failed:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Database connection failed',
+      details: error.message
+    });
+  }
+}));
+
+// Test books table
+router.get('/count', asyncHandler(async (req, res) => {
+  try {
+    console.log('🔍 Testing books table...');
+    const count = await db('books').count('* as count').first();
+    console.log('✅ Books count result:', count);
+    res.json({
+      success: true,
+      message: 'Books table accessible',
+      count: count.count
+    });
+  } catch (error) {
+    console.error('❌ Books table test failed:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Books table query failed',
+      details: error.message
+    });
+  }
+}));
+
+// Test specific book endpoint
+router.get('/test/:id', asyncHandler(async (req, res) => {
+  try {
+    const { id } = req.params;
+    console.log('🔍 Testing book endpoint for ID:', id);
+    
+    const book = await db('books').where('id', id).first();
+    
+    if (!book) {
+      return res.json({
+        success: false,
+        message: 'Book not found',
+        id: id
+      });
+    }
+    
+    res.json({
+      success: true,
+      message: 'Book found',
+      id: book.id,
+      title: book.title,
+      authors: book.authors,
+      hasEbookContent: !!book.ebook_content,
+      ebookContentLength: book.ebook_content ? book.ebook_content.length : 0
+    });
+  } catch (error) {
+    console.error('💥 Error in test book endpoint:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Test failed',
+      details: error.message
+    });
+  }
+}));
+
 // Get all unique genres/categories
 router.get('/categories', asyncHandler(async (req, res) => {
   try {
@@ -166,8 +243,10 @@ router.get('/language/:language', asyncHandler(async (req, res) => {
 // Get all books with pagination and filters
 router.get('/', asyncHandler(async (req, res) => {
   try {
+    console.log('🔍 Books endpoint called with query:', req.query);
     const { page = 1, limit = 20, search, genre, author, language, format } = req.query;
     const offset = (page - 1) * limit;
+    console.log('📊 Books endpoint params:', { page, limit, offset, search, genre, author, language, format });
 
     let query = db('books')
       .select(
@@ -190,11 +269,9 @@ router.get('/', asyncHandler(async (req, res) => {
       });
     }
 
-    // Apply genre filter (now category filter)
+    // Apply genre filter (simplified - use old genre field for now)
     if (genre) {
-      query = query.join('book_categories', 'books.id', 'book_categories.book_id')
-        .join('categories', 'book_categories.category_id', 'categories.id')
-        .where('categories.name', 'like', `%${genre}%`);
+      query = query.where('genre', 'like', `%${genre}%`);
     }
 
     // Apply author filter
@@ -213,15 +290,20 @@ router.get('/', asyncHandler(async (req, res) => {
     }
 
     // Get total count
+    console.log('📊 Getting total count...');
     const totalCount = await query.clone().count('* as count').first();
+    console.log('📊 Total count result:', totalCount);
     const total = totalCount.count;
     const totalPages = Math.ceil(total / limit);
+    console.log('📊 Total:', total, 'Total pages:', totalPages);
 
     // Apply pagination
+    console.log('📚 Getting books with pagination...');
     const books = await query
       .orderBy('created_at', 'desc')
       .limit(parseInt(limit))
       .offset(offset);
+    console.log('📚 Retrieved books:', books.length);
 
     // Process books to handle JSON fields
     const processedBooks = books.map(book => ({
@@ -261,10 +343,13 @@ router.get('/', asyncHandler(async (req, res) => {
       hasPrev: page > 1
     });
   } catch (error) {
+    console.error('💥 Error in books endpoint:', error);
+    console.error('💥 Error stack:', error.stack);
     logger.error('Error fetching books:', error);
     res.status(500).json({
       success: false,
-      error: 'Failed to fetch books'
+      error: 'Failed to fetch books',
+      details: error.message
     });
   }
 }));
@@ -273,6 +358,7 @@ router.get('/', asyncHandler(async (req, res) => {
 router.get('/:id', asyncHandler(async (req, res) => {
   try {
     const { id } = req.params;
+    console.log('🔍 Book by ID endpoint called with ID:', id);
     
     const book = await db('books')
       .where('id', id)
@@ -286,11 +372,19 @@ router.get('/:id', asyncHandler(async (req, res) => {
       .first();
 
     if (!book) {
+      console.log('❌ Book not found for ID:', id);
       return res.status(404).json({
         success: false,
         error: 'Book not found'
       });
     }
+
+    console.log('✅ Book found:', {
+      id: book.id,
+      title: book.title,
+      authors: book.authors,
+      ebookContent: book.ebook_content ? `${book.ebook_content.length} chars` : 'null'
+    });
 
     // TODO: Uncomment when categories table is created
     // // Get categories for this book
@@ -319,15 +413,23 @@ router.get('/:id', asyncHandler(async (req, res) => {
       updatedAt: book.updated_at,
     };
 
-    res.json({
-      success: true,
-      book: processedBook
+    console.log('📤 Sending processed book data:', {
+      id: processedBook.id,
+      title: processedBook.title,
+      authors: processedBook.authors,
+      ebookContent: processedBook.ebookContent ? `${processedBook.ebookContent.length} chars` : 'null'
     });
+
+    // Return the book data directly (not wrapped in success object)
+    res.json(processedBook);
   } catch (error) {
+    console.error('💥 Error in book by ID endpoint:', error);
+    console.error('💥 Error stack:', error.stack);
     logger.error('Error fetching book:', error);
     res.status(500).json({
       success: false,
-      error: 'Failed to fetch book'
+      error: 'Failed to fetch book',
+      details: error.message
     });
   }
 }));
@@ -640,6 +742,7 @@ router.get('/languages/list', asyncHandler(async (req, res) => {
 router.get('/featured/list', asyncHandler(async (req, res) => {
   try {
     const { limit = 10 } = req.query;
+    console.log('🔍 Featured books endpoint called with limit:', limit);
     
     const featuredBooks = await db('books')
       .where('is_featured', true)
@@ -668,7 +771,7 @@ router.get('/featured/list', asyncHandler(async (req, res) => {
       format: book.format,
       coverImageUrl: book.cover_image_url,
       audioUrl: book.audio_url,
-      ebookUrl: book.ebook_url,
+      ebookContent: book.ebook_content,
       sampleUrl: book.sample_url,
       duration: book.duration,
       pageCount: book.page_count,
@@ -681,6 +784,16 @@ router.get('/featured/list', asyncHandler(async (req, res) => {
       createdAt: book.created_at,
       updatedAt: book.updated_at,
     }));
+
+    console.log('📤 Sending featured books:', {
+      count: processedBooks.length,
+      books: processedBooks.map(b => ({
+        id: b.id,
+        title: b.title,
+        hasEbookContent: !!b.ebookContent,
+        ebookContentLength: b.ebookContent ? b.ebookContent.length : 0
+      }))
+    });
 
     res.json({
       success: true,
@@ -700,6 +813,7 @@ router.get('/featured/list', asyncHandler(async (req, res) => {
 router.get('/new-releases/list', asyncHandler(async (req, res) => {
   try {
     const { limit = 10 } = req.query;
+    console.log('🔍 New releases endpoint called with limit:', limit);
     
     const newReleases = await db('books')
       .where('is_new_release', true)
@@ -728,7 +842,7 @@ router.get('/new-releases/list', asyncHandler(async (req, res) => {
       format: book.format,
       coverImageUrl: book.cover_image_url,
       audioUrl: book.audio_url,
-      ebookUrl: book.ebook_url,
+      ebookContent: book.ebook_content,
       sampleUrl: book.sample_url,
       duration: book.duration,
       pageCount: book.page_count,
@@ -741,6 +855,16 @@ router.get('/new-releases/list', asyncHandler(async (req, res) => {
       createdAt: book.created_at,
       updatedAt: book.updated_at,
     }));
+
+    console.log('📤 Sending new releases:', {
+      count: processedBooks.length,
+      books: processedBooks.map(b => ({
+        id: b.id,
+        title: b.title,
+        hasEbookContent: !!b.ebookContent,
+        ebookContentLength: b.ebookContent ? b.ebookContent.length : 0
+      }))
+    });
 
     res.json({
       success: true,

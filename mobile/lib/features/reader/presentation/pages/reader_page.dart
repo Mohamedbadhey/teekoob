@@ -6,6 +6,7 @@ import 'package:teekoob/core/models/book_model.dart';
 import 'package:teekoob/features/reader/bloc/reader_bloc.dart';
 import 'package:teekoob/features/reader/services/reader_service.dart';
 import 'package:teekoob/core/services/storage_service.dart';
+import 'package:teekoob/features/books/services/books_service.dart';
 
 class ReaderPage extends StatefulWidget {
   final String bookId;
@@ -41,14 +42,44 @@ class _ReaderPageState extends State<ReaderPage> {
     try {
       final storageService = StorageService();
       final book = storageService.getBook(widget.bookId);
+      print('🔍 ReaderPage: Loading book with ID: ${widget.bookId}');
+      print('📖 ReaderPage: Book found in storage: ${book != null}');
       if (book != null) {
+        print('📚 ReaderPage: Book title: ${book.title}');
+        print('📝 ReaderPage: Ebook content length: ${book.ebookContent?.length ?? 0}');
+        print('📝 ReaderPage: Ebook content preview: ${book.ebookContent?.substring(0, 100) ?? 'null'}');
         setState(() {
           _book = book;
           _bookContent = book.ebookContent;
         });
+      } else {
+        print('❌ ReaderPage: Book not found in local storage');
+        // Try to get all books to see what's available
+        final allBooks = storageService.getBooks();
+        print('📚 ReaderPage: Total books in storage: ${allBooks.length}');
+        print('📖 ReaderPage: Available book IDs: ${allBooks.map((b) => b.id).toList()}');
+        
+        // Try to fetch the book from API as fallback
+        print('🔄 ReaderPage: Attempting to fetch book from API...');
+        try {
+          final booksService = BooksService(storageService: storageService);
+          final fetchedBook = await booksService.getBookById(widget.bookId);
+          if (fetchedBook != null) {
+            print('✅ ReaderPage: Successfully fetched book from API');
+            print('📝 ReaderPage: API ebook content length: ${fetchedBook.ebookContent?.length ?? 0}');
+            setState(() {
+              _book = fetchedBook;
+              _bookContent = fetchedBook.ebookContent;
+            });
+          } else {
+            print('❌ ReaderPage: Book not found in API either');
+          }
+        } catch (e) {
+          print('💥 ReaderPage: Error fetching book from API: $e');
+        }
       }
     } catch (e) {
-      print('Error loading book: $e');
+      print('💥 ReaderPage: Error loading book: $e');
     }
   }
 

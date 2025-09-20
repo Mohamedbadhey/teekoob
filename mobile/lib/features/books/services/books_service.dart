@@ -49,8 +49,8 @@ class BooksService {
         final booksData = response.data['books'] as List;
         final books = booksData.map((json) => Book.fromJson(json)).toList();
         
-        // Cache books locally
-        await _storageService.saveBooks(books);
+        // DO NOT cache books locally - always fetch fresh
+        print('🚫 BooksService: Not caching books - always fetch fresh');
         
         return {
           'books': books,
@@ -63,48 +63,119 @@ class BooksService {
         throw Exception('Failed to fetch books');
       }
     } catch (e) {
-      print('BooksService: Error occurred: $e');
-      // Try to get from local storage if network fails
-      final localBooks = _storageService.getBooks();
-      print('BooksService: Found ${localBooks.length} local books');
-      if (localBooks.isNotEmpty) {
-        return {
-          'books': localBooks,
-          'total': localBooks.length,
-          'page': 1,
-          'limit': localBooks.length,
-          'totalPages': 1,
-        };
-      }
-      print('BooksService: No local books found, throwing exception');
+      print('💥 BooksService: Error fetching books from API: $e');
       throw Exception('Failed to fetch books: $e');
     }
   }
 
-  // Get book by ID
-  Future<Book?> getBookById(String bookId) async {
+  // Get book by ID - ALWAYS fetch from API (no caching)
+  Future<Book?> getBookById(String bookId, {bool forceRefresh = false}) async {
     try {
-      // First try to get from local storage
-      Book? book = _storageService.getBook(bookId);
-      if (book != null) {
-        return book;
-      }
+      print('🔍 BooksService: Getting book by ID from API: $bookId');
+      print('🚫 BooksService: Caching disabled - always fetching fresh data');
+      
+      // Always fetch from API - no caching
+      return await _fetchBookFromAPI(bookId);
+    } catch (e) {
+      print('💥 BooksService: Error getting book by ID: $e');
+      return null;
+    }
+  }
 
-      // If not in local storage, fetch from server
+  // Helper method to fetch book from API (no caching)
+  Future<Book?> _fetchBookFromAPI(String bookId) async {
+    try {
       final response = await _networkService.get('/books/$bookId');
+      
+      print('📡 BooksService: Server response status: ${response.statusCode}');
       
       if (response.statusCode == 200) {
         final bookData = response.data as Map<String, dynamic>;
-        book = Book.fromJson(bookData);
+        print('📚 BooksService: API book data keys: ${bookData.keys.toList()}');
+        print('📝 BooksService: API ebookContent: ${bookData['ebookContent']?.toString().substring(0, 100)}...');
+        print('📅 BooksService: API book updated at: ${bookData['updatedAt']}');
         
-        // Save to local storage
-        await _storageService.saveBook(book);
+        final book = Book.fromJson(bookData);
+        print('📖 BooksService: API book ebook content length: ${book.ebookContent?.length ?? 0}');
+        
+        // DO NOT save to local storage - always fetch fresh
+        print('🚫 BooksService: Not saving to cache - always fetch fresh');
         
         return book;
       } else {
+        print('❌ BooksService: Server returned status ${response.statusCode}');
         return null;
       }
     } catch (e) {
+      print('💥 BooksService: Error fetching book from API: $e');
+      return null;
+    }
+  }
+
+  // Check if a book should be refreshed from the server
+  bool _shouldRefreshBook(Book book) {
+    // Always refresh if ebook content is missing
+    if (book.ebookContent == null || book.ebookContent!.isEmpty) {
+      print('🔄 BooksService: Book missing ebook content, needs refresh');
+      return true;
+    }
+    
+    // For now, only refresh if ebook content is missing
+    // We can add time-based refresh later if needed
+    print('✅ BooksService: Book has ebook content, no refresh needed');
+    return false;
+  }
+
+  // Clear cache for a specific book (useful when admin updates a book)
+  Future<void> clearBookCache(String bookId) async {
+    try {
+      print('🗑️ BooksService: Clearing cache for book: $bookId');
+      await _storageService.deleteBook(bookId);
+      print('✅ BooksService: Cache cleared for book: $bookId');
+    } catch (e) {
+      print('💥 BooksService: Error clearing cache for book $bookId: $e');
+    }
+  }
+
+  // Clear all book cache
+  Future<void> clearAllBookCache() async {
+    try {
+      print('🗑️ BooksService: Clearing all book cache');
+      await _storageService.clearBooks();
+      print('✅ BooksService: All book cache cleared');
+    } catch (e) {
+      print('💥 BooksService: Error clearing all book cache: $e');
+    }
+  }
+
+  // Initialize service - clear all cache on startup
+  Future<void> initialize() async {
+    try {
+      print('🚀 BooksService: Initializing - clearing all cache');
+      await clearAllBookCache();
+      print('✅ BooksService: Initialization complete - cache cleared');
+    } catch (e) {
+      print('💥 BooksService: Error during initialization: $e');
+    }
+  }
+
+  // Simple method to get book with fallback (for debugging)
+  Future<Book?> getBookByIdSimple(String bookId) async {
+    try {
+      print('🔍 BooksService: Simple get book by ID: $bookId');
+      
+      // Try local storage first
+      Book? book = _storageService.getBook(bookId);
+      if (book != null) {
+        print('✅ BooksService: Found book in local storage (simple)');
+        return book;
+      }
+      
+      // Try API
+      print('🔄 BooksService: Not in local storage, trying API (simple)');
+      return await _fetchBookFromAPI(bookId);
+    } catch (e) {
+      print('💥 BooksService: Error in simple get book: $e');
       return null;
     }
   }
@@ -170,17 +241,17 @@ class BooksService {
         final booksData = response.data['featuredBooks'] as List;
         final books = booksData.map((json) => Book.fromJson(json)).toList();
         
-        // Cache featured books
-        await _storageService.saveBooks(books);
+        // DO NOT cache featured books - always fetch fresh
+        print('🚫 getFeaturedBooks: Not caching books - always fetch fresh');
         
         return books;
       } else {
+        print('❌ getFeaturedBooks: API returned status ${response.statusCode}');
         return [];
       }
     } catch (e) {
-      // Fallback to local featured books
-      final allBooks = _storageService.getBooks();
-      return allBooks.where((book) => book.isFeatured).take(limit).toList();
+      print('💥 getFeaturedBooks: Error occurred: $e');
+      return [];
     }
   }
 
@@ -193,17 +264,17 @@ class BooksService {
         final booksData = response.data['newReleases'] as List;
         final books = booksData.map((json) => Book.fromJson(json)).toList();
         
-        // Cache new releases
-        await _storageService.saveBooks(books);
+        // DO NOT cache new releases - always fetch fresh
+        print('🚫 getNewReleases: Not caching books - always fetch fresh');
         
         return books;
       } else {
+        print('❌ getNewReleases: API returned status ${response.statusCode}');
         return [];
       }
     } catch (e) {
-      // Fallback to local new releases
-      final allBooks = _storageService.getBooks();
-      return allBooks.where((book) => book.isNewRelease).take(limit).toList();
+      print('💥 getNewReleases: Error occurred: $e');
+      return [];
     }
   }
 
@@ -232,8 +303,8 @@ class BooksService {
         print('✅ getRandomBooks: Successfully parsed ${books.length} books');
         print('📚 getRandomBooks: Final book titles: ${books.map((b) => b.title).toList()}');
         
-        // Cache random books
-        await _storageService.saveBooks(books);
+        // DO NOT cache random books - always fetch fresh
+        print('🚫 getRandomBooks: Not caching books - always fetch fresh');
         
         return books;
       } else {
@@ -242,12 +313,6 @@ class BooksService {
       }
     } catch (e) {
       print('💥 getRandomBooks: Error occurred: $e');
-      // Fallback to local random selection
-      final allBooks = _storageService.getBooks();
-      if (allBooks.isNotEmpty) {
-        allBooks.shuffle(); // Randomize the list
-        return allBooks.take(limit).toList();
-      }
       return [];
     }
   }

@@ -289,30 +289,60 @@ Note: We attempted to extract text from the PDF but were unable to. We've provid
         // Ebook Content
         Expanded(
           child: book.ebookContent == null || book.ebookContent!.isEmpty
-              ? const Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.book_outlined,
-                        size: 64,
-                        color: Colors.grey,
-                      ),
-                      SizedBox(height: 16),
-                      Text(
-                        'No ebook content available for this book.',
-                        style: TextStyle(
-                          color: Colors.grey,
-                          fontSize: 16,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
-                  ),
-                )
+              ? _buildFallbackContent(context, book)
               : _buildTextContentViewer(context, book),
         ),
       ],
+    );
+  }
+
+  Widget _buildFallbackContent(BuildContext context, Book book) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.book_outlined,
+            size: 64,
+            color: Colors.grey,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'No ebook content available for this book.',
+            style: TextStyle(
+              color: Colors.grey,
+              fontSize: 16,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Book ID: ${book.id}',
+            style: TextStyle(
+              color: Colors.grey[500],
+              fontSize: 12,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Ebook content field: ${book.ebookContent == null ? 'null' : 'empty'}',
+            style: TextStyle(
+              color: Colors.grey[500],
+              fontSize: 12,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 24),
+          ElevatedButton(
+            onPressed: () {
+              // Try to refresh the book data
+              _loadEbookContent();
+            },
+            child: Text('Refresh Content'),
+          ),
+        ],
+      ),
     );
   }
 
