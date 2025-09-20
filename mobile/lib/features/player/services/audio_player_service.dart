@@ -105,9 +105,14 @@ class AudioPlayerService {
   }
 
   // Helper method to build full audio URL
-  String _buildFullAudioUrl(String relativeUrl) {
-    // Remove leading slash if present
-    final cleanUrl = relativeUrl.startsWith('/') ? relativeUrl.substring(1) : relativeUrl;
+  String _buildFullAudioUrl(String url) {
+    // If URL is already a full URL, return as is
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return url;
+    }
+    
+    // If URL is relative, build full URL
+    final cleanUrl = url.startsWith('/') ? url.substring(1) : url;
     return '${AppConfig.mediaBaseUrl}/$cleanUrl';
   }
 
