@@ -60,53 +60,18 @@ class _BookDetailPageState extends State<BookDetailPage> {
           isLoading = false;
         });
       } else {
-        print('❌ BookDetailPage: Book not found in API, trying local storage...');
-        // Try to get from local storage as fallback
-        final storageService = context.read<StorageService>();
-        final localBook = storageService.getBook(widget.bookId);
-        if (localBook != null) {
-          print('✅ BookDetailPage: Found book in local storage');
-          print('📝 BookDetailPage: Local ebook content length: ${localBook.ebookContent?.length ?? 0}');
-          setState(() {
-            book = localBook;
-            isLoading = false;
-          });
-        } else {
-          print('❌ BookDetailPage: Book not found in local storage either');
-          setState(() {
-            error = 'Book not found';
-            isLoading = false;
-          });
-        }
-      }
-    } catch (e) {
-      print('💥 BookDetailPage: Error loading book: $e');
-      print('🔄 BookDetailPage: Trying local storage as fallback...');
-      // Try to get from local storage as fallback
-      try {
-        final storageService = context.read<StorageService>();
-        final localBook = storageService.getBook(widget.bookId);
-        if (localBook != null) {
-          print('✅ BookDetailPage: Found book in local storage after error');
-          setState(() {
-            book = localBook;
-            isLoading = false;
-            error = null;
-          });
-        } else {
-          print('❌ BookDetailPage: Book not found in local storage after error');
-          setState(() {
-            error = 'Failed to load book: $e';
-            isLoading = false;
-          });
-        }
-      } catch (localError) {
-        print('💥 BookDetailPage: Local storage error: $localError');
+        print('❌ BookDetailPage: Book not found in API');
         setState(() {
-          error = 'Failed to load book: $e';
+          error = 'Book not found';
           isLoading = false;
         });
       }
+    } catch (e) {
+      print('💥 BookDetailPage: Error loading book: $e');
+      setState(() {
+        error = 'Failed to load book: $e';
+        isLoading = false;
+      });
     }
   }
 
@@ -185,9 +150,6 @@ class _BookDetailPageState extends State<BookDetailPage> {
                     
                     // Action Buttons
                     _buildActionButtons(),
-                    
-                    // Refresh Button
-                    _buildRefreshButton(),
                     
                     // Rating Section
                     _buildRatingSection(),
@@ -604,27 +566,5 @@ class _BookDetailPageState extends State<BookDetailPage> {
     );
   }
 
-  Widget _buildRefreshButton() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: ElevatedButton.icon(
-        onPressed: () async {
-          print('🔄 BookDetailPage: Refresh button pressed');
-          // Clear cache and force refresh
-          final booksService = BooksService(
-            storageService: context.read<StorageService>(),
-          );
-          await booksService.clearBookCache(widget.bookId);
-          _loadBookDetails();
-        },
-        icon: Icon(Icons.refresh),
-        label: Text('Refresh Book Data'),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.blue,
-          foregroundColor: Colors.white,
-        ),
-      ),
-    );
-  }
 
 }

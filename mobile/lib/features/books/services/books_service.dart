@@ -159,26 +159,6 @@ class BooksService {
     }
   }
 
-  // Simple method to get book with fallback (for debugging)
-  Future<Book?> getBookByIdSimple(String bookId) async {
-    try {
-      print('🔍 BooksService: Simple get book by ID: $bookId');
-      
-      // Try local storage first
-      Book? book = _storageService.getBook(bookId);
-      if (book != null) {
-        print('✅ BooksService: Found book in local storage (simple)');
-        return book;
-      }
-      
-      // Try API
-      print('🔄 BooksService: Not in local storage, trying API (simple)');
-      return await _fetchBookFromAPI(bookId);
-    } catch (e) {
-      print('💥 BooksService: Error in simple get book: $e');
-      return null;
-    }
-  }
 
   // Search books
   Future<List<Book>> searchBooks(String query, {
@@ -203,8 +183,8 @@ class BooksService {
         final booksData = response.data['books'] as List;
         final books = booksData.map((json) => Book.fromJson(json)).toList();
         
-        // Cache search results
-        await _storageService.saveBooks(books);
+        // DO NOT cache search results - always fetch fresh
+        print('🚫 searchBooks: Not caching books - always fetch fresh');
         
         return books;
       } else {
@@ -326,8 +306,8 @@ class BooksService {
         final booksData = response.data['books'] as List;
         final books = booksData.map((json) => Book.fromJson(json)).toList();
         
-        // Cache popular books
-        await _storageService.saveBooks(books);
+        // DO NOT cache popular books - always fetch fresh
+        print('🚫 getPopularBooks: Not caching books - always fetch fresh');
         
         return books;
       } else {
@@ -355,8 +335,8 @@ class BooksService {
         final booksData = response.data['books'] as List;
         final books = booksData.map((json) => Book.fromJson(json)).toList();
         
-        // Cache recommended books
-        await _storageService.saveBooks(books);
+        // DO NOT cache recommended books - always fetch fresh
+        print('🚫 getRecommendedBooks: Not caching books - always fetch fresh');
         
         return books;
       } else {
@@ -402,8 +382,8 @@ class BooksService {
           final books = booksData.map((json) => Book.fromJson(json)).toList();
           print('📚 BooksService: Found ${books.length} books for language $language');
           
-          // Cache filtered books locally
-          await _storageService.saveBooks(books);
+          // DO NOT cache filtered books - always fetch fresh
+          print('🚫 filterBooksByLanguage: Not caching books - always fetch fresh');
           
           return books;
         } else {
@@ -437,8 +417,8 @@ class BooksService {
           final categoriesData = data['categories'] as List;
           final categories = categoriesData.map((json) => Category.fromJson(json)).toList();
           
-          // Cache categories locally
-          await _storageService.saveCategories(categories);
+          // DO NOT cache categories - always fetch fresh
+          print('🚫 getCategories: Not caching categories - always fetch fresh');
           
           return categories;
         } else {
@@ -522,8 +502,8 @@ class BooksService {
         final booksData = response.data['books'] as List;
         final books = booksData.map((json) => Book.fromJson(json)).toList();
         
-        // Cache related books
-        await _storageService.saveBooks(books);
+        // DO NOT cache related books - always fetch fresh
+        print('🚫 getRelatedBooks: Not caching books - always fetch fresh');
         
         return books;
       } else {
