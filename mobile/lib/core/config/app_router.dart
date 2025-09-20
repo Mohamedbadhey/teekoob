@@ -7,6 +7,7 @@ import 'package:teekoob/core/presentation/app_scaffold.dart';
 import 'package:teekoob/features/books/presentation/pages/books_page.dart';
 import 'package:teekoob/features/books/presentation/pages/book_detail_page.dart';
 import 'package:teekoob/features/books/presentation/pages/book_read_page.dart';
+import 'package:teekoob/features/books/presentation/pages/all_books_page.dart';
 import 'package:teekoob/features/library/presentation/pages/library_page.dart';
 import 'package:teekoob/features/player/presentation/pages/audio_player_page.dart';
 import 'package:teekoob/features/reader/presentation/pages/reader_page.dart';
@@ -106,6 +107,17 @@ class AppRouter {
         builder: (context, state) {
           final bookId = state.pathParameters['id']!;
           return BookDetailPage(bookId: bookId);
+        },
+      ),
+      
+      // All Books Page (Outside of AppScaffold to remove bottom navigation)
+      GoRoute(
+        path: '/all-books/:category/:title',
+        name: 'allBooks',
+        builder: (context, state) {
+          final category = state.pathParameters['category']!;
+          final title = state.pathParameters['title']!;
+          return AllBooksPage(category: category, title: title);
         },
       ),
     ],
