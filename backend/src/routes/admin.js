@@ -128,26 +128,17 @@ router.get('/books', asyncHandler(async (req, res) => {
         .orWhere('authors_somali', 'like', `%${search}%`);
     });
   }
-  if (genre) {
-    countQuery = countQuery.where('genre', 'like', `%${genre}%`);
+  if (genre && genre !== 'all') {
+    countQuery = countQuery.where('genre', genre);
   }
-  if (author) {
-    countQuery = countQuery.where('authors', 'like', `%${author}%`);
-  }
-  if (language) {
+  if (language && language !== 'all') {
     countQuery = countQuery.where('language', language);
   }
-  if (format) {
+  if (format && format !== 'all') {
     countQuery = countQuery.where('format', format);
   }
-  if (isFeatured !== undefined) {
-    countQuery = countQuery.where('is_featured', isFeatured);
-  }
-  if (isNewRelease !== undefined) {
-    countQuery = countQuery.where('is_new_release', isNewRelease);
-  }
-  if (isPremium !== undefined) {
-    countQuery = countQuery.where('is_premium', isPremium);
+  if (featured && featured !== 'all') {
+    countQuery = countQuery.where('is_featured', featured === 'true');
   }
   
   const totalCount = await countQuery.count('* as count').first();
