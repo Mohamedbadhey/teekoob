@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:teekoob/core/services/localization_service.dart';
-import 'package:teekoob/features/auth/bloc/auth_bloc.dart';
 
 class SplashPage extends StatefulWidget {
   const SplashPage({super.key});
@@ -90,11 +88,12 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
     // Start fade animation
     await _fadeController.forward();
     
-    // Wait a bit then check auth status
+    // Wait a bit then go directly to home (skip authentication for now)
     await Future.delayed(const Duration(milliseconds: 500));
     
     if (mounted) {
-      context.read<AuthBloc>().add(const CheckAuthStatus());
+      // Skip authentication check and go directly to home
+      context.go('/home');
     }
   }
 
@@ -110,17 +109,7 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.background,
-      body: BlocListener<AuthBloc, AuthState>(
-        listener: (context, state) {
-          if (state is Authenticated) {
-            // User is authenticated, navigate to home
-            context.go('/home');
-          } else if (state is Unauthenticated) {
-            // User is not authenticated, navigate to auth
-            context.go('/auth');
-          }
-        },
-        child: SafeArea(
+      body: SafeArea(
           child: Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -146,7 +135,6 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
             ),
           ),
         ),
-      ),
     );
   }
 
