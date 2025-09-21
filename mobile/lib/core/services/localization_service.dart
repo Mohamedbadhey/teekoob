@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+// import 'package:shared_preferences/shared_preferences.dart'; // Removed - no local storage
 
 class LocalizationService {
   static const String _languageCodeKey = 'language_code';
@@ -42,9 +42,11 @@ class LocalizationService {
   
   // Initialize localization service
   static Future<void> initialize() async {
-    final prefs = await SharedPreferences.getInstance();
-    final savedLanguage = prefs.getString(_languageCodeKey);
-    final savedCountry = prefs.getString(_countryCodeKey);
+    // Note: No local storage - return default language
+    // final prefs = await SharedPreferences.getInstance();
+    // Note: No local storage - return default language
+    final savedLanguage = null; // prefs.getString(_languageCodeKey);
+    final savedCountry = null; // prefs.getString(_countryCodeKey);
     
     if (savedLanguage != null) {
       _currentLocale = Locale(savedLanguage, savedCountry);
@@ -60,11 +62,13 @@ class LocalizationService {
     _currentLocale = newLocale;
     
     // Save to preferences
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_languageCodeKey, newLocale.languageCode);
-    if (newLocale.countryCode != null) {
-      await prefs.setString(_countryCodeKey, newLocale.countryCode!);
-    }
+    // Note: No local storage - return default language
+    // final prefs = await SharedPreferences.getInstance();
+    // Note: No local storage - language not saved locally
+    // await prefs.setString(_languageCodeKey, newLocale.languageCode);
+    // if (newLocale.countryCode != null) {
+    //   await prefs.setString(_countryCodeKey, newLocale.countryCode!);
+    // }
   }
   
   // Get localized text

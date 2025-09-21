@@ -1,43 +1,17 @@
-import 'package:hive/hive.dart';
-
-part 'category_model.g.dart';
-
-@HiveType(typeId: 2)
 class Category {
-  @HiveField(0)
   final String id;
-
-  @HiveField(1)
   final String name;
-
-  @HiveField(2)
   final String nameSomali;
-
-  @HiveField(3)
   final String? description;
-
-  @HiveField(4)
   final String? descriptionSomali;
 
-  @HiveField(5)
   final String color;
-
-  @HiveField(6)
   final String icon;
-
-  @HiveField(7)
   final bool isActive;
-
-  @HiveField(8)
   final int sortOrder;
-
-  @HiveField(9)
   final DateTime createdAt;
-
-  @HiveField(10)
   final DateTime updatedAt;
 
-  @HiveField(11)
   final int bookCount;
 
   Category({

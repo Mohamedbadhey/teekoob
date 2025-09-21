@@ -1,88 +1,34 @@
 import 'package:json_annotation/json_annotation.dart';
 import 'package:equatable/equatable.dart';
-import 'package:hive/hive.dart';
 
-part 'user_model.g.dart';
-
-@HiveType(typeId: 0)
-@JsonSerializable()
 class User extends Equatable {
-  @HiveField(0)
   final String id;
-  
-  @HiveField(1)
   final String email;
-  
-  @HiveField(2)
   final String username;
-  
-  @HiveField(3)
   final String? firstName;
   
-  @HiveField(4)
   final String? lastName;
-  
-  @HiveField(5)
   final String? profilePicture;
-  
-  @HiveField(6)
   final String preferredLanguage;
-  
-  @HiveField(7)
   final String? phoneNumber;
-  
-  @HiveField(8)
   final DateTime? dateOfBirth;
-  
-  @HiveField(9)
   final String? country;
-  
-  @HiveField(10)
   final String? city;
-  
-  @HiveField(11)
   final String subscriptionPlan;
-  
-  @HiveField(12)
   final DateTime? subscriptionExpiry;
-  
-  @HiveField(13)
   final bool isEmailVerified;
-  
-  @HiveField(14)
   final bool isPhoneVerified;
-  
-  @HiveField(15)
   final DateTime createdAt;
-  
-  @HiveField(16)
   final DateTime updatedAt;
-  
-  @HiveField(17)
   final DateTime? lastLoginAt;
-  
-  @HiveField(18)
   final Map<String, dynamic> preferences;
-  
-  @HiveField(19)
   final List<String> favoriteGenres;
-  
-  @HiveField(20)
   final int totalBooksRead;
   
-  @HiveField(21)
   final int totalReadingTime;
-  
-  @HiveField(22)
   final double averageRating;
-  
-  @HiveField(23)
   final List<String> readingGoals;
-  
-  @HiveField(24)
   final bool isActive;
-  
-  @HiveField(25)
   final String? bio;
 
   const User({
@@ -114,8 +60,67 @@ class User extends Equatable {
     this.bio,
   });
 
-  factory User.fromJson(Map<String, dynamic> json) => _$UserFromJson(json);
-  Map<String, dynamic> toJson() => _$UserToJson(this);
+  factory User.fromJson(Map<String, dynamic> json) {
+    return User(
+      id: json['id'] as String,
+      email: json['email'] as String,
+      username: json['username'] as String,
+      firstName: json['firstName'] as String?,
+      lastName: json['lastName'] as String?,
+      profilePicture: json['profilePicture'] as String?,
+      preferredLanguage: json['preferredLanguage'] as String? ?? 'en',
+      phoneNumber: json['phoneNumber'] as String?,
+      dateOfBirth: json['dateOfBirth'] != null ? DateTime.parse(json['dateOfBirth'] as String) : null,
+      country: json['country'] as String?,
+      city: json['city'] as String?,
+      subscriptionPlan: json['subscriptionPlan'] as String? ?? 'free',
+      subscriptionExpiry: json['subscriptionExpiry'] != null ? DateTime.parse(json['subscriptionExpiry'] as String) : null,
+      isEmailVerified: json['isEmailVerified'] as bool? ?? false,
+      isPhoneVerified: json['isPhoneVerified'] as bool? ?? false,
+      createdAt: DateTime.parse(json['createdAt'] as String),
+      updatedAt: DateTime.parse(json['updatedAt'] as String),
+      lastLoginAt: json['lastLoginAt'] != null ? DateTime.parse(json['lastLoginAt'] as String) : null,
+      preferences: Map<String, dynamic>.from(json['preferences'] as Map? ?? {}),
+      favoriteGenres: List<String>.from(json['favoriteGenres'] as List? ?? []),
+      totalBooksRead: json['totalBooksRead'] as int? ?? 0,
+      totalReadingTime: json['totalReadingTime'] as int? ?? 0,
+      averageRating: (json['averageRating'] as num?)?.toDouble() ?? 0.0,
+      readingGoals: List<String>.from(json['readingGoals'] as List? ?? []),
+      isActive: json['isActive'] as bool? ?? true,
+      bio: json['bio'] as String?,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'email': email,
+      'username': username,
+      'firstName': firstName,
+      'lastName': lastName,
+      'profilePicture': profilePicture,
+      'preferredLanguage': preferredLanguage,
+      'phoneNumber': phoneNumber,
+      'dateOfBirth': dateOfBirth?.toIso8601String(),
+      'country': country,
+      'city': city,
+      'subscriptionPlan': subscriptionPlan,
+      'subscriptionExpiry': subscriptionExpiry?.toIso8601String(),
+      'isEmailVerified': isEmailVerified,
+      'isPhoneVerified': isPhoneVerified,
+      'createdAt': createdAt.toIso8601String(),
+      'updatedAt': updatedAt.toIso8601String(),
+      'lastLoginAt': lastLoginAt?.toIso8601String(),
+      'preferences': preferences,
+      'favoriteGenres': favoriteGenres,
+      'totalBooksRead': totalBooksRead,
+      'totalReadingTime': totalReadingTime,
+      'averageRating': averageRating,
+      'readingGoals': readingGoals,
+      'isActive': isActive,
+      'bio': bio,
+    };
+  }
 
   User copyWith({
     String? id,

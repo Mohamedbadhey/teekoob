@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 import 'package:teekoob/core/config/app_router.dart';
 import 'package:teekoob/core/config/app_theme.dart';
 import 'package:teekoob/core/services/localization_service.dart';
-import 'package:teekoob/core/services/storage_service.dart';
 
 import 'package:teekoob/features/auth/services/auth_service.dart';
 import 'package:teekoob/features/auth/bloc/auth_bloc.dart';
@@ -21,68 +20,43 @@ import 'package:teekoob/features/settings/bloc/settings_bloc.dart';
 import 'package:teekoob/features/subscription/services/subscription_service.dart';
 import 'package:teekoob/features/subscription/bloc/subscription_bloc.dart';
 import 'package:teekoob/core/bloc/theme_bloc.dart';
-import 'package:hive_flutter/hive_flutter.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
-  // Initialize Hive
-  await Hive.initFlutter();
-  
   // Initialize Localization
   await LocalizationService.initialize();
   
-  // Initialize Storage Service
-  final storageService = StorageService();
-  await storageService.initialize();
-  
-  runApp(TeekoobApp(storageService: storageService));
+  runApp(TeekoobApp());
 }
 
 class TeekoobApp extends StatelessWidget {
-  final StorageService storageService;
-  
-  const TeekoobApp({super.key, required this.storageService});
+  const TeekoobApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MultiRepositoryProvider(
           providers: [
-            RepositoryProvider<StorageService>(
-              create: (context) => storageService,
-            ),
             RepositoryProvider<AuthService>(
-              create: (context) => AuthService(
-                storageService: context.read<StorageService>(),
-              ),
+              create: (context) => AuthService(),
             ),
             RepositoryProvider<BooksService>(
-              create: (context) => BooksService(
-                storageService: context.read<StorageService>(),
-              ),
+              create: (context) => BooksService(),
             ),
             RepositoryProvider<LibraryService>(
-              create: (context) => LibraryService(
-                storageService: context.read<StorageService>(),
-              ),
+              create: (context) => LibraryService(),
             ),
             RepositoryProvider<AudioPlayerService>(
               create: (context) => AudioPlayerService(),
             ),
             RepositoryProvider<ReaderService>(
-              create: (context) => ReaderService(
-                storageService: context.read<StorageService>(),
-              ),
+              create: (context) => ReaderService(),
             ),
             RepositoryProvider<SettingsService>(
-              create: (context) => SettingsService(
-                storageService: context.read<StorageService>(),
-              ),
+              create: (context) => SettingsService(),
             ),
             RepositoryProvider<SubscriptionService>(
-              create: (context) => SubscriptionService(
-                storageService: context.read<StorageService>(),
-              ),
+              create: (context) => SubscriptionService(),
             ),
           ],
                 child: MultiBlocProvider(

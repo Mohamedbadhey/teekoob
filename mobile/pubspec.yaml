@@ -21,10 +21,10 @@ dependencies:
   json_annotation: ^4.8.1
   http: ^1.1.0
   
-  # Local Storage
-  shared_preferences: ^2.2.1
-  hive: ^2.2.3
-  hive_flutter: ^1.1.0
+  # Local Storage (removed - no caching)
+  # shared_preferences: ^2.2.1
+  # hive: ^2.2.3
+  # hive_flutter: ^1.1.0
   
   # UI Components
   cupertino_icons: ^1.0.6

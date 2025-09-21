@@ -6,7 +6,7 @@ import 'package:teekoob/features/books/presentation/widgets/book_card.dart';
 import 'package:teekoob/core/models/book_model.dart';
 import 'package:teekoob/features/library/bloc/library_bloc.dart';
 import 'package:teekoob/features/library/services/library_service.dart';
-import 'package:teekoob/core/services/storage_service.dart';
+// import 'package:teekoob/core/services/storage_service.dart'; // Removed - no local storage
 
 class LibraryPage extends StatefulWidget {
   const LibraryPage({super.key});
@@ -904,7 +904,8 @@ class _LibraryPageState extends State<LibraryPage> with TickerProviderStateMixin
         
         // Get book data from storage service first
         final bookId = libraryItem['bookId'];
-        final localBook = StorageService().getBook(bookId);
+        // Note: No local storage - cannot get book from storage
+        final localBook = null;
         
         if (localBook != null) {
           // Book found in local storage, use it

@@ -2,16 +2,11 @@
 import 'package:teekoob/core/models/book_model.dart';
 import 'package:teekoob/core/models/category_model.dart';
 import 'package:teekoob/core/services/network_service.dart';
-import 'package:teekoob/core/services/storage_service.dart';
 
 class BooksService {
   final NetworkService _networkService;
-  final StorageService _storageService;
 
-  BooksService({
-    required StorageService storageService,
-  }) : _storageService = storageService,
-       _networkService = NetworkService(storageService: storageService) {
+  BooksService() : _networkService = NetworkService() {
     _networkService.initialize();
   }
 
@@ -136,7 +131,7 @@ class BooksService {
   Future<void> clearBookCache(String bookId) async {
     try {
       print('🗑️ BooksService: Clearing cache for book: $bookId');
-      await _storageService.deleteBook(bookId);
+      // Note: No local storage - book not deleted locally
       print('✅ BooksService: Cache cleared for book: $bookId');
     } catch (e) {
       print('💥 BooksService: Error clearing cache for book $bookId: $e');
@@ -147,7 +142,7 @@ class BooksService {
   Future<void> clearAllBookCache() async {
     try {
       print('🗑️ BooksService: Clearing all book cache');
-      await _storageService.clearBooks();
+      // Note: No local storage - books not cleared locally
       print('✅ BooksService: All book cache cleared');
     } catch (e) {
       print('💥 BooksService: Error clearing all book cache: $e');
@@ -205,7 +200,8 @@ class BooksService {
   // Local search in books
   List<Book> searchBooksLocally(String query) {
     final queryLower = query.toLowerCase();
-    final allBooks = _storageService.getBooks();
+    // Note: No local storage - return empty list
+    final allBooks = <Book>[];
     
     return allBooks.where((book) =>
       book.title.toLowerCase().contains(queryLower) ||
@@ -358,7 +354,8 @@ class BooksService {
       }
     } catch (e) {
       // Try to get from local storage if network fails
-      final allBooks = _storageService.getBooks();
+      // Note: No local storage - return empty list
+    final allBooks = <Book>[];
       // Sort by rating and review count for popularity
       allBooks.sort((a, b) {
         final aScore = (a.rating ?? 0) * (a.reviewCount ?? 0);
@@ -387,7 +384,8 @@ class BooksService {
       }
     } catch (e) {
       // Try to get from local storage if network fails
-      final allBooks = _storageService.getBooks();
+      // Note: No local storage - return empty list
+    final allBooks = <Book>[];
       // Return featured and new release books as recommendations
       return allBooks.where((book) => book.isFeatured || book.isNewRelease).take(limit).toList();
     }
@@ -395,7 +393,8 @@ class BooksService {
 
   // Get books by genre (now category)
   List<Book> getBooksByGenre(String genre) {
-    final allBooks = _storageService.getBooks();
+    // Note: No local storage - return empty list
+    final allBooks = <Book>[];
     return allBooks.where((book) => 
       (book.categoryNames?.any((category) => category.toLowerCase() == genre.toLowerCase()) ?? false)
     ).toList();
@@ -403,7 +402,8 @@ class BooksService {
 
   // Get books by author
   List<Book> getBooksByAuthor(String author) {
-    final allBooks = _storageService.getBooks();
+    // Note: No local storage - return empty list
+    final allBooks = <Book>[];
     return allBooks.where((book) => 
       (book.authors?.toLowerCase().contains(author.toLowerCase()) ?? false) ||
       (book.authorsSomali?.toLowerCase().contains(author.toLowerCase()) ?? false)
@@ -440,7 +440,8 @@ class BooksService {
     } catch (e) {
       print('📚 BooksService: Error filtering by language: $e');
       // Fallback to local filtering if network fails
-      final allBooks = _storageService.getBooks();
+      // Note: No local storage - return empty list
+    final allBooks = <Book>[];
       final filteredBooks = allBooks.where((book) => 
         book.language.toLowerCase() == language.toLowerCase()
       ).toList();
@@ -472,7 +473,8 @@ class BooksService {
       }
     } catch (e) {
       // Try to get from local storage if network fails
-      return _storageService.getCategories();
+      // Note: No local storage - return empty list
+      return <Category>[];
     }
   }
 
@@ -502,7 +504,8 @@ class BooksService {
     } catch (e) {
       print('🏷️ BooksService: Error filtering by category: $e');
       // Try to get from local storage if network fails
-      final localBooks = _storageService.getBooks();
+      // Note: No local storage - return empty list
+      final localBooks = <Book>[];
       final filteredBooks = localBooks.where((book) => 
         book.categories != null && 
         book.categories!.contains(categoryId)
@@ -525,7 +528,8 @@ class BooksService {
       return await getBooksByCategory(categoryId, limit: 50);
     } catch (e) {
       // Try to get from local storage if network fails
-      final localBooks = _storageService.getBooks();
+      // Note: No local storage - return empty list
+      final localBooks = <Book>[];
       if (categoryId == null) {
         return localBooks;
       }
@@ -554,7 +558,8 @@ class BooksService {
       }
     } catch (e) {
       // Try to get from local storage if network fails
-      final allBooks = _storageService.getBooks();
+      // Note: No local storage - return empty list
+    final allBooks = <Book>[];
       return allBooks.where((book) => 
         book.id != currentBook.id &&
         (book.categoryNames?.any((category) => 
@@ -566,7 +571,8 @@ class BooksService {
 
   // Get all unique genres/categories
   List<String> getGenres() {
-    final allBooks = _storageService.getBooks();
+    // Note: No local storage - return empty list
+    final allBooks = <Book>[];
     final genres = <String>{};
     
     for (final book in allBooks) {
@@ -591,7 +597,8 @@ class BooksService {
       }
     } catch (e) {
       // Fallback to local languages
-      final allBooks = _storageService.getBooks();
+      // Note: No local storage - return empty list
+    final allBooks = <Book>[];
       final languages = <String>{};
       for (final book in allBooks) {
         languages.add(book.language);
@@ -608,7 +615,8 @@ class BooksService {
       return ['ebook', 'audiobook', 'both'];
     } catch (e) {
       // Fallback to local formats
-      final allBooks = _storageService.getBooks();
+      // Note: No local storage - return empty list
+    final allBooks = <Book>[];
       final formats = <String>{};
       for (final book in allBooks) {
         formats.add(book.format);
@@ -627,10 +635,11 @@ class BooksService {
       // });
 
       // Save download info locally for now
-      await _storageService.saveDownload(bookId, {
-        'downloadedAt': DateTime.now().toIso8601String(),
-        'status': 'completed',
-      });
+      // Note: No local storage - download not saved locally
+      // await _storageService.saveDownload(bookId, {
+      //   'downloadedAt': DateTime.now().toIso8601String(),
+      //   'status': 'completed',
+      // });
       
       return true;
     } catch (e) {
@@ -640,11 +649,12 @@ class BooksService {
 
   // Get download status
   Map<String, dynamic>? getDownloadStatus(String bookId) {
-    return _storageService.getDownload(bookId);
+    // Note: No local storage - return null
+    return null;
   }
 
   // Clear local cache
   Future<void> clearCache() async {
-    await _storageService.clearCache();
+    // Note: No local storage - cache not cleared locally
   }
 }

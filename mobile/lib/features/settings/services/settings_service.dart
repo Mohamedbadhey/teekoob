@@ -1,33 +1,22 @@
-import 'package:teekoob/core/services/storage_service.dart';
 import 'package:teekoob/core/services/network_service.dart';
 
 class SettingsService {
-  final StorageService _storageService;
   final NetworkService _networkService;
 
-  SettingsService({
-    required StorageService storageService,
-  }) : _storageService = storageService,
-       _networkService = NetworkService(storageService: storageService) {
+  SettingsService() : _networkService = NetworkService() {
     _networkService.initialize();
   }
 
   // Load all settings for a user
   Future<Map<String, dynamic>> loadSettings(String userId) async {
-    try {
-      return _storageService.getSettings(userId);
-    } catch (e) {
-      // Return default settings if none exist
-      return _getDefaultSettings();
-    }
+    // Note: No local storage - return default settings
+    return _getDefaultSettings();
   }
 
   // Update language setting
   Future<void> updateLanguage(String userId, String language) async {
     try {
-      final currentSettings = _storageService.getSettings(userId);
-      currentSettings['language'] = language;
-      await _storageService.saveSettings(userId, currentSettings);
+      // Note: No local storage - settings not saved locally
 
       // Sync with server if online
       try {
@@ -47,9 +36,7 @@ class SettingsService {
   // Update theme setting
   Future<void> updateTheme(String userId, String theme) async {
     try {
-      final currentSettings = _storageService.getSettings(userId);
-      currentSettings['theme'] = theme;
-      await _storageService.saveSettings(userId, currentSettings);
+      // Note: No local storage - settings not saved locally
 
       // Sync with server if online
       try {
@@ -69,9 +56,7 @@ class SettingsService {
   // Update notification settings
   Future<void> updateNotifications(String userId, Map<String, bool> notificationSettings) async {
     try {
-      final currentSettings = _storageService.getSettings(userId);
-      currentSettings['notifications'] = notificationSettings;
-      await _storageService.saveSettings(userId, currentSettings);
+      // Note: No local storage - settings not saved locally
 
       // Sync with server if online
       try {
@@ -91,9 +76,7 @@ class SettingsService {
   // Update auto-download setting
   Future<void> updateAutoDownload(String userId, bool autoDownload) async {
     try {
-      final currentSettings = _storageService.getSettings(userId);
-      currentSettings['autoDownload'] = autoDownload;
-      await _storageService.saveSettings(userId, currentSettings);
+      // Note: No local storage - settings not saved locally
 
       // Sync with server if online
       try {
@@ -113,9 +96,7 @@ class SettingsService {
   // Update font size setting
   Future<void> updateFontSize(String userId, double fontSize) async {
     try {
-      final currentSettings = _storageService.getSettings(userId);
-      currentSettings['fontSize'] = fontSize;
-      await _storageService.saveSettings(userId, currentSettings);
+      // Note: No local storage - settings not saved locally
 
       // Sync with server if online
       try {
@@ -135,9 +116,7 @@ class SettingsService {
   // Update audio speed setting
   Future<void> updateAudioSpeed(String userId, double audioSpeed) async {
     try {
-      final currentSettings = _storageService.getSettings(userId);
-      currentSettings['audioSpeed'] = audioSpeed;
-      await _storageService.saveSettings(userId, currentSettings);
+      // Note: No local storage - settings not saved locally
 
       // Sync with server if online
       try {
@@ -157,9 +136,7 @@ class SettingsService {
   // Update offline mode setting
   Future<void> updateOfflineMode(String userId, bool offlineMode) async {
     try {
-      final currentSettings = _storageService.getSettings(userId);
-      currentSettings['offlineMode'] = offlineMode;
-      await _storageService.saveSettings(userId, currentSettings);
+      // Note: No local storage - settings not saved locally
 
       // Sync with server if online
       try {
@@ -179,9 +156,7 @@ class SettingsService {
   // Update audio quality setting
   Future<void> updateAudioQuality(String userId, String audioQuality) async {
     try {
-      final currentSettings = _storageService.getSettings(userId);
-      currentSettings['audioQuality'] = audioQuality;
-      await _storageService.saveSettings(userId, currentSettings);
+      // Note: No local storage - settings not saved locally
 
       // Sync with server if online
       try {
@@ -201,19 +176,13 @@ class SettingsService {
   // Clear cache
   Future<void> clearCache(String userId) async {
     try {
-      // Clear local cache
-      await _storageService.clearCache();
-      
-      // Update settings to reflect cache clearing
-      final currentSettings = _storageService.getSettings(userId);
-      currentSettings['lastCacheClear'] = DateTime.now().toIso8601String();
-      await _storageService.saveSettings(userId, currentSettings);
+      // Note: No local storage - cache not cleared locally
 
       // Sync with server if online
       try {
         await _networkService.put('/user/settings', data: {
           'userId': userId,
-          'lastCacheClear': currentSettings['lastCacheClear'],
+          'lastCacheClear': DateTime.now().toIso8601String(),
         });
       } catch (e) {
         // Continue offline if sync fails
@@ -227,7 +196,8 @@ class SettingsService {
   // Export settings
   Future<Map<String, dynamic>> exportSettings(String userId) async {
     try {
-      final settings = _storageService.getSettings(userId);
+      // Note: No local storage - return default settings
+      final settings = _getDefaultSettings();
       return {
         'userId': userId,
         'exportedAt': DateTime.now().toIso8601String(),
@@ -248,7 +218,7 @@ class SettingsService {
         _validateSettings(settings);
         
         // Import settings
-        await _storageService.saveSettings(userId, settings);
+        // Note: No local storage - settings not saved locally
 
         // Sync with server if online
         try {
@@ -270,7 +240,7 @@ class SettingsService {
   Future<void> resetSettings(String userId) async {
     try {
       final defaultSettings = _getDefaultSettings();
-      await _storageService.saveSettings(userId, defaultSettings);
+      // Note: No local storage - settings not saved locally
 
       // Sync with server if online
       try {
@@ -348,7 +318,8 @@ class SettingsService {
   // Get specific setting value
   T? getSetting<T>(String userId, String key, {T? defaultValue}) {
     try {
-      final settings = _storageService.getSettings(userId);
+      // Note: No local storage - return default settings
+      final settings = _getDefaultSettings();
       final value = settings[key];
       
       if (value != null && value is T) {
@@ -364,11 +335,12 @@ class SettingsService {
   // Set specific setting value
   Future<void> setSetting<T>(String userId, String key, T value) async {
     try {
-      final currentSettings = _storageService.getSettings(userId);
+      // Note: No local storage - return default settings
+      final currentSettings = _getDefaultSettings();
       currentSettings[key] = value;
       currentSettings['updatedAt'] = DateTime.now().toIso8601String();
       
-      await _storageService.saveSettings(userId, currentSettings);
+      // Note: No local storage - settings not saved locally
 
       // Sync with server if online
       try {
@@ -389,7 +361,8 @@ class SettingsService {
   // Check if a setting exists
   bool hasSetting(String userId, String key) {
     try {
-      final settings = _storageService.getSettings(userId);
+      // Note: No local storage - return default settings
+      final settings = _getDefaultSettings();
       return settings.containsKey(key);
     } catch (e) {
       return false;
@@ -399,11 +372,12 @@ class SettingsService {
   // Remove a setting
   Future<void> removeSetting(String userId, String key) async {
     try {
-      final currentSettings = _storageService.getSettings(userId);
+      // Note: No local storage - return default settings
+      final currentSettings = _getDefaultSettings();
       currentSettings.remove(key);
       currentSettings['updatedAt'] = DateTime.now().toIso8601String();
       
-      await _storageService.saveSettings(userId, currentSettings);
+      // Note: No local storage - settings not saved locally
 
       // Sync with server if online
       try {
@@ -420,7 +394,8 @@ class SettingsService {
   // Get all settings keys
   List<String> getSettingsKeys(String userId) {
     try {
-      final settings = _storageService.getSettings(userId);
+      // Note: No local storage - return default settings
+      final settings = _getDefaultSettings();
       return settings.keys.toList();
     } catch (e) {
       return [];
@@ -430,7 +405,8 @@ class SettingsService {
   // Get settings count
   int getSettingsCount(String userId) {
     try {
-      final settings = _storageService.getSettings(userId);
+      // Note: No local storage - return default settings
+      final settings = _getDefaultSettings();
       return settings.length;
     } catch (e) {
       return 0;
@@ -440,7 +416,8 @@ class SettingsService {
   // Check if settings are synced with server
   Future<bool> areSettingsSynced(String userId) async {
     try {
-      final localSettings = _storageService.getSettings(userId);
+      // Note: No local storage - return default settings
+      final localSettings = _getDefaultSettings();
       final lastUpdated = localSettings['updatedAt'];
       
       if (lastUpdated == null) return false;
@@ -468,7 +445,8 @@ class SettingsService {
   // Force sync settings with server
   Future<void> forceSyncSettings(String userId) async {
     try {
-      final localSettings = _storageService.getSettings(userId);
+      // Note: No local storage - return default settings
+      final localSettings = _getDefaultSettings();
       
       // Send all local settings to server
       await _networkService.put('/user/settings', data: {
@@ -479,7 +457,7 @@ class SettingsService {
       
       // Update local timestamp
       localSettings['updatedAt'] = DateTime.now().toIso8601String();
-      await _storageService.saveSettings(userId, localSettings);
+      // Note: No local storage - settings not saved locally
       
     } catch (e) {
       throw Exception('Failed to force sync settings: $e');

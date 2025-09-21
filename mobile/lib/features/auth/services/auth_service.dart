@@ -1,16 +1,11 @@
 
 import 'package:teekoob/core/models/user_model.dart';
-import 'package:teekoob/core/services/storage_service.dart';
 import 'package:teekoob/core/services/network_service.dart';
 
 class AuthService {
   final NetworkService _networkService;
-  final StorageService _storageService;
 
-  AuthService({
-    required StorageService storageService,
-  }) : _storageService = storageService,
-       _networkService = NetworkService(storageService: storageService) {
+  AuthService() : _networkService = NetworkService() {
     _networkService.initialize();
   }
 
@@ -32,11 +27,7 @@ class AuthService {
         // Create user object
         final user = User.fromJson(userData);
         
-        // Save user and token
-        await _storageService.saveUser(user);
-        await _storageService.saveSetting('auth_token', token);
-        // Note: Backend doesn't return refreshToken yet, using token as placeholder
-        await _storageService.saveSetting('refresh_token', token);
+        // Note: No local storage - user data not persisted
         
         return user;
       } else {
@@ -77,11 +68,7 @@ class AuthService {
         // Create user object
         final user = User.fromJson(userData);
         
-        // Save user and token
-        await _storageService.saveUser(user);
-        await _storageService.saveSetting('auth_token', token);
-        // Note: Backend doesn't return refreshToken yet, using token as placeholder
-        await _storageService.saveSetting('refresh_token', token);
+        // Note: No local storage - user data not persisted
         
         return user;
       } else {
@@ -101,47 +88,26 @@ class AuthService {
       // Continue with local logout even if server call fails
       print('Server logout failed: $e');
     } finally {
-      // Clear local data
-      await _storageService.deleteUser();
-      await _storageService.deleteSetting('auth_token');
-      await _storageService.deleteSetting('refresh_token');
+      // Note: No local storage to clear
     }
   }
 
   // Check if user is authenticated
   Future<bool> isAuthenticated() async {
-    try {
-      final token = _storageService.getSetting<String>('auth_token');
-      final user = _storageService.getUser();
-      return token != null && user != null;
-    } catch (e) {
-      return false;
-    }
+    // Note: No local storage - always return false
+    return false;
   }
 
   // Get current user
   User? getCurrentUser() {
-    return _storageService.getUser();
+    // Note: No local storage - always return null
+    return null;
   }
 
   // Refresh token
   Future<String> refreshToken() async {
-    try {
-      // For now, since backend doesn't support refresh tokens yet,
-      // we'll just return the current token
-      final currentToken = _storageService.getSetting<String>('auth_token');
-      if (currentToken == null) {
-        throw Exception('No auth token available');
-      }
-      
-      // TODO: Implement proper refresh token when backend supports it
-      // For now, just return the current token
-      return currentToken;
-    } catch (e) {
-      // If refresh fails, logout user
-      await logout();
-      throw Exception('Token refresh failed: $e');
-    }
+    // Note: No local storage - throw error
+    throw Exception('No auth token available - no local storage');
   }
 
   // Forgot password
@@ -220,10 +186,8 @@ class AuthService {
     String? bio,
   }) async {
     try {
-      final currentUser = _storageService.getUser();
-      if (currentUser == null) {
-        throw Exception('No user logged in');
-      }
+      // Note: No local storage - cannot get current user
+      throw Exception('No user logged in - no local storage');
 
       final response = await _networkService.put('/auth/profile', data: {
         'firstName': firstName,
@@ -238,21 +202,8 @@ class AuthService {
       });
 
       if (response.statusCode == 200) {
-        final updatedUser = currentUser.copyWith(
-          firstName: firstName ?? currentUser.firstName,
-          lastName: lastName ?? currentUser.lastName,
-          profilePicture: profilePicture ?? currentUser.profilePicture,
-          preferredLanguage: preferredLanguage ?? currentUser.preferredLanguage,
-          phoneNumber: phoneNumber ?? currentUser.phoneNumber,
-          dateOfBirth: dateOfBirth ?? currentUser.dateOfBirth,
-          country: country ?? currentUser.country,
-          city: city ?? currentUser.city,
-          bio: bio ?? currentUser.bio,
-          updatedAt: DateTime.now(),
-        );
-
-        await _storageService.saveUser(updatedUser);
-        return updatedUser;
+        // Note: No local storage - cannot get current user
+        throw Exception('No user logged in - no local storage');
       } else {
         throw Exception('Profile update failed');
       }
@@ -270,14 +221,7 @@ class AuthService {
 
       if (response.statusCode == 200) {
         // Update user verification status
-        final currentUser = _storageService.getUser();
-        if (currentUser != null) {
-          final updatedUser = currentUser.copyWith(
-            isEmailVerified: true,
-            updatedAt: DateTime.now(),
-          );
-          await _storageService.saveUser(updatedUser);
-        }
+        // Note: No local storage - user verification status not updated locally
       } else {
         throw Exception('Email verification failed');
       }
@@ -318,7 +262,8 @@ class AuthService {
 
   // Get auth token
   String? getAuthToken() {
-    return _storageService.getSetting<String>('auth_token');
+    // Note: No local storage - always return null
+    return null;
   }
 
   // Check if token is expired

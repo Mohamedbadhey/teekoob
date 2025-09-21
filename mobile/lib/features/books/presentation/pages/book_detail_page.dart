@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:teekoob/core/models/book_model.dart';
 import 'package:teekoob/features/books/bloc/books_bloc.dart';
 import 'package:teekoob/features/books/services/books_service.dart';
-import 'package:teekoob/core/services/storage_service.dart';
+// import 'package:teekoob/core/services/storage_service.dart'; // Removed - no local storage
 import 'package:teekoob/core/services/navigation_service.dart';
 import 'package:teekoob/features/books/presentation/pages/book_read_page.dart';
 import 'package:teekoob/features/player/presentation/pages/audio_player_page.dart';
@@ -43,9 +43,7 @@ class _BookDetailPageState extends State<BookDetailPage> {
       print('🔍 BookDetailPage: Loading book details for ID: ${widget.bookId}');
 
       // Fetch book details from the backend
-      final booksService = BooksService(
-        storageService: context.read<StorageService>(),
-      );
+      final booksService = BooksService();
       
       final fetchedBook = await booksService.getBookById(widget.bookId);
       

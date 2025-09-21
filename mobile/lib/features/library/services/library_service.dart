@@ -1,15 +1,10 @@
 import 'package:teekoob/core/models/book_model.dart';
-import 'package:teekoob/core/services/storage_service.dart';
 import 'package:teekoob/core/services/network_service.dart';
 
 class LibraryService {
-  final StorageService _storageService;
   final NetworkService _networkService;
 
-  LibraryService({
-    required StorageService storageService,
-  }) : _storageService = storageService,
-       _networkService = NetworkService(storageService: storageService) {
+  LibraryService() : _networkService = NetworkService() {
     _networkService.initialize();
   }
 
@@ -33,7 +28,7 @@ class LibraryService {
         'bookmarks': <Map<String, dynamic>>[],
       };
 
-      await _storageService.saveLibraryItem(userId, bookId, libraryItem);
+      // Note: No local storage - library item not saved locally
 
       // Sync with server if online (optional for demo)
       try {
@@ -51,7 +46,7 @@ class LibraryService {
   // Remove book from library
   Future<void> removeBookFromLibrary(String userId, String bookId) async {
     try {
-      await _storageService.deleteLibraryItem(userId, bookId);
+      // Note: No local storage - library item not deleted locally
 
       // Sync with server if online
       try {
@@ -68,11 +63,12 @@ class LibraryService {
   // Update reading progress
   Future<void> updateReadingProgress(String userId, String bookId, double progress) async {
     try {
-      final item = _storageService.getLibraryItem(userId, bookId);
+      // Note: No local storage - cannot get library item
+      final item = null;
       if (item != null) {
         item['progress'] = progress;
         item['lastReadAt'] = DateTime.now().toIso8601String();
-        await _storageService.saveLibraryItem(userId, bookId, item);
+        // Note: No local storage - library item not saved locally
 
         // Sync with server if online
         try {
@@ -94,10 +90,11 @@ class LibraryService {
   // Update book status
   Future<void> updateBookStatus(String userId, String bookId, String status) async {
     try {
-      final item = _storageService.getLibraryItem(userId, bookId);
+      // Note: No local storage - cannot get library item
+      final item = null;
       if (item != null) {
         item['status'] = status;
-        await _storageService.saveLibraryItem(userId, bookId, item);
+        // Note: No local storage - library item not saved locally
 
         // Sync with server if online
         try {
@@ -121,7 +118,8 @@ class LibraryService {
     try {
       print('❤️ LibraryService: Toggling favorite for user: $userId, book: $bookId');
       
-      var item = _storageService.getLibraryItem(userId, bookId);
+      // Note: No local storage - cannot get library item
+      var item = null;
       
       if (item != null) {
         // Book is already in library, toggle favorite status
@@ -133,18 +131,18 @@ class LibraryService {
         if (newFavoriteStatus) {
           // Adding to favorites - update the item
           item['isFavorite'] = true;
-          await _storageService.saveLibraryItem(userId, bookId, item);
+          // Note: No local storage - library item not saved locally
           print('❤️ LibraryService: Book added to favorites');
         } else {
           // Removing from favorites - check if it's a favorite-only item
           if (item['status'] == 'favorite') {
             // This is a favorite-only item, remove it completely
-            await _storageService.deleteLibraryItem(userId, bookId);
+            // Note: No local storage - library item not deleted locally
             print('❤️ LibraryService: Favorite-only book removed from library');
           } else {
             // Book is in library for other reasons (reading, completed, etc.), just remove favorite status
             item['isFavorite'] = false;
-            await _storageService.saveLibraryItem(userId, bookId, item);
+            // Note: No local storage - library item not saved locally
             print('❤️ LibraryService: Favorite status removed, book remains in library');
           }
         }
@@ -164,7 +162,7 @@ class LibraryService {
           'highlights': <Map<String, dynamic>>[],
           'bookmarks': <Map<String, dynamic>>[],
         };
-        await _storageService.saveLibraryItem(userId, bookId, item);
+        // Note: No local storage - library item not saved locally
         print('❤️ LibraryService: New library item created as favorite');
       }
 
@@ -195,7 +193,8 @@ class LibraryService {
     String? note,
   }) async {
     try {
-      final item = _storageService.getLibraryItem(userId, bookId);
+      // Note: No local storage - cannot get library item
+      final item = null;
       if (item != null) {
         final bookmark = {
           'id': DateTime.now().millisecondsSinceEpoch.toString(),
@@ -211,7 +210,7 @@ class LibraryService {
         }
         item['bookmarks'].add(bookmark);
 
-        await _storageService.saveLibraryItem(userId, bookId, item);
+        // Note: No local storage - library item not saved locally
 
         // Sync with server if online
         try {
@@ -233,10 +232,11 @@ class LibraryService {
   // Remove bookmark
   Future<void> removeBookmark(String userId, String bookId, String bookmarkId) async {
     try {
-      final item = _storageService.getLibraryItem(userId, bookId);
+      // Note: No local storage - cannot get library item
+      final item = null;
       if (item != null && item['bookmarks'] != null) {
         item['bookmarks'].removeWhere((bookmark) => bookmark['id'] == bookmarkId);
-        await _storageService.saveLibraryItem(userId, bookId, item);
+        // Note: No local storage - library item not saved locally
 
         // Sync with server if online
         try {
@@ -258,7 +258,8 @@ class LibraryService {
     String? chapter,
   }) async {
     try {
-      final item = _storageService.getLibraryItem(userId, bookId);
+      // Note: No local storage - cannot get library item
+      final item = null;
       if (item != null) {
         final note = {
           'id': DateTime.now().millisecondsSinceEpoch.toString(),
@@ -273,7 +274,7 @@ class LibraryService {
         }
         item['notes'].add(note['content']);
 
-        await _storageService.saveLibraryItem(userId, bookId, item);
+        // Note: No local storage - library item not saved locally
 
         // Sync with server if online
         try {
@@ -301,7 +302,8 @@ class LibraryService {
     String? note,
   }) async {
     try {
-      final item = _storageService.getLibraryItem(userId, bookId);
+      // Note: No local storage - cannot get library item
+      final item = null;
       if (item != null) {
         final highlight = {
           'id': DateTime.now().millisecondsSinceEpoch.toString(),
@@ -318,7 +320,7 @@ class LibraryService {
         }
         item['highlights'].add(highlight);
 
-        await _storageService.saveLibraryItem(userId, bookId, item);
+        // Note: No local storage - library item not saved locally
 
         // Sync with server if online
         try {
@@ -340,10 +342,11 @@ class LibraryService {
   // Remove highlight
   Future<void> removeHighlight(String userId, String bookId, String highlightId) async {
     try {
-      final item = _storageService.getLibraryItem(userId, bookId);
+      // Note: No local storage - cannot get library item
+      final item = null;
       if (item != null && item['highlights'] != null) {
         item['highlights'].removeWhere((highlight) => highlight['id'] == highlightId);
-        await _storageService.saveLibraryItem(userId, bookId, item);
+        // Note: No local storage - library item not saved locally
 
         // Sync with server if online
         try {
@@ -362,7 +365,8 @@ class LibraryService {
   List<Map<String, dynamic>> getUserLibrary(String userId) {
     try {
       print('📚 LibraryService: Getting library for user: $userId');
-      final library = _storageService.getLibraryItems(userId);
+      // Note: No local storage - return empty library
+      final library = <Map<String, dynamic>>[];
       print('📚 LibraryService: Retrieved ${library.length} library items');
       return library;
     } catch (e) {
@@ -375,7 +379,8 @@ class LibraryService {
   List<Map<String, dynamic>> getFavoriteBooks(String userId) {
     try {
       print('❤️ LibraryService: Getting favorite books for user: $userId');
-      final library = _storageService.getLibraryItems(userId);
+      // Note: No local storage - return empty library
+      final library = <Map<String, dynamic>>[];
       final favorites = library.where((item) => 
         item['isFavorite'] == true || item['status'] == 'favorite'
       ).toList();
@@ -391,7 +396,8 @@ class LibraryService {
   List<Map<String, dynamic>> getRecentlyReadBooks(String userId, {int limit = 10}) {
     try {
       print('📖 LibraryService: Getting recently read books for user: $userId');
-      final library = _storageService.getLibraryItems(userId);
+      // Note: No local storage - return empty library
+      final library = <Map<String, dynamic>>[];
       library.sort((a, b) {
         final aDate = DateTime.tryParse(a['lastReadAt'] ?? '') ?? DateTime(1900);
         final bDate = DateTime.tryParse(b['lastReadAt'] ?? '') ?? DateTime(1900);
@@ -409,7 +415,8 @@ class LibraryService {
   // Get books by status
   List<Map<String, dynamic>> getBooksByStatus(String userId, String status) {
     try {
-      final library = _storageService.getLibraryItems(userId);
+      // Note: No local storage - return empty library
+      final library = <Map<String, dynamic>>[];
       return library.where((item) => item['status'] == status).toList();
     } catch (e) {
       return [];
@@ -422,7 +429,8 @@ class LibraryService {
     final items = getUserLibrary(userId);
     
     return items.where((item) {
-      final book = _storageService.getBook(item['bookId']);
+      // Note: No local storage - cannot get book
+      final book = null;
       if (book == null) return false;
       
       return book.title.toLowerCase().contains(queryLower) ||
@@ -437,7 +445,8 @@ class LibraryService {
   Future<void> syncLibrary(String userId) async {
     try {
       // Get local library
-      final localLibrary = _storageService.getLibraryItems(userId);
+      // Note: No local storage - return empty library
+      final localLibrary = <Map<String, dynamic>>[];
       
       // Get server library
       final response = await _networkService.get('/library/sync/$userId');
@@ -454,7 +463,7 @@ class LibraryService {
           // Use server data if it's newer
           if (localItem == serverItem || 
               DateTime.parse(serverItem['updatedAt']).isAfter(DateTime.parse(localItem['updatedAt'] ?? '1900-01-01'))) {
-            await _storageService.saveLibraryItem(userId, serverItem['bookId'], serverItem);
+            // Note: No local storage - library item not saved locally
           }
         }
       }
@@ -467,7 +476,8 @@ class LibraryService {
   Map<String, dynamic> getReadingStats(String userId) {
     try {
       print('📊 LibraryService: Getting reading stats for user: $userId');
-      final library = _storageService.getLibraryItems(userId);
+      // Note: No local storage - return empty library
+      final library = <Map<String, dynamic>>[];
       
       int totalBooks = library.length;
       int completedBooks = library.where((item) => item['status'] == 'completed').length;
@@ -509,7 +519,8 @@ class LibraryService {
       print('📖 LibraryService: Fetching book by ID: $bookId');
       
       // Try to get from local storage first
-      final localBook = _storageService.getBook(bookId);
+      // Note: No local storage - cannot get book
+      final localBook = null;
       if (localBook != null) {
         print('📖 LibraryService: Book found in local storage');
         return localBook;
@@ -524,7 +535,7 @@ class LibraryService {
         final book = Book.fromJson(bookData);
         
         // Save to local storage for future use
-        await _storageService.saveBook(book);
+        // Note: No local storage - book not saved locally
         print('📖 LibraryService: Book fetched from database and saved locally');
         
         return book;
@@ -548,7 +559,8 @@ class LibraryService {
       
       // First, try to get from local storage
       for (final bookId in bookIds) {
-        final localBook = _storageService.getBook(bookId);
+        // Note: No local storage - cannot get book
+      final localBook = null;
         if (localBook != null) {
           books.add(localBook);
         } else {
@@ -573,7 +585,7 @@ class LibraryService {
               books.add(book);
               
               // Save to local storage
-              await _storageService.saveBook(book);
+              // Note: No local storage - book not saved locally
             }
             
             print('📚 LibraryService: Fetched ${booksData.length} books from database');

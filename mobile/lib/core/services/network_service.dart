@@ -1,15 +1,12 @@
 import 'package:dio/dio.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:teekoob/core/config/app_config.dart';
-import 'package:teekoob/core/services/storage_service.dart';
 
 class NetworkService {
   late Dio _dio;
   final Connectivity _connectivity = Connectivity();
-  final StorageService _storageService;
 
-  NetworkService({required StorageService storageService}) 
-      : _storageService = storageService;
+  NetworkService();
 
   void initialize() {
     _dio = Dio(BaseOptions(
@@ -25,11 +22,7 @@ class NetworkService {
     // Add interceptors
     _dio.interceptors.add(InterceptorsWrapper(
       onRequest: (options, handler) async {
-        // Add auth token if available
-        final token = await _getAuthToken();
-        if (token != null) {
-          options.headers['Authorization'] = 'Bearer $token';
-        }
+        // Note: Auth token handling removed - no local storage
         handler.next(options);
       },
       onResponse: (response, handler) {
@@ -57,10 +50,6 @@ class NetworkService {
   // Stream connectivity changes
   Stream<ConnectivityResult> get connectivityStream => _connectivity.onConnectivityChanged;
 
-  // Get auth token from storage
-  Future<String?> _getAuthToken() async {
-    return _storageService.getSetting<String>('auth_token');
-  }
 
   // GET request
   Future<Response> get(

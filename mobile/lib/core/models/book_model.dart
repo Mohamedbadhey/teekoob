@@ -1,88 +1,46 @@
 import 'package:json_annotation/json_annotation.dart';
 import 'package:equatable/equatable.dart';
-import 'package:hive/hive.dart';
 import 'dart:convert'; // Added for jsonDecode
 
-part 'book_model.g.dart';
-
-@HiveType(typeId: 1)
 class Book {
-  @HiveField(0)
   final String id;
-
-  @HiveField(1)
   final String title;
-
-  @HiveField(2)
   final String? titleSomali;
-
-  @HiveField(3)
   final String? description;
 
-  @HiveField(4)
   final String? descriptionSomali;
-
-  @HiveField(5)
   final String? authors;
-
-  @HiveField(6)
   final String? authorsSomali;
-
-  @HiveField(7)
   final List<String>? categories; // New: category IDs
-
-  @HiveField(8)
   final List<String>? categoryNames; // New: category names for display
-
-  @HiveField(9)
   final String language;
-
-  @HiveField(10)
   final String format;
-
-  @HiveField(11)
   final String? coverImageUrl;
-
-  @HiveField(12)
   final String? audioUrl;
 
-  @HiveField(13)
   final String? ebookUrl;
 
-  @HiveField(14)
   final String? sampleUrl;
 
-  @HiveField(15)
   final String? ebookContent; // New: actual ebook text content
 
-  @HiveField(16)
   final int? duration;
 
-  @HiveField(17)
   final int? pageCount;
 
-  @HiveField(18)
   final double? rating;
 
-  @HiveField(19)
   final int? reviewCount;
 
-  @HiveField(20)
   final bool isFeatured;
 
-  @HiveField(21)
   final bool isNewRelease;
 
-  @HiveField(22)
   final bool isPremium;
 
-  @HiveField(23)
   final Map<String, dynamic>? metadata;
-
-  @HiveField(24)
   final DateTime createdAt;
 
-  @HiveField(25)
   final DateTime updatedAt;
 
   Book({

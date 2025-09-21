@@ -1,25 +1,16 @@
-import 'package:teekoob/core/services/storage_service.dart';
 import 'package:teekoob/core/services/network_service.dart';
 
 class SubscriptionService {
-  final StorageService _storageService;
   final NetworkService _networkService;
 
-  SubscriptionService({
-    required StorageService storageService,
-  }) : _storageService = storageService,
-       _networkService = NetworkService(storageService: storageService) {
+  SubscriptionService() : _networkService = NetworkService() {
     _networkService.initialize();
   }
 
   // Get available subscription plans
   Future<List<Map<String, dynamic>>> getSubscriptionPlans() async {
     try {
-      // First try to get from local storage
-      final localPlans = _storageService.getSubscriptionPlans();
-      if (localPlans.isNotEmpty) {
-        return localPlans;
-      }
+      // Note: No local storage - always fetch from API
 
       // If not available locally, try to fetch from server
       try {
@@ -27,8 +18,7 @@ class SubscriptionService {
         if (response.statusCode == 200) {
           final plans = List<Map<String, dynamic>>.from(response.data['plans']);
           
-          // Save to local storage
-          await _storageService.saveSubscriptionPlans(plans);
+          // Note: No local storage - plans not saved locally
           
           return plans;
         }
@@ -47,7 +37,8 @@ class SubscriptionService {
   Future<Map<String, dynamic>?> getCurrentSubscription(String userId) async {
     try {
       // First try to get from local storage
-      final localSubscription = _storageService.getUserSubscription(userId);
+      // Note: No local storage - return null
+      final localSubscription = null;
       if (localSubscription != null) {
         return localSubscription;
       }
@@ -59,7 +50,7 @@ class SubscriptionService {
           final subscription = response.data['subscription'];
           
           // Save to local storage
-          await _storageService.saveUserSubscription(userId, subscription);
+          // Note: No local storage - subscription not saved locally
           
           return subscription;
         }
@@ -90,7 +81,7 @@ class SubscriptionService {
         final subscription = response.data['subscription'];
         
         // Save to local storage
-        await _storageService.saveUserSubscription(userId, subscription);
+        // Note: No local storage - subscription not saved locally
         
         return subscription;
       } else {
@@ -111,11 +102,12 @@ class SubscriptionService {
 
       if (response.statusCode == 200) {
         // Update local storage
-        final currentSubscription = _storageService.getUserSubscription(userId);
+        // Note: No local storage - return null
+        final currentSubscription = null;
         if (currentSubscription != null) {
           currentSubscription['status'] = 'cancelled';
           currentSubscription['cancelledAt'] = DateTime.now().toIso8601String();
-          await _storageService.saveUserSubscription(userId, currentSubscription);
+          // Note: No local storage - subscription not saved locally
         }
       } else {
         throw Exception('Failed to cancel subscription: ${response.statusMessage}');
@@ -135,11 +127,12 @@ class SubscriptionService {
 
       if (response.statusCode == 200) {
         // Update local storage
-        final currentSubscription = _storageService.getUserSubscription(userId);
+        // Note: No local storage - return null
+        final currentSubscription = null;
         if (currentSubscription != null) {
           currentSubscription['status'] = 'active';
           currentSubscription['reactivatedAt'] = DateTime.now().toIso8601String();
-          await _storageService.saveUserSubscription(userId, currentSubscription);
+          // Note: No local storage - subscription not saved locally
         }
       } else {
         throw Exception('Failed to reactivate subscription: ${response.statusMessage}');
@@ -160,11 +153,12 @@ class SubscriptionService {
 
       if (response.statusCode == 200) {
         // Update local storage
-        final currentSubscription = _storageService.getUserSubscription(userId);
+        // Note: No local storage - return null
+        final currentSubscription = null;
         if (currentSubscription != null) {
           currentSubscription['paymentMethodId'] = newPaymentMethodId;
           currentSubscription['updatedAt'] = DateTime.now().toIso8601String();
-          await _storageService.saveUserSubscription(userId, currentSubscription);
+          // Note: No local storage - subscription not saved locally
         }
       } else {
         throw Exception('Failed to update payment method: ${response.statusMessage}');
@@ -178,7 +172,8 @@ class SubscriptionService {
   Future<List<Map<String, dynamic>>> getPaymentMethods(String userId) async {
     try {
       // First try to get from local storage
-      final localPaymentMethods = _storageService.getUserPaymentMethods(userId);
+      // Note: No local storage - return empty list
+      final localPaymentMethods = <Map<String, dynamic>>[];
       if (localPaymentMethods.isNotEmpty) {
         return localPaymentMethods;
       }
@@ -190,7 +185,7 @@ class SubscriptionService {
           final paymentMethods = List<Map<String, dynamic>>.from(response.data['paymentMethods']);
           
           // Save to local storage
-          await _storageService.saveUserPaymentMethods(userId, paymentMethods);
+          // Note: No local storage - payment methods not saved locally
           
           return paymentMethods;
         }
@@ -213,9 +208,10 @@ class SubscriptionService {
         final newPaymentMethod = response.data['paymentMethod'];
         
         // Add to local storage
-        final currentPaymentMethods = _storageService.getUserPaymentMethods(userId);
+        // Note: No local storage - return empty list
+        final currentPaymentMethods = <Map<String, dynamic>>[];
         currentPaymentMethods.add(newPaymentMethod);
-        await _storageService.saveUserPaymentMethods(userId, currentPaymentMethods);
+        // Note: No local storage - payment methods not saved locally
         
         return newPaymentMethod;
       } else {
@@ -233,9 +229,10 @@ class SubscriptionService {
 
       if (response.statusCode == 200) {
         // Remove from local storage
-        final currentPaymentMethods = _storageService.getUserPaymentMethods(userId);
+        // Note: No local storage - return empty list
+        final currentPaymentMethods = <Map<String, dynamic>>[];
         currentPaymentMethods.removeWhere((method) => method['id'] == paymentMethodId);
-        await _storageService.saveUserPaymentMethods(userId, currentPaymentMethods);
+        // Note: No local storage - payment methods not saved locally
       } else {
         throw Exception('Failed to remove payment method: ${response.statusMessage}');
       }
@@ -248,7 +245,8 @@ class SubscriptionService {
   Future<List<Map<String, dynamic>>> getBillingHistory(String userId) async {
     try {
       // First try to get from local storage
-      final localBillingHistory = _storageService.getUserBillingHistory(userId);
+      // Note: No local storage - return empty list
+      final localBillingHistory = <Map<String, dynamic>>[];
       if (localBillingHistory.isNotEmpty) {
         return localBillingHistory;
       }
@@ -260,7 +258,7 @@ class SubscriptionService {
           final billingHistory = List<Map<String, dynamic>>.from(response.data['billingHistory']);
           
           // Save to local storage
-          await _storageService.saveUserBillingHistory(userId, billingHistory);
+          // Note: No local storage - billing history not saved locally
           
           return billingHistory;
         }
@@ -296,7 +294,8 @@ class SubscriptionService {
   Future<List<Map<String, dynamic>>> getSubscriptionFeatures(String planId) async {
     try {
       // First try to get from local storage
-      final localFeatures = _storageService.getSubscriptionFeatures(planId);
+      // Note: No local storage - return empty list
+      final localFeatures = <Map<String, dynamic>>[];
       if (localFeatures.isNotEmpty) {
         return localFeatures;
       }
@@ -308,7 +307,7 @@ class SubscriptionService {
           final features = List<Map<String, dynamic>>.from(response.data['features']);
           
           // Save to local storage
-          await _storageService.saveSubscriptionFeatures(planId, features);
+          // Note: No local storage - features not saved locally
           
           return features;
         }
@@ -374,7 +373,7 @@ class SubscriptionService {
         final newSubscription = response.data['subscription'];
         
         // Update local storage
-        await _storageService.saveUserSubscription(userId, newSubscription);
+        // Note: No local storage - subscription not saved locally
         
         return newSubscription;
       } else {
@@ -400,7 +399,7 @@ class SubscriptionService {
         final newSubscription = response.data['subscription'];
         
         // Update local storage
-        await _storageService.saveUserSubscription(userId, newSubscription);
+        // Note: No local storage - subscription not saved locally
         
         return newSubscription;
       } else {

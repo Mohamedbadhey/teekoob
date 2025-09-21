@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+// import 'package:shared_preferences/shared_preferences.dart'; // Removed - no local storage
 
 // Events
 abstract class ThemeEvent extends Equatable {
@@ -56,8 +56,10 @@ class ThemeBloc extends Bloc<ThemeEvent, ThemeState> {
 
   Future<void> _onLoadTheme(LoadTheme event, Emitter<ThemeState> emit) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final themeString = prefs.getString(_themeKey) ?? 'system';
+      // Note: No local storage - return default theme
+      // final prefs = await SharedPreferences.getInstance();
+      // Note: No local storage - return default theme
+      final themeString = 'system';
       
       ThemeMode themeMode;
       switch (themeString) {
@@ -88,8 +90,10 @@ class ThemeBloc extends Bloc<ThemeEvent, ThemeState> {
 
   Future<void> _onChangeTheme(ChangeTheme event, Emitter<ThemeState> emit) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_themeKey, event.theme);
+      // Note: No local storage - return default theme
+      // final prefs = await SharedPreferences.getInstance();
+      // Note: No local storage - theme not saved locally
+      // await prefs.setString(_themeKey, event.theme);
 
       ThemeMode themeMode;
       switch (event.theme) {

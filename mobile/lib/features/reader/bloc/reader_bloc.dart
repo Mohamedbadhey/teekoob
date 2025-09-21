@@ -583,7 +583,7 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
         event.bookId,
         content: event.content,
         page: event.page,
-        chapter: event.chapter,
+        // chapter: event.chapter, // Removed - not supported in ReaderService
       );
 
       emit(const ReaderOperationSuccess(
@@ -653,10 +653,9 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
       await _readerService.addHighlight(
         event.userId,
         event.bookId,
+        startPosition: 0, // Default position since we don't have page-based positioning
+        endPosition: event.text.length, // Use text length as end position
         text: event.text,
-        startPage: event.startPage,
-        endPage: event.endPage,
-        color: event.color,
         note: event.note,
       );
 
@@ -765,7 +764,6 @@ class ReaderBloc extends Bloc<ReaderEvent, ReaderState> {
   ) async {
     try {
       final results = await _readerService.searchInBook(
-        event.userId,
         event.bookId,
         event.query,
       );

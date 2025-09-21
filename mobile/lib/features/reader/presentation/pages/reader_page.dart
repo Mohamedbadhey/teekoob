@@ -5,7 +5,7 @@ import 'package:teekoob/core/services/localization_service.dart';
 import 'package:teekoob/core/models/book_model.dart';
 import 'package:teekoob/features/reader/bloc/reader_bloc.dart';
 import 'package:teekoob/features/reader/services/reader_service.dart';
-import 'package:teekoob/core/services/storage_service.dart';
+// import 'package:teekoob/core/services/storage_service.dart'; // Removed - no local storage
 import 'package:teekoob/features/books/services/books_service.dart';
 
 class ReaderPage extends StatefulWidget {
@@ -40,8 +40,8 @@ class _ReaderPageState extends State<ReaderPage> {
 
   void _loadBook() async {
     try {
-      final storageService = StorageService();
-      final book = storageService.getBook(widget.bookId);
+      // Note: No local storage - cannot get book from storage
+      final book = null;
       print('🔍 ReaderPage: Loading book with ID: ${widget.bookId}');
       print('📖 ReaderPage: Book found in storage: ${book != null}');
       if (book != null) {
@@ -53,14 +53,15 @@ class _ReaderPageState extends State<ReaderPage> {
       } else {
         print('❌ ReaderPage: Book not found in local storage');
         // Try to get all books to see what's available
-        final allBooks = storageService.getBooks();
+        // Note: No local storage - cannot get books from storage
+        final allBooks = <Book>[];
         print('📚 ReaderPage: Total books in storage: ${allBooks.length}');
         print('📖 ReaderPage: Available book IDs: ${allBooks.map((b) => b.id).toList()}');
         
         // Try to fetch the book from API as fallback
         print('🔄 ReaderPage: Attempting to fetch book from API...');
         try {
-          final booksService = BooksService(storageService: storageService);
+          final booksService = BooksService();
           final fetchedBook = await booksService.getBookById(widget.bookId);
           if (fetchedBook != null) {
             print('✅ ReaderPage: Successfully fetched book from API');
