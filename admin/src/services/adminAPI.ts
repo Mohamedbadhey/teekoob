@@ -577,8 +577,8 @@ export const restoreSystemBackup = async (backupId: string) => {
 // ===== CATEGORY MANAGEMENT =====
 
 export const getCategories = async () => {
-  const response = await api.get('/admin/categories')
-  return response.data
+  const response = await api.get('/categories/admin')
+  return response.data.categories || []
 }
 
 export const createCategory = async (categoryData: {
@@ -587,7 +587,7 @@ export const createCategory = async (categoryData: {
   description?: string
   description_somali?: string
 }) => {
-  const response = await api.post('/admin/categories', categoryData)
+  const response = await api.post('/categories', categoryData)
   return response.data
 }
 
@@ -597,11 +597,11 @@ export const updateCategory = async (id: string, categoryData: {
   description?: string
   description_somali?: string
 }) => {
-  const response = await api.put(`/admin/categories/${id}`, categoryData)
+  const response = await api.put(`/categories/${id}`, categoryData)
   return response.data
 }
 
 export const deleteCategory = async (id: string) => {
-  const response = await api.delete(`/admin/categories/${id}`)
+  const response = await api.delete(`/categories/${id}`)
   return response.data
 }

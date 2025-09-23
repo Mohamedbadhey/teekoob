@@ -77,12 +77,12 @@ class _SearchBarState extends State<SearchBar> {
             margin: const EdgeInsets.all(8),
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: const Color(0xFFF56C23).withOpacity(0.1),
+              color: const Color(0xFF0466c8).withOpacity(0.1),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(
               Icons.search,
-              color: const Color(0xFFF56C23),
+              color: const Color(0xFF0466c8),
               size: 20,
             ),
           ),

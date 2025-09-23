@@ -130,15 +130,26 @@ const UserReportsPage: React.FC = () => {
               Generated on {new Date(reportData.generatedAt).toLocaleString()}
             </Typography>
             
-            <pre style={{ 
-              backgroundColor: theme.palette.grey[100], 
-              padding: theme.spacing(2), 
-              borderRadius: theme.shape.borderRadius,
-              overflow: 'auto',
-              fontSize: '0.875rem'
-            }}>
-              {JSON.stringify(reportData.data, null, 2)}
-            </pre>
+            <Grid container spacing={3}>
+              <Grid item xs={12}>
+                <Paper sx={{ p: 2, backgroundColor: 'grey.50' }}>
+                  <Typography variant="h6" gutterBottom>
+                    Report Summary
+                  </Typography>
+                  <Box component="pre" sx={{ 
+                    backgroundColor: 'white', 
+                    p: 2, 
+                    borderRadius: 1,
+                    overflow: 'auto',
+                    fontSize: '0.875rem',
+                    border: '1px solid',
+                    borderColor: 'divider'
+                  }}>
+                    {JSON.stringify(reportData.data, null, 2)}
+                  </Box>
+                </Paper>
+              </Grid>
+            </Grid>
           </Box>
         )}
       </Paper>

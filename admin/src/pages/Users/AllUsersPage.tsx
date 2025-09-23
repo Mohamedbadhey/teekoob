@@ -24,7 +24,14 @@ import {
   DialogContent,
   DialogActions,
   useTheme,
-  useMediaQuery
+  useMediaQuery,
+  Avatar,
+  Menu,
+  ListItemIcon,
+  ListItemText,
+  Divider,
+  Badge,
+  LinearProgress
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -40,11 +47,20 @@ import {
   AdminPanelSettings as AdminIcon,
   Verified as VerifiedIcon,
   Block as BlockIcon,
-  Timeline as TimelineIcon
+  Timeline as TimelineIcon,
+  Email as EmailIcon,
+  Phone as PhoneIcon,
+  LocationOn as LocationIcon,
+  Security as SecurityIcon,
+  TrendingUp as TrendingUpIcon,
+  Warning as WarningIcon,
+  CheckCircle as CheckCircleIcon,
+  Cancel as CancelIcon,
+  Save as SaveIcon
 } from '@mui/icons-material';
-import { DataGrid, GridColDef, GridToolbar } from '@mui/x-data-grid';
+import { DataGrid, GridColDef, GridToolbar, GridActionsCellItem } from '@mui/x-data-grid';
 import { format } from 'date-fns';
-import { getUsers, getUserStats, updateUserStatus, bulkUpdateUsers, exportUsers } from '../../services/adminAPI';
+import { getUsers, getUserStats, updateUserStatus, bulkUpdateUsers, exportUsers, deleteUser } from '../../services/adminAPI';
 
 interface User {
   id: string;
@@ -84,6 +100,11 @@ const AllUsersPage: React.FC = () => {
   const [bulkActionDialog, setBulkActionDialog] = useState(false);
   const [bulkAction, setBulkAction] = useState('');
   const [bulkValue, setBulkValue] = useState('');
+  const [deleteDialog, setDeleteDialog] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<User | null>(null);
+  const [actionMenuAnchor, setActionMenuAnchor] = useState<null | HTMLElement>(null);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [isActionLoading, setIsActionLoading] = useState(false);
 
   // Query parameters
   const queryParams = {
@@ -110,99 +131,87 @@ const AllUsersPage: React.FC = () => {
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
-  // Columns definition
+  // Enhanced columns definition
   const baseColumns: GridColDef[] = [
     {
       field: 'avatar',
-      headerName: 'Avatar',
-      width: 80,
+      headerName: 'User',
+      width: 120,
       sortable: false,
       renderCell: (params) => (
-        <Box
-          sx={{
-            width: 40,
-            height: 40,
-            borderRadius: '50%',
-            backgroundColor: theme.palette.primary.main,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: 'white',
-            fontWeight: 'bold',
-            fontSize: '1rem'
-          }}
-        >
-          {params.row.firstName?.charAt(0) || 'U'}
+        <Box display="flex" alignItems="center" gap={1}>
+          <Badge
+            overlap="circular"
+            anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+            badgeContent={
+              params.row.isActive ? (
+                <CheckCircleIcon sx={{ color: 'success.main', fontSize: 16 }} />
+              ) : (
+                <BlockIcon sx={{ color: 'error.main', fontSize: 16 }} />
+              )
+            }
+          >
+            <Avatar
+              src={params.row.avatarUrl}
+              sx={{ width: 40, height: 40 }}
+            >
+              {params.row.firstName?.charAt(0) || 'U'}
+            </Avatar>
+          </Badge>
+          <Box>
+            <Typography variant="body2" fontWeight="bold" noWrap>
+              {params.row.firstName} {params.row.lastName}
+            </Typography>
+            <Typography variant="caption" color="text.secondary" noWrap>
+              {params.row.email}
+            </Typography>
+          </Box>
         </Box>
       ),
     },
     {
-      field: 'name',
-      headerName: 'Name',
-      width: 200,
-      valueGetter: (params) => `${params.row.firstName} ${params.row.lastName}`,
+      field: 'subscriptionPlan',
+      headerName: 'Subscription',
+      width: 140,
       renderCell: (params) => (
-        <Box>
-          <Typography variant="body2" fontWeight="bold">
-            {params.row.firstName} {params.row.lastName}
-          </Typography>
-          {params.row.displayName && (
-            <Typography variant="caption" color="text.secondary">
-              @{params.row.displayName}
-            </Typography>
+        <Box display="flex" flexDirection="column" gap={0.5}>
+          <Chip
+            label={params.value}
+            size="small"
+            color={
+              params.value === 'lifetime' ? 'success' :
+              params.value === 'premium' ? 'primary' : 'default'
+            }
+            variant="outlined"
+            sx={{ fontSize: '0.75rem' }}
+          />
+          {params.row.subscriptionStatus && (
+            <Chip
+              label={params.row.subscriptionStatus}
+              size="small"
+              color={params.row.subscriptionStatus === 'active' ? 'success' : 'warning'}
+              variant="filled"
+              sx={{ fontSize: '0.7rem', height: 16 }}
+            />
           )}
         </Box>
       ),
     },
     {
-      field: 'email',
-      headerName: 'Email',
-      width: 250,
-      renderCell: (params) => (
-        <Typography variant="body2" noWrap>
-          {params.value}
-        </Typography>
-      ),
-    },
-    {
-      field: 'subscriptionPlan',
-      headerName: 'Plan',
+      field: 'isVerified',
+      headerName: 'Verification',
       width: 120,
       renderCell: (params) => (
-        <Chip
-          label={params.value}
-          size="small"
-          color={
-            params.value === 'lifetime' ? 'success' :
-            params.value === 'premium' ? 'primary' : 'default'
-          }
-          variant="outlined"
-        />
-      ),
-    },
-    {
-      field: 'isVerified',
-      headerName: 'Verified',
-      width: 100,
-      renderCell: (params) => (
-        <Chip
-          icon={params.value ? <VerifiedIcon /> : <BlockIcon />}
-          label={params.value ? 'Yes' : 'No'}
-          size="small"
-          color={params.value ? 'success' : 'default'}
-        />
-      ),
-    },
-    {
-      field: 'isActive',
-      headerName: 'Status',
-      width: 100,
-      renderCell: (params) => (
-        <Chip
-          label={params.value ? 'Active' : 'Inactive'}
-          size="small"
-          color={params.value ? 'success' : 'error'}
-        />
+        <Box display="flex" alignItems="center" gap={1}>
+          {params.value ? (
+            <VerifiedIcon color="success" fontSize="small" />
+          ) : (
+            <WarningIcon color="warning" fontSize="small" />
+          )}
+          <Typography variant="caption" color={params.value ? 'success.main' : 'warning.main'}>
+            {params.value ? 'Verified' : 'Pending'}
+          </Typography>
+        </Box>
       ),
     },
     {
@@ -215,59 +224,100 @@ const AllUsersPage: React.FC = () => {
           label={params.value ? 'Admin' : 'User'}
           size="small"
           color={params.value ? 'warning' : 'default'}
+          variant={params.value ? 'filled' : 'outlined'}
         />
       ),
     },
     {
       field: 'lastLoginAt',
-      headerName: 'Last Login',
-      width: 150,
-      valueGetter: (params) => {
-        if (!params.value) return 'Never';
-        try {
-          return format(new Date(params.value), 'MMM dd, yyyy');
-        } catch {
-          return 'Invalid Date';
+      headerName: 'Last Activity',
+      width: 160,
+      renderCell: (params) => {
+        if (!params.value) {
+          return (
+            <Box display="flex" alignItems="center" gap={1}>
+              <BlockIcon color="disabled" fontSize="small" />
+              <Typography variant="caption" color="text.secondary">
+                Never
+              </Typography>
+            </Box>
+          );
         }
+        
+        const lastLogin = new Date(params.value);
+        const now = new Date();
+        const diffInHours = Math.floor((now.getTime() - lastLogin.getTime()) / (1000 * 60 * 60));
+        
+        let statusColor = 'success';
+        let statusText = 'Active';
+        
+        if (diffInHours > 24 * 7) {
+          statusColor = 'error';
+          statusText = 'Inactive';
+        } else if (diffInHours > 24) {
+          statusColor = 'warning';
+          statusText = 'Recent';
+        }
+        
+        return (
+          <Box>
+            <Typography variant="body2" fontWeight="medium">
+              {format(lastLogin, 'MMM dd, yyyy')}
+            </Typography>
+            <Typography variant="caption" color={`${statusColor}.main`}>
+              {statusText} • {diffInHours < 24 ? `${diffInHours}h ago` : `${Math.floor(diffInHours / 24)}d ago`}
+            </Typography>
+          </Box>
+        );
       },
     },
     {
       field: 'createdAt',
-      headerName: 'Joined',
-      width: 150,
-      valueGetter: (params) => {
-        try {
-          return format(new Date(params.value), 'MMM dd, yyyy');
-        } catch {
-          return 'Invalid Date';
-        }
+      headerName: 'Member Since',
+      width: 140,
+      renderCell: (params) => {
+        const created = new Date(params.value);
+        const now = new Date();
+        const diffInDays = Math.floor((now.getTime() - created.getTime()) / (1000 * 60 * 60 * 24));
+        
+        return (
+          <Box>
+            <Typography variant="body2" fontWeight="medium">
+              {format(created, 'MMM dd, yyyy')}
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              {diffInDays < 30 ? `${diffInDays}d ago` : `${Math.floor(diffInDays / 30)}mo ago`}
+            </Typography>
+          </Box>
+        );
       },
     },
     {
       field: 'actions',
       headerName: 'Actions',
+      type: 'actions',
       width: 120,
-      sortable: false,
-      renderCell: (params) => (
-        <Box display="flex" gap={0.5}>
-          <Tooltip title="View Details">
-            <IconButton
-              size="small"
-              onClick={() => navigate(`/admin/users/${params.row.id}`)}
-            >
-              <ViewIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
-          <Tooltip title="Edit User">
-            <IconButton
-              size="small"
-              onClick={() => navigate(`/admin/users/${params.row.id}/edit`)}
-            >
-              <EditIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
-        </Box>
-      ),
+      getActions: (params) => [
+        <GridActionsCellItem
+          icon={<ViewIcon />}
+          label="View Details"
+          onClick={() => navigate(`/admin/users/${params.row.id}`)}
+        />,
+        <GridActionsCellItem
+          icon={<EditIcon />}
+          label="Edit User"
+          onClick={() => navigate(`/admin/users/${params.row.id}/edit`)}
+        />,
+        <GridActionsCellItem
+          icon={<DeleteIcon />}
+          label="Delete User"
+          onClick={() => {
+            setUserToDelete(params.row);
+            setDeleteDialog(true);
+          }}
+          showInMenu
+        />,
+      ],
     },
   ];
 
@@ -285,6 +335,7 @@ const AllUsersPage: React.FC = () => {
   const handleBulkAction = async () => {
     if (!selectedUsers.length || !bulkAction) return;
 
+    setIsActionLoading(true);
     try {
       await bulkUpdateUsers({
         userIds: selectedUsers,
@@ -294,10 +345,31 @@ const AllUsersPage: React.FC = () => {
 
       // Refresh data
       queryClient.invalidateQueries({ queryKey: ['users'] });
+      queryClient.invalidateQueries({ queryKey: ['user-stats'] });
       setSelectedUsers([]);
       setBulkActionDialog(false);
     } catch (error) {
       console.error('Bulk action failed:', error);
+    } finally {
+      setIsActionLoading(false);
+    }
+  };
+
+  // Handle user deletion
+  const handleDeleteUser = async () => {
+    if (!userToDelete) return;
+
+    setIsActionLoading(true);
+    try {
+      await deleteUser(userToDelete.id);
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      queryClient.invalidateQueries({ queryKey: ['user-stats'] });
+      setDeleteDialog(false);
+      setUserToDelete(null);
+    } catch (error) {
+      console.error('Delete user failed:', error);
+    } finally {
+      setIsActionLoading(false);
     }
   };
 
@@ -351,56 +423,128 @@ const AllUsersPage: React.FC = () => {
         </Box>
       </Box>
 
-      {/* Statistics Cards */}
+      {/* Enhanced Statistics Cards */}
       <Grid container spacing={3} mb={3}>
         <Grid item xs={6} sm={6} md={3}>
-          <Card>
+          <Card sx={{ 
+            background: `linear-gradient(135deg, ${theme.palette.primary.main}15, ${theme.palette.primary.main}25)`,
+            border: `1px solid ${theme.palette.primary.main}20`
+          }}>
             <CardContent sx={{ textAlign: 'center', py: 2 }}>
-              <PeopleIcon sx={{ fontSize: 40, color: 'primary.main', mb: 1 }} />
+              <Box
+                sx={{
+                  backgroundColor: theme.palette.primary.main,
+                  borderRadius: '50%',
+                  p: 1.5,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  mb: 2
+                }}
+              >
+                <PeopleIcon sx={{ color: 'white', fontSize: 28 }} />
+              </Box>
               <Typography variant="h4" fontWeight="bold" color="primary">
                 {userStats?.totalUsers || 0}
               </Typography>
-              <Typography variant="body2" color="text.secondary">
+              <Typography variant="body2" color="text.secondary" mb={1}>
                 Total Users
+              </Typography>
+              <Typography variant="caption" color="success.main">
+                +{userStats?.newUsersThisMonth || 0} this month
               </Typography>
             </CardContent>
           </Card>
         </Grid>
         <Grid item xs={6} sm={6} md={3}>
-          <Card>
+          <Card sx={{ 
+            background: `linear-gradient(135deg, ${theme.palette.success.main}15, ${theme.palette.success.main}25)`,
+            border: `1px solid ${theme.palette.success.main}20`
+          }}>
             <CardContent sx={{ textAlign: 'center', py: 2 }}>
-              <VerifiedIcon sx={{ fontSize: 40, color: 'success.main', mb: 1 }} />
+              <Box
+                sx={{
+                  backgroundColor: theme.palette.success.main,
+                  borderRadius: '50%',
+                  p: 1.5,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  mb: 2
+                }}
+              >
+                <CheckCircleIcon sx={{ color: 'white', fontSize: 28 }} />
+              </Box>
               <Typography variant="h4" fontWeight="bold" color="success.main">
                 {userStats?.activeUsers || 0}
               </Typography>
-              <Typography variant="body2" color="text.secondary">
+              <Typography variant="body2" color="text.secondary" mb={1}>
                 Active Users
+              </Typography>
+              <Typography variant="caption" color="success.main">
+                {userStats?.totalUsers ? Math.round((userStats.activeUsers / userStats.totalUsers) * 100) : 0}% of total
               </Typography>
             </CardContent>
           </Card>
         </Grid>
         <Grid item xs={6} sm={6} md={3}>
-          <Card>
+          <Card sx={{ 
+            background: `linear-gradient(135deg, ${theme.palette.warning.main}15, ${theme.palette.warning.main}25)`,
+            border: `1px solid ${theme.palette.warning.main}20`
+          }}>
             <CardContent sx={{ textAlign: 'center', py: 2 }}>
-              <AdminIcon sx={{ fontSize: 40, color: 'warning.main', mb: 1 }} />
+              <Box
+                sx={{
+                  backgroundColor: theme.palette.warning.main,
+                  borderRadius: '50%',
+                  p: 1.5,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  mb: 2
+                }}
+              >
+                <AdminIcon sx={{ color: 'white', fontSize: 28 }} />
+              </Box>
               <Typography variant="h4" fontWeight="bold" color="warning.main">
                 {userStats?.adminUsers || 0}
               </Typography>
-              <Typography variant="body2" color="text.secondary">
+              <Typography variant="body2" color="text.secondary" mb={1}>
                 Admin Users
+              </Typography>
+              <Typography variant="caption" color="warning.main">
+                {userStats?.verifiedUsers || 0} verified
               </Typography>
             </CardContent>
           </Card>
         </Grid>
         <Grid item xs={6} sm={6} md={3}>
-          <Card>
+          <Card sx={{ 
+            background: `linear-gradient(135deg, ${theme.palette.info.main}15, ${theme.palette.info.main}25)`,
+            border: `1px solid ${theme.palette.info.main}20`
+          }}>
             <CardContent sx={{ textAlign: 'center', py: 2 }}>
-              <TimelineIcon sx={{ fontSize: 40, color: 'info.main', mb: 1 }} />
+              <Box
+                sx={{
+                  backgroundColor: theme.palette.info.main,
+                  borderRadius: '50%',
+                  p: 1.5,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  mb: 2
+                }}
+              >
+                <TrendingUpIcon sx={{ color: 'white', fontSize: 28 }} />
+              </Box>
               <Typography variant="h4" fontWeight="bold" color="info.main">
-                {userStats?.newUsers || 0}
+                {userStats?.newUsersThisWeek || 0}
               </Typography>
-              <Typography variant="body2" color="text.secondary">
-                New Users
+              <Typography variant="body2" color="text.secondary" mb={1}>
+                New This Week
+              </Typography>
+              <Typography variant="caption" color="info.main">
+                {userStats?.recentLogins || 0} recent logins
               </Typography>
             </CardContent>
           </Card>
@@ -577,10 +721,13 @@ const AllUsersPage: React.FC = () => {
       </Paper>
 
       {/* Bulk Action Dialog */}
-      <Dialog open={bulkActionDialog} onClose={() => setBulkActionDialog(false)}>
+      <Dialog open={bulkActionDialog} onClose={() => setBulkActionDialog(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Bulk Update Users</DialogTitle>
         <DialogContent>
           <Box display="flex" flexDirection="column" gap={2} mt={1}>
+            <Alert severity="info" sx={{ mb: 2 }}>
+              This action will be applied to {selectedUsers.length} selected user(s).
+            </Alert>
             <FormControl fullWidth>
               <InputLabel>Action</InputLabel>
               <Select
@@ -615,9 +762,65 @@ const AllUsersPage: React.FC = () => {
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setBulkActionDialog(false)}>Cancel</Button>
-          <Button onClick={handleBulkAction} variant="contained">
-            Apply
+          <Button onClick={() => setBulkActionDialog(false)} disabled={isLoading}>
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleBulkAction} 
+            variant="contained"
+            disabled={isActionLoading || !bulkAction}
+            startIcon={isActionLoading ? <CircularProgress size={16} /> : <SaveIcon />}
+          >
+            {isActionLoading ? 'Applying...' : 'Apply Changes'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Delete User Dialog */}
+      <Dialog open={deleteDialog} onClose={() => setDeleteDialog(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>
+          <Box display="flex" alignItems="center" gap={1}>
+            <WarningIcon color="error" />
+            Delete User
+          </Box>
+        </DialogTitle>
+        <DialogContent>
+          <Alert severity="warning" sx={{ mb: 2 }}>
+            This action cannot be undone. All user data, including their library and preferences, will be permanently deleted.
+          </Alert>
+          {userToDelete && (
+            <Box>
+              <Typography variant="body1" gutterBottom>
+                Are you sure you want to delete this user?
+              </Typography>
+              <Box display="flex" alignItems="center" gap={2} mt={2} p={2} sx={{ backgroundColor: 'grey.50', borderRadius: 1 }}>
+                <Avatar src={userToDelete.avatarUrl}>
+                  {userToDelete.firstName?.charAt(0) || 'U'}
+                </Avatar>
+                <Box>
+                  <Typography variant="body1" fontWeight="bold">
+                    {userToDelete.firstName} {userToDelete.lastName}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {userToDelete.email}
+                  </Typography>
+                </Box>
+              </Box>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteDialog(false)} disabled={isLoading}>
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleDeleteUser} 
+            variant="contained"
+            color="error"
+            disabled={isActionLoading}
+            startIcon={isActionLoading ? <CircularProgress size={16} /> : <DeleteIcon />}
+          >
+            {isActionLoading ? 'Deleting...' : 'Delete User'}
           </Button>
         </DialogActions>
       </Dialog>

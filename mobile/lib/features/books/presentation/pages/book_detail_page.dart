@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:teekoob/core/models/book_model.dart';
+import 'package:teekoob/core/config/app_config.dart';
 import 'package:teekoob/features/books/bloc/books_bloc.dart';
 import 'package:teekoob/features/books/services/books_service.dart';
 // import 'package:teekoob/core/services/storage_service.dart'; // Removed - no local storage
@@ -78,6 +80,13 @@ class _BookDetailPageState extends State<BookDetailPage> {
     }
   }
 
+  String _buildFullImageUrl(String relativeUrl) {
+    if (relativeUrl.startsWith('http')) {
+      return relativeUrl;
+    }
+    return '${AppConfig.mediaBaseUrl}$relativeUrl';
+  }
+
   @override
   Widget build(BuildContext context) {
     if (isLoading) {
@@ -145,6 +154,11 @@ class _BookDetailPageState extends State<BookDetailPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // Book Cover Image
+                    _buildBookCoverImage(),
+                    
+                    const SizedBox(height: 24),
+                    
                     // Title and Author
                     _buildTitleSection(),
                     
@@ -172,92 +186,112 @@ class _BookDetailPageState extends State<BookDetailPage> {
 
   Widget _buildHeader(BuildContext context) {
     return Container(
-      color: const Color(0xFFF56C23), // Orange - same as home page top bar
-      child: Column(
-        children: [
-          // Status Bar (simulated)
-          Container(
-            height: 24,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  '11:40',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.white, // White text on orange background
-                  ),
-                ),
-                Row(
-                  children: [
-                    Icon(Icons.wifi, size: 16, color: Colors.white),
-                    const SizedBox(width: 4),
-                    Icon(Icons.battery_full, size: 16, color: Colors.white),
-                    Text(
-                      '98%',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.white, // White text on orange background
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+      color: const Color(0xFF0466c8), // Blue - same as home page top bar
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            IconButton(
+              onPressed: () async {
+                print('Back button pressed'); // Debug log
+                try {
+                  if (Navigator.of(context).canPop()) {
+                    print('Can pop, going back'); // Debug log
+                    Navigator.of(context).pop();
+                  } else {
+                    print('Cannot pop, navigating to last visited tab'); // Debug log
+                    // Navigate to the last visited bottom navigation tab
+                    final lastTab = await NavigationService.getLastTab();
+                    final route = NavigationService.getRouteForTab(lastTab);
+                    print('Navigating to last visited tab: $lastTab, route: $route'); // Debug log
+                    context.go(route);
+                  }
+                } catch (e) {
+                  print('Navigation error: $e'); // Debug log
+                  // Fallback to home page
+                  context.go('/home');
+                }
+              },
+              icon: const Icon(Icons.arrow_back, color: Colors.white), // White on orange
             ),
-          ),
-          
-          // Header Content
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                IconButton(
-                  onPressed: () async {
-                    print('Back button pressed'); // Debug log
-                    try {
-                      if (Navigator.of(context).canPop()) {
-                        print('Can pop, going back'); // Debug log
-                        Navigator.of(context).pop();
-                      } else {
-                        print('Cannot pop, navigating to last visited tab'); // Debug log
-                        // Navigate to the last visited bottom navigation tab
-                        final lastTab = await NavigationService.getLastTab();
-                        final route = NavigationService.getRouteForTab(lastTab);
-                        print('Navigating to last visited tab: $lastTab, route: $route'); // Debug log
-                        context.go(route);
-                      }
-                    } catch (e) {
-                      print('Navigation error: $e'); // Debug log
-                      // Fallback to home page
-                      context.go('/home');
-                    }
-                  },
-                  icon: const Icon(Icons.arrow_back, color: Colors.white), // White on orange
+            Expanded(
+              child: Text(
+                (book?.titleSomali?.isNotEmpty ?? false) ? book!.titleSomali! : book?.title ?? '',
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white, // White text on orange background
                 ),
-                Expanded(
-                  child: Text(
-                    (book?.titleSomali?.isNotEmpty ?? false) ? book!.titleSomali! : book?.title ?? '',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white, // White text on orange background
-                    ),
-                  ),
-                ),
-                IconButton(
-                  onPressed: () {
-                    // TODO: Implement share functionality
-                  },
-                  icon: const Icon(Icons.share, color: Colors.white), // White on orange
-                ),
-              ],
+              ),
             ),
-          ),
-        ],
+            IconButton(
+              onPressed: () {
+                // TODO: Implement share functionality
+              },
+              icon: const Icon(Icons.share, color: Colors.white), // White on orange
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBookCoverImage() {
+    return Center(
+      child: Container(
+        width: 200,
+        height: 280,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: book?.coverImageUrl != null
+              ? CachedNetworkImage(
+                  imageUrl: _buildFullImageUrl(book!.coverImageUrl!),
+                  fit: BoxFit.cover,
+                  width: double.infinity,
+                  height: double.infinity,
+                  placeholder: (context, url) => _buildPlaceholderImage(),
+                  errorWidget: (context, url, error) => _buildPlaceholderImage(),
+                )
+              : _buildPlaceholderImage(),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPlaceholderImage() {
+    return Container(
+      width: double.infinity,
+      height: double.infinity,
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color(0xFF1E3A8A),
+            Color(0xFF3B82F6),
+            Color(0xFF60A5FA),
+          ],
+          stops: [0.0, 0.5, 1.0],
+        ),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: const Center(
+        child: Icon(
+          Icons.book,
+          size: 60,
+          color: Colors.white,
+        ),
       ),
     );
   }
@@ -339,7 +373,7 @@ class _BookDetailPageState extends State<BookDetailPage> {
                 }
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFF56C23), // Orange - same as home page
+                backgroundColor: const Color(0xFF0466c8), // Blue - same as home page
                 foregroundColor: Colors.white, // White text on orange background
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -508,16 +542,6 @@ class _BookDetailPageState extends State<BookDetailPage> {
             content: 'Written by ${book!.authors!}',
           ),
         
-        if (book?.authors != null && book!.authors!.isNotEmpty)
-          const SizedBox(height: 24),
-        
-        // Somali Author Section
-        if (book?.authorsSomali != null && book!.authorsSomali!.isNotEmpty)
-          _buildTextBlock(
-            title: 'Qoraaga',
-            content: 'Qoray ${book!.authorsSomali!}',
-          ),
-        
         // Genre/Category Section
         if (book?.categoryNames != null && book!.categoryNames!.isNotEmpty)
           _buildTextBlock(
@@ -538,7 +562,7 @@ class _BookDetailPageState extends State<BookDetailPage> {
               width: 12,
               height: 12,
               decoration: BoxDecoration(
-                color: const Color(0xFFFFE4D6), // Light orange
+                color: const Color(0xFFE6F2FF), // Light blue
                 borderRadius: BorderRadius.circular(2),
               ),
             ),

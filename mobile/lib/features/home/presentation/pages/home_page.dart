@@ -32,7 +32,7 @@ class _HomePageState extends State<HomePage> {
   // Language options
   final List<Map<String, dynamic>> _languages = [
     {'name': 'All Books', 'code': null, 'color': '#1E3A8A'},
-    {'name': 'English', 'code': 'en', 'color': '#F56C23'},
+    {'name': 'English', 'code': 'en', 'color': '#0466c8'},
     {'name': 'Somali', 'code': 'so', 'color': '#10B981'},
     {'name': 'Arabic', 'code': 'ar', 'color': '#8B5CF6'},
   ];
@@ -195,7 +195,7 @@ class _HomePageState extends State<HomePage> {
 
   Widget _buildHeader() {
     return Container(
-      color: const Color(0xFFF56C23), // Orange
+      color: const Color(0xFF0466c8), // Blue
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       child: Row(
         children: [
@@ -222,7 +222,7 @@ class _HomePageState extends State<HomePage> {
             child: Icon(
               Icons.notifications_none,
               size: 20,
-              color: const Color(0xFFF56C23),
+              color: const Color(0xFF0466c8),
             ),
           ),
         ],
@@ -476,10 +476,11 @@ class _HomePageState extends State<HomePage> {
                   return BookCard(
                     book: book,
                     onTap: () => _navigateToBookDetail(book),
-                    showLibraryActions: true,
+                    showLibraryActions: false, // Disabled for cleaner design
                     isInLibrary: isInLibrary,
                     isFavorite: isFavorite,
                     userId: 'current_user', // TODO: Get from auth service
+                    enableAnimations: true,
                   );
                 },
               ),
@@ -494,75 +495,24 @@ class _HomePageState extends State<HomePage> {
 
   Widget _buildRecentBooksSection() {
     print('Building Recent Books Section - _recentBooks: ${_recentBooks.length}, _isLoadingRecentBooks: $_isLoadingRecentBooks');
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'Recent books',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
-              ),
-              TextButton(
-                onPressed: () {
-                  context.go('/all-books/recent/Recent Books');
-                },
-                child: Text(
-                  'View All',
-                  style: TextStyle(
-                    color: Theme.of(context).primaryColor,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          
-          if (_isLoadingRecentBooks)
-            _buildLoadingGrid()
-          else if (_recentBooks.isNotEmpty)
-            _buildBooksGrid(_recentBooks)
-          else
-            _buildEmptyState('No recent books available'),
-        ],
-      ),
-    );
+    
+    if (_isLoadingRecentBooks)
+      return _buildLoadingHorizontalScroll();
+    else if (_recentBooks.isNotEmpty)
+      return _buildBooksHorizontalScroll(_recentBooks, 'Recent Books');
+    else
+      return _buildEmptyState('No recent books available');
   }
 
   Widget _buildNewReleasesSection() {
     print('Building New Releases Section - _newReleases: ${_newReleases.length}, _isLoadingNewReleases: $_isLoadingNewReleases');
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'New releases',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
-            ),
-          ),
-          const SizedBox(height: 16),
-          
-          if (_isLoadingNewReleases)
-            _buildLoadingHorizontalScroll()
-          else if (_newReleases.isNotEmpty)
-            _buildBooksHorizontalScroll(_newReleases, 'New Releases')
-          else
-            _buildEmptyState('No new releases available'),
-        ],
-      ),
-    );
+    
+    if (_isLoadingNewReleases)
+      return _buildLoadingHorizontalScroll();
+    else if (_newReleases.isNotEmpty)
+      return _buildBooksHorizontalScroll(_newReleases, 'New Releases');
+    else
+      return _buildEmptyState('No new releases available');
   }
 
   Widget _buildRecommendedBooksSection() {
@@ -572,17 +522,39 @@ class _HomePageState extends State<HomePage> {
     print('⏳ _isLoadingRandomBooks: $_isLoadingRandomBooks');
     print('🔍 _randomBooks data: ${_randomBooks.map((b) => {'id': b.id, 'title': b.title, 'coverImageUrl': b.coverImageUrl}).toList()}');
     
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+    if (_isLoadingRandomBooks)
+      return _buildLoadingHorizontalScroll();
+    else if (_randomBooks.isNotEmpty)
+      return _buildBooksHorizontalScroll(_randomBooks, 'Recommended Books');
+    else
+      return _buildEmptyState('No recommended books available');
+  }
+
+  Widget _buildEmptyState(String message) {
+    // Determine section title and route based on message
+    String sectionTitle = 'Recent Books';
+    String route = '/all-books/recent/Recent Books';
+    
+    if (message.contains('new releases')) {
+      sectionTitle = 'New Releases';
+      route = '/all-books/new-releases/New Releases';
+    } else if (message.contains('recommended')) {
+      sectionTitle = 'Recommended Books';
+      route = '/all-books/recommended/Recommended Books';
+    }
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Section header
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'Recommended books',
-                style: TextStyle(
+              Text(
+                sectionTitle,
+                style: const TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
                   color: Colors.black87,
@@ -590,7 +562,7 @@ class _HomePageState extends State<HomePage> {
               ),
               TextButton(
                 onPressed: () {
-                  context.go('/all-books/recommended/Recommended Books');
+                  context.go(route);
                 },
                 child: Text(
                   'View All',
@@ -602,125 +574,90 @@ class _HomePageState extends State<HomePage> {
               ),
             ],
           ),
-          const SizedBox(height: 16),
-          
-          if (_isLoadingRandomBooks)
-            _buildLoadingHorizontalScroll()
-          else if (_randomBooks.isNotEmpty)
-            _buildBooksHorizontalScroll(_randomBooks, 'Recommended Books')
-          else
-            _buildEmptyState('No recommended books available'),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildEmptyState(String message) {
-    return Container(
-      height: 160,
-      decoration: BoxDecoration(
-        color: Colors.grey.shade100,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade300),
-      ),
-      child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.book_outlined,
-              size: 48,
-              color: Colors.grey.shade400,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              message,
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey.shade600,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
         ),
-      ),
+        
+        // Empty state container
+        Container(
+          height: _getResponsiveHorizontalCardHeight() + 20, // Use responsive height
+          margin: const EdgeInsets.symmetric(horizontal: 20),
+          decoration: BoxDecoration(
+            color: Colors.grey.shade100,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey.shade300),
+          ),
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.book_outlined,
+                  size: 48,
+                  color: Colors.grey.shade400,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  message,
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.grey.shade600,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+        ),
+        
+        const SizedBox(height: 24),
+      ],
     );
   }
 
   Widget _buildBooksGrid(List<Book> books) {
-    return Column(
-      children: [
-        // First row
-        Row(
-          children: [
-            for (int i = 0; i < 3 && i < books.length; i++)
-              Expanded(
-                child: Container(
-                  margin: EdgeInsets.only(right: i < 2 ? 12 : 0),
-                  child: BlocBuilder<LibraryBloc, LibraryState>(
-                    builder: (context, libraryState) {
-                      final book = books[i];
-                      bool isInLibrary = false;
-                      bool isFavorite = false;
-                      
-                      if (libraryState is LibraryLoaded) {
-                        isInLibrary = libraryState.library.any((item) => item['bookId'] == book.id);
-                        isFavorite = libraryState.library.any((item) => 
-                          item['bookId'] == book.id && (item['isFavorite'] == true || item['status'] == 'favorite')
-                        );
-                      }
-                      
-                      return BookCard(
-                        book: book,
-                        onTap: () => _navigateToBookDetail(book),
-                        showLibraryActions: true,
-                        isInLibrary: isInLibrary,
-                        isFavorite: isFavorite,
-                        userId: 'current_user', // TODO: Get from auth service
-                      );
-                    },
-                  ),
-                ),
-              ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        // Second row
-        if (books.length > 3)
-          Row(
-            children: [
-              for (int i = 3; i < 6 && i < books.length; i++)
-                Expanded(
-                  child: Container(
-                    margin: EdgeInsets.only(right: i < 5 ? 12 : 0),
-                    child: BlocBuilder<LibraryBloc, LibraryState>(
-                      builder: (context, libraryState) {
-                        final book = books[i];
-                        bool isInLibrary = false;
-                        bool isFavorite = false;
-                        
-                        if (libraryState is LibraryLoaded) {
-                          isInLibrary = libraryState.library.any((item) => item['bookId'] == book.id);
-                          isFavorite = libraryState.library.any((item) => 
-                            item['bookId'] == book.id && (item['isFavorite'] == true || item['status'] == 'favorite')
-                          );
-                        }
-                        
-                        return BookCard(
-                          book: book,
-                          onTap: () => _navigateToBookDetail(book),
-                          showLibraryActions: true,
-                          isInLibrary: isInLibrary,
-                          isFavorite: isFavorite,
-                          userId: 'current_user', // TODO: Get from auth service
-                        );
-                      },
-                    ),
-                  ),
-                ),
-            ],
+    final screenWidth = MediaQuery.of(context).size.width;
+    final crossAxisCount = _getResponsiveGridColumns(); // Professional responsive columns
+    
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          padding: const EdgeInsets.symmetric(horizontal: 16), // Proper padding to prevent overlap
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: crossAxisCount,
+            childAspectRatio: _getResponsiveGridAspectRatioFromHeight(), // Use same height as horizontal cards
+            crossAxisSpacing: _getResponsiveGridSpacing(), // Responsive spacing
+            mainAxisSpacing: _getResponsiveGridSpacing(), // Responsive spacing
           ),
-      ],
+          itemCount: books.length,
+          itemBuilder: (context, index) {
+            final book = books[index];
+            return BlocBuilder<LibraryBloc, LibraryState>(
+              builder: (context, libraryState) {
+                bool isInLibrary = false;
+                bool isFavorite = false;
+                
+                if (libraryState is LibraryLoaded) {
+                  isInLibrary = libraryState.library.any((item) => item['bookId'] == book.id);
+                  isFavorite = libraryState.library.any((item) => 
+                    item['bookId'] == book.id && (item['isFavorite'] == true || item['status'] == 'favorite')
+                  );
+                }
+                
+                return BookCard(
+                  book: book,
+                  onTap: () => _navigateToBookDetail(book),
+                  showLibraryActions: false, // Disabled for cleaner design
+                  isInLibrary: isInLibrary,
+                  isFavorite: isFavorite,
+                  userId: 'current_user', // TODO: Get from auth service
+                  enableAnimations: true,
+                );
+              },
+            );
+          },
+        );
+      },
     );
   }
 
@@ -751,7 +688,13 @@ class _HomePageState extends State<HomePage> {
               ),
               TextButton(
                 onPressed: () {
-                  context.go('/all-books/new-releases/New Releases');
+                  if (sectionTitle == 'Recent Books') {
+                    context.go('/all-books/recent/Recent Books');
+                  } else if (sectionTitle == 'New Releases') {
+                    context.go('/all-books/new-releases/New Releases');
+                  } else if (sectionTitle == 'Recommended Books') {
+                    context.go('/all-books/recommended/Recommended Books');
+                  }
                 },
                 child: Text(
                   'View All',
@@ -765,38 +708,43 @@ class _HomePageState extends State<HomePage> {
           ),
         ),
         
-        // Horizontal scrollable books
+        // Horizontal scrollable books - Dynamic height with overflow protection
         SizedBox(
-          height: 300, // Increased height for better card display
-          child: ListView.builder(
-            padding: const EdgeInsets.only(left: 20),
-            scrollDirection: Axis.horizontal,
-            itemCount: books.length,
-            itemBuilder: (context, index) {
-              final book = books[index];
-              print('🎨 _buildBooksHorizontalScroll: Building item $index for book: ${book.title}');
-              
-              return BlocBuilder<LibraryBloc, LibraryState>(
-                builder: (context, libraryState) {
-                  bool isInLibrary = false;
-                  bool isFavorite = false;
+          height: _getResponsiveHorizontalCardHeight() + 20, // Card height + padding
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              return ListView.builder(
+                padding: const EdgeInsets.only(left: 20),
+                scrollDirection: Axis.horizontal,
+                itemCount: books.length,
+                itemBuilder: (context, index) {
+                  final book = books[index];
+                  print('🎨 _buildBooksHorizontalScroll: Building item $index for book: ${book.title}');
                   
-                  if (libraryState is LibraryLoaded) {
-                    isInLibrary = libraryState.library.any((item) => item['bookId'] == book.id);
-                    isFavorite = libraryState.library.any((item) => 
-                      item['bookId'] == book.id && (item['isFavorite'] == true || item['status'] == 'favorite')
-                    );
-                  }
-                  
-                  return BookCard(
-                    book: book,
-                    onTap: () => _navigateToBookDetail(book),
-                    showLibraryActions: true,
-                    isInLibrary: isInLibrary,
-                    isFavorite: isFavorite,
-                    userId: 'current_user', // TODO: Get from auth service
-                    width: MediaQuery.of(context).size.width * 0.4, // Responsive width based on screen size
-                    height: 280, // Fixed height for consistency
+                  return BlocBuilder<LibraryBloc, LibraryState>(
+                    builder: (context, libraryState) {
+                      bool isInLibrary = false;
+                      bool isFavorite = false;
+                      
+                      if (libraryState is LibraryLoaded) {
+                        isInLibrary = libraryState.library.any((item) => item['bookId'] == book.id);
+                        isFavorite = libraryState.library.any((item) => 
+                          item['bookId'] == book.id && (item['isFavorite'] == true || item['status'] == 'favorite')
+                        );
+                      }
+                      
+                      return BookCard(
+                        book: book,
+                        onTap: () => _navigateToBookDetail(book),
+                        showLibraryActions: false, // Disabled for cleaner design
+                        isInLibrary: isInLibrary,
+                        isFavorite: isFavorite,
+                        userId: 'current_user', // TODO: Get from auth service
+                        width: _getResponsiveHorizontalCardWidth(), // Responsive width based on screen size
+                        // No fixed height - uses responsive height from BookCard component
+                        enableAnimations: true,
+                      );
+                    },
                   );
                 },
               );
@@ -847,15 +795,15 @@ class _HomePageState extends State<HomePage> {
 
   Widget _buildLoadingHorizontalScroll() {
     return SizedBox(
-      height: 200,
+      height: _getResponsiveHorizontalScrollHeight(), // Responsive height
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         itemCount: 5,
         itemBuilder: (context, index) {
           return Container(
             margin: EdgeInsets.only(right: index < 4 ? 16 : 0),
-            width: 140,
-            height: 200,
+            width: _getResponsiveHorizontalCardWidth() * 0.8, // Responsive width (80% of card width)
+            height: _getResponsiveHorizontalCardHeight(), // Responsive height
             decoration: BoxDecoration(
               color: Colors.grey.shade300,
               borderRadius: BorderRadius.circular(12),
@@ -951,10 +899,11 @@ class _HomePageState extends State<HomePage> {
                     return BookCard(
                       book: book,
                       onTap: () => _navigateToBookDetail(book),
-                      showLibraryActions: true,
+                      showLibraryActions: false, // Disabled for cleaner design
                       isInLibrary: isInLibrary,
                       isFavorite: isFavorite,
                       userId: 'current_user', // TODO: Get from auth service
+                      enableAnimations: true,
                     );
                   },
                 );
@@ -967,5 +916,124 @@ class _HomePageState extends State<HomePage> {
 
   void _navigateToBookDetail(Book book) {
     context.go('/book/${book.id}');
+  }
+
+  // Responsive helper methods for horizontal scroll sections
+  double _getResponsiveHorizontalCardWidth() {
+    final screenWidth = MediaQuery.of(context).size.width;
+    if (screenWidth < 360) {
+      return screenWidth * 0.40; // Small phones - more conservative
+    } else if (screenWidth < 400) {
+      return screenWidth * 0.38; // Medium phones - more conservative
+    } else if (screenWidth < 480) {
+      return screenWidth * 0.36; // Large phones - more conservative
+    } else if (screenWidth < 600) {
+      return screenWidth * 0.34; // Very large phones - more conservative
+    } else if (screenWidth < 768) {
+      return screenWidth * 0.32; // Small tablets - more conservative
+    } else {
+      return screenWidth * 0.28; // Large tablets - more conservative
+    }
+  }
+
+  double _getResponsiveHorizontalCardHeight() {
+    final screenHeight = MediaQuery.of(context).size.height;
+    if (screenHeight < 600) {
+      return screenHeight * 0.26; // Very small screens - content fitted with overflow prevention
+    } else if (screenHeight < 700) {
+      return screenHeight * 0.24; // Small screens - content fitted with overflow prevention
+    } else if (screenHeight < 800) {
+      return screenHeight * 0.22; // Medium screens - content fitted with overflow prevention
+    } else if (screenHeight < 900) {
+      return screenHeight * 0.20; // Large screens - content fitted with overflow prevention
+    } else if (screenHeight < 1000) {
+      return screenHeight * 0.18; // Very large screens - content fitted with overflow prevention
+    } else {
+      return screenHeight * 0.16; // Extra large screens - content fitted with overflow prevention
+    }
+  }
+
+  double _getResponsiveHorizontalScrollHeight() {
+    final screenHeight = MediaQuery.of(context).size.height;
+    if (screenHeight < 600) {
+      return screenHeight * 0.28; // Very small screens - accommodate content fitted cards with overflow prevention
+    } else if (screenHeight < 700) {
+      return screenHeight * 0.26; // Small screens - accommodate content fitted cards with overflow prevention
+    } else if (screenHeight < 800) {
+      return screenHeight * 0.24; // Medium screens - accommodate content fitted cards with overflow prevention
+    } else if (screenHeight < 900) {
+      return screenHeight * 0.22; // Large screens - accommodate content fitted cards with overflow prevention
+    } else if (screenHeight < 1000) {
+      return screenHeight * 0.20; // Very large screens - accommodate content fitted cards with overflow prevention
+    } else {
+      return screenHeight * 0.18; // Extra large screens - accommodate content fitted cards with overflow prevention
+    }
+  }
+
+  // Responsive grid helper methods for professional card layout - prevent overflow
+  int _getResponsiveGridColumns() {
+    final screenWidth = MediaQuery.of(context).size.width;
+    if (screenWidth < 320) {
+      return 2; // Very small phones - 2 columns
+    } else if (screenWidth < 360) {
+      return 2; // Small phones - 2 columns
+    } else if (screenWidth < 400) {
+      return 2; // Medium phones - 2 columns (conservative to prevent overflow)
+    } else if (screenWidth < 480) {
+      return 2; // Large phones - 2 columns (conservative to prevent overflow)
+    } else if (screenWidth < 600) {
+      return 2; // Very large phones - 2 columns (reduced from 3 to prevent overflow)
+    } else if (screenWidth < 768) {
+      return 3; // Small tablets - 3 columns
+    } else if (screenWidth < 1024) {
+      return 4; // Medium tablets - 4 columns
+    } else {
+      return 5; // Large tablets/desktop - 5 columns
+    }
+  }
+
+  double _getResponsiveGridAspectRatio() {
+    final screenWidth = MediaQuery.of(context).size.width;
+    if (screenWidth < 360) {
+      return 0.75; // More compact aspect ratio for small screens
+    } else if (screenWidth < 480) {
+      return 0.80; // More compact aspect ratio for medium screens
+    } else if (screenWidth < 600) {
+      return 0.85; // More compact aspect ratio for large phones
+    } else if (screenWidth < 768) {
+      return 0.90; // More compact aspect ratio for tablets
+    } else {
+      return 0.95; // More compact aspect ratio for large screens
+    }
+  }
+
+  // Calculate aspect ratio based on same height as horizontal cards
+  double _getResponsiveGridAspectRatioFromHeight() {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+    final crossAxisCount = _getResponsiveGridColumns();
+    final cardHeight = _getResponsiveHorizontalCardHeight();
+    
+    // Calculate available width per card (accounting for spacing and proper padding)
+    final availableWidth = screenWidth - 32 - (_getResponsiveGridSpacing() * (crossAxisCount - 1)); // 32 for proper padding, spacing between cards
+    final cardWidth = availableWidth / crossAxisCount;
+    
+    // Calculate aspect ratio: width / height
+    return cardWidth / cardHeight;
+  }
+
+  double _getResponsiveGridSpacing() {
+    final screenWidth = MediaQuery.of(context).size.width;
+    if (screenWidth < 360) {
+      return 8.0; // Proper spacing for small screens
+    } else if (screenWidth < 480) {
+      return 10.0; // Proper spacing
+    } else if (screenWidth < 600) {
+      return 12.0; // Proper spacing
+    } else if (screenWidth < 768) {
+      return 14.0; // Professional spacing for tablets
+    } else {
+      return 16.0; // Professional spacing for large screens
+    }
   }
 }

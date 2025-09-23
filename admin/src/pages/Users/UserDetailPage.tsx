@@ -28,6 +28,22 @@ import {
   CircularProgress,
   Tabs,
   Tab,
+  Badge,
+  IconButton,
+  Tooltip,
+  LinearProgress,
+  useTheme,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Timeline,
+  TimelineItem,
+  TimelineSeparator,
+  TimelineConnector,
+  TimelineContent,
+  TimelineDot,
+  TimelineOppositeContent
 } from '@mui/material'
 import {
   Person as PersonIcon,
@@ -41,10 +57,22 @@ import {
   Cancel as CancelIcon,
   Block as BlockIcon,
   CheckCircle as VerifyIcon,
+  AdminPanelSettings as AdminIcon,
+  Security as SecurityIcon,
+  Timeline as TimelineIcon,
+  TrendingUp as TrendingUpIcon,
+  Warning as WarningIcon,
+  Info as InfoIcon,
+  Refresh as RefreshIcon,
+  Download as DownloadIcon,
+  MoreVert as MoreVertIcon,
+  Visibility as VisibilityIcon,
+  Delete as DeleteIcon
 } from '@mui/icons-material'
-import { getUser, updateUserStatus } from '@/services/adminAPI'
+import { getUser, updateUserStatus, deleteUser } from '@/services/adminAPI'
 import { useDispatch } from 'react-redux'
 import { addNotification } from '@/store/slices/uiSlice'
+import { format } from 'date-fns'
 
 interface TabPanelProps {
   children?: React.ReactNode
@@ -73,6 +101,7 @@ const UserDetailPage: React.FC = () => {
   const navigate = useNavigate()
   const dispatch = useDispatch()
   const queryClient = useQueryClient()
+  const theme = useTheme()
   
   const [tabValue, setTabValue] = useState(0)
   const [editMode, setEditMode] = useState(false)
@@ -85,6 +114,8 @@ const UserDetailPage: React.FC = () => {
   })
   const [statusDialogOpen, setStatusDialogOpen] = useState(false)
   const [newStatus, setNewStatus] = useState({ isActive: true, isVerified: true })
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [isActionLoading, setIsActionLoading] = useState(false)
 
   // Fetch user data
   const { data: userData, isLoading } = useQuery({
@@ -109,6 +140,24 @@ const UserDetailPage: React.FC = () => {
       dispatch(addNotification({
         type: 'error',
         message: error.response?.data?.error || 'Failed to update user status',
+      }))
+    },
+  })
+
+  // Delete user mutation
+  const deleteUserMutation = useMutation({
+    mutationFn: (userId: string) => deleteUser(userId),
+    onSuccess: () => {
+      dispatch(addNotification({
+        type: 'success',
+        message: 'User deleted successfully',
+      }))
+      navigate('/admin/users')
+    },
+    onError: (error: any) => {
+      dispatch(addNotification({
+        type: 'error',
+        message: error.response?.data?.error || 'Failed to delete user',
       }))
     },
   })
@@ -225,37 +274,78 @@ const UserDetailPage: React.FC = () => {
           >
             Update Status
           </Button>
+          <Button
+            variant="outlined"
+            color="error"
+            startIcon={<DeleteIcon />}
+            onClick={() => setDeleteDialogOpen(true)}
+          >
+            Delete User
+          </Button>
         </Box>
       </Box>
 
-      {/* User Profile Card */}
-      <Paper sx={{ p: 3, mb: 3 }}>
+      {/* Enhanced User Profile Card */}
+      <Paper sx={{ 
+        p: 3, 
+        mb: 3,
+        background: `linear-gradient(135deg, ${theme.palette.primary.main}05, ${theme.palette.primary.main}10)`,
+        border: `1px solid ${theme.palette.primary.main}20`
+      }}>
         <Grid container spacing={3} alignItems="center">
           <Grid item>
-            <Avatar
-              src={user.avatar_url}
-              sx={{ width: 100, height: 100 }}
+            <Badge
+              overlap="circular"
+              anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+              badgeContent={
+                user.is_active ? (
+                  <CheckCircleIcon sx={{ color: 'success.main', fontSize: 20 }} />
+                ) : (
+                  <BlockIcon sx={{ color: 'error.main', fontSize: 20 }} />
+                )
+              }
             >
-              {user.first_name?.charAt(0) || 'U'}
-            </Avatar>
+              <Avatar
+                src={user.avatar_url}
+                sx={{ width: 100, height: 100, border: `3px solid ${theme.palette.primary.main}20` }}
+              >
+                {user.first_name?.charAt(0) || 'U'}
+              </Avatar>
+            </Badge>
           </Grid>
           <Grid item xs>
-            <Typography variant="h5" gutterBottom>
-              {user.first_name} {user.last_name}
-            </Typography>
-            <Typography variant="body1" color="textSecondary" gutterBottom>
-              {user.email}
-            </Typography>
-            <Box display="flex" gap={1} flexWrap="wrap">
+            <Box display="flex" alignItems="center" gap={2} mb={1}>
+              <Typography variant="h4" fontWeight="bold">
+                {user.first_name} {user.last_name}
+              </Typography>
+              {user.is_admin && (
+                <Chip
+                  icon={<AdminIcon />}
+                  label="Admin"
+                  color="warning"
+                  variant="filled"
+                  size="small"
+                />
+              )}
+            </Box>
+            <Box display="flex" alignItems="center" gap={1} mb={2}>
+              <EmailIcon fontSize="small" color="action" />
+              <Typography variant="body1" color="textSecondary">
+                {user.email}
+              </Typography>
+            </Box>
+            <Box display="flex" gap={1} flexWrap="wrap" mb={2}>
               <Chip
                 label={user.is_active ? 'Active' : 'Inactive'}
                 color={getStatusColor(user.is_active)}
                 size="small"
+                icon={user.is_active ? <CheckCircleIcon /> : <BlockIcon />}
               />
               <Chip
                 label={user.is_verified ? 'Verified' : 'Unverified'}
                 color={user.is_verified ? 'success' : 'warning'}
                 size="small"
+                icon={user.is_verified ? <VerifyIcon /> : <WarningIcon />}
               />
               <Chip
                 label={user.subscription_plan}
@@ -264,11 +354,30 @@ const UserDetailPage: React.FC = () => {
                 size="small"
               />
             </Box>
+            <Box display="flex" gap={3}>
+              <Box display="flex" alignItems="center" gap={1}>
+                <LanguageIcon fontSize="small" color="action" />
+                <Typography variant="body2" color="textSecondary">
+                  {user.language_preference || 'en'}
+                </Typography>
+              </Box>
+              <Box display="flex" alignItems="center" gap={1}>
+                <TimelineIcon fontSize="small" color="action" />
+                <Typography variant="body2" color="textSecondary">
+                  Member since {format(new Date(user.created_at), 'MMM dd, yyyy')}
+                </Typography>
+              </Box>
+            </Box>
           </Grid>
           <Grid item>
-            <Typography variant="body2" color="textSecondary">
-              Member since {new Date(user.created_at).toLocaleDateString()}
-            </Typography>
+            <Box display="flex" flexDirection="column" gap={1}>
+              <Typography variant="body2" color="textSecondary" textAlign="right">
+                Last login: {user.last_login_at ? format(new Date(user.last_login_at), 'MMM dd, yyyy') : 'Never'}
+              </Typography>
+              <Typography variant="caption" color="textSecondary" textAlign="right">
+                ID: {user.id}
+              </Typography>
+            </Box>
           </Grid>
         </Grid>
       </Paper>
@@ -454,6 +563,51 @@ const UserDetailPage: React.FC = () => {
             disabled={updateUserStatusMutation.isPending}
           >
             Update Status
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Delete User Dialog */}
+      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>
+          <Box display="flex" alignItems="center" gap={1}>
+            <WarningIcon color="error" />
+            Delete User
+          </Box>
+        </DialogTitle>
+        <DialogContent>
+          <Alert severity="error" sx={{ mb: 2 }}>
+            This action cannot be undone. All user data, including their library and preferences, will be permanently deleted.
+          </Alert>
+          <Typography variant="body1" gutterBottom>
+            Are you sure you want to delete this user?
+          </Typography>
+          <Box display="flex" alignItems="center" gap={2} mt={2} p={2} sx={{ backgroundColor: 'grey.50', borderRadius: 1 }}>
+            <Avatar src={user.avatar_url}>
+              {user.first_name?.charAt(0) || 'U'}
+            </Avatar>
+            <Box>
+              <Typography variant="body1" fontWeight="bold">
+                {user.first_name} {user.last_name}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                {user.email}
+              </Typography>
+            </Box>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteDialogOpen(false)} disabled={deleteUserMutation.isPending}>
+            Cancel
+          </Button>
+          <Button
+            onClick={() => deleteUserMutation.mutate(user.id)}
+            variant="contained"
+            color="error"
+            disabled={deleteUserMutation.isPending}
+            startIcon={deleteUserMutation.isPending ? <CircularProgress size={16} /> : <DeleteIcon />}
+          >
+            {deleteUserMutation.isPending ? 'Deleting...' : 'Delete User'}
           </Button>
         </DialogActions>
       </Dialog>

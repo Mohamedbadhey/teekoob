@@ -120,14 +120,14 @@ class _LibraryPageState extends State<LibraryPage> with TickerProviderStateMixin
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [
-                const Color(0xFFF56C23), // Orange
-                const Color(0xFFFF8A65), // Light orange
-                const Color(0xFFFFAB91), // Lighter orange
+                const Color(0xFF0466c8), // Blue
+                const Color(0xFF3A7BD5), // Light blue
+                const Color(0xFF5A8BD8), // Lighter blue
               ],
             ),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFFF56C23).withOpacity(0.3),
+                color: const Color(0xFF0466c8).withOpacity(0.3),
                 blurRadius: 12,
                 offset: const Offset(0, 4),
               ),
@@ -187,7 +187,7 @@ class _LibraryPageState extends State<LibraryPage> with TickerProviderStateMixin
                   icon: Icon(
                     Icons.sync_rounded,
                     size: screenWidth * 0.06,
-                    color: const Color(0xFFF56C23),
+                    color: const Color(0xFF0466c8),
                   ),
             onPressed: () {
                     context.read<LibraryBloc>().add(SyncLibrary(_userId));
@@ -218,7 +218,7 @@ class _LibraryPageState extends State<LibraryPage> with TickerProviderStateMixin
               borderRadius: BorderRadius.circular(20),
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFFF56C23).withOpacity(0.1),
+                  color: const Color(0xFF0466c8).withOpacity(0.1),
                   blurRadius: 10,
                   offset: const Offset(0, 4),
                 ),
@@ -232,18 +232,18 @@ class _LibraryPageState extends State<LibraryPage> with TickerProviderStateMixin
                   somaliText: 'Raadi maktabaddaada...',
                 ),
                 hintStyle: TextStyle(
-                  color: const Color(0xFFF56C23).withOpacity(0.5),
+                  color: const Color(0xFF0466c8).withOpacity(0.5),
                   fontSize: screenWidth * 0.04,
                 ),
                 prefixIcon: Container(
                   margin: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF56C23).withOpacity(0.1),
+                    color: const Color(0xFF0466c8).withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(
                     Icons.search_rounded,
-                    color: const Color(0xFFF56C23),
+                    color: const Color(0xFF0466c8),
                     size: screenWidth * 0.05,
                   ),
                 ),
@@ -251,7 +251,7 @@ class _LibraryPageState extends State<LibraryPage> with TickerProviderStateMixin
                     ? IconButton(
                         icon: Icon(
                           Icons.clear_rounded,
-                          color: const Color(0xFFF56C23).withOpacity(0.5),
+                          color: const Color(0xFF0466c8).withOpacity(0.5),
                         ),
             onPressed: () {
                           _searchController.clear();
@@ -265,21 +265,21 @@ class _LibraryPageState extends State<LibraryPage> with TickerProviderStateMixin
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(20),
                   borderSide: BorderSide(
-                    color: const Color(0xFFF56C23).withOpacity(0.2),
+                    color: const Color(0xFF0466c8).withOpacity(0.2),
                     width: 2,
                   ),
                 ),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(20),
                   borderSide: BorderSide(
-                    color: const Color(0xFFF56C23).withOpacity(0.2),
+                    color: const Color(0xFF0466c8).withOpacity(0.2),
                     width: 2,
                   ),
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(20),
                   borderSide: const BorderSide(
-                    color: Color(0xFFF56C23),
+                    color: Color(0xFF0466c8),
                     width: 2,
                   ),
                 ),
@@ -290,7 +290,7 @@ class _LibraryPageState extends State<LibraryPage> with TickerProviderStateMixin
               ),
               style: TextStyle(
                 fontSize: screenWidth * 0.04,
-                color: const Color(0xFFF56C23),
+                color: const Color(0xFF0466c8),
               ),
               onChanged: (value) {
                 setState(() {
@@ -329,7 +329,7 @@ class _LibraryPageState extends State<LibraryPage> with TickerProviderStateMixin
                       'Dhammaan Kutubta',
                       stats['totalBooks']?.toString() ?? '0',
                       Icons.library_books_rounded,
-                      const Color(0xFFF56C23),
+                      const Color(0xFF0466c8),
                       screenWidth,
                     ),
                   ),
@@ -351,7 +351,7 @@ class _LibraryPageState extends State<LibraryPage> with TickerProviderStateMixin
                       'Ku Xiisatay',
                       stats['favoriteBooks']?.toString() ?? '0',
                       Icons.favorite_rounded,
-                      const Color(0xFFF56C23),
+                      const Color(0xFF0466c8),
                       screenWidth,
                     ),
                   ),
@@ -421,19 +421,19 @@ class _LibraryPageState extends State<LibraryPage> with TickerProviderStateMixin
             vertical: screenWidth * 0.03,
           ),
           decoration: BoxDecoration(
-            color: const Color(0xFFF56C23).withOpacity(0.05),
+            color: const Color(0xFF0466c8).withOpacity(0.05),
             borderRadius: BorderRadius.circular(16),
           ),
           child: TabBar(
           controller: _tabController,
             indicator: BoxDecoration(
-              color: const Color(0xFFF56C23),
+              color: const Color(0xFF0466c8),
               borderRadius: BorderRadius.circular(12),
             ),
             indicatorSize: TabBarIndicatorSize.tab,
             dividerColor: Colors.transparent,
             labelColor: Colors.white,
-            unselectedLabelColor: const Color(0xFFF56C23),
+            unselectedLabelColor: const Color(0xFF0466c8),
             labelStyle: TextStyle(
               fontSize: screenWidth * 0.035,
               fontWeight: FontWeight.w600,
@@ -508,7 +508,7 @@ class _LibraryPageState extends State<LibraryPage> with TickerProviderStateMixin
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           CircularProgressIndicator(
-            valueColor: AlwaysStoppedAnimation<Color>(const Color(0xFFF56C23)),
+            valueColor: AlwaysStoppedAnimation<Color>(const Color(0xFF0466c8)),
           ),
           const SizedBox(height: 16),
           Text(
@@ -517,7 +517,7 @@ class _LibraryPageState extends State<LibraryPage> with TickerProviderStateMixin
               somaliText: 'Waxaan soo gelinaynaa maktabaddaada...',
             ),
             style: const TextStyle(
-              color: Color(0xFFF56C23),
+              color: Color(0xFF0466c8),
               fontSize: 16,
             ),
           ),
@@ -547,7 +547,7 @@ class _LibraryPageState extends State<LibraryPage> with TickerProviderStateMixin
               style: const TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
-                color: Color(0xFFF56C23),
+                color: Color(0xFF0466c8),
               ),
               textAlign: TextAlign.center,
             ),
@@ -569,7 +569,7 @@ class _LibraryPageState extends State<LibraryPage> with TickerProviderStateMixin
                 somaliText: 'Dib u day',
               )),
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFF56C23),
+                backgroundColor: const Color(0xFF0466c8),
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 shape: RoundedRectangleBorder(
@@ -594,7 +594,7 @@ class _LibraryPageState extends State<LibraryPage> with TickerProviderStateMixin
               Icon(
                 Icons.search_off_rounded,
                 size: 64,
-                color: const Color(0xFFF56C23).withOpacity(0.6),
+                color: const Color(0xFF0466c8).withOpacity(0.6),
               ),
               const SizedBox(height: 16),
               Text(
@@ -605,7 +605,7 @@ class _LibraryPageState extends State<LibraryPage> with TickerProviderStateMixin
                 style: const TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFFF56C23),
+                  color: Color(0xFF0466c8),
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -616,7 +616,7 @@ class _LibraryPageState extends State<LibraryPage> with TickerProviderStateMixin
                   somaliText: 'Iska day inaad raadiso ereyada kale',
                 ),
                 style: TextStyle(
-                  color: const Color(0xFFF56C23).withOpacity(0.7),
+                  color: const Color(0xFF0466c8).withOpacity(0.7),
                   fontSize: 14,
                 ),
                 textAlign: TextAlign.center,
@@ -756,21 +756,21 @@ class _LibraryPageState extends State<LibraryPage> with TickerProviderStateMixin
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                       colors: [
-                        const Color(0xFFF56C23).withOpacity(0.1),
-                        const Color(0xFFFF8A65).withOpacity(0.1),
-                        const Color(0xFFFFAB91).withOpacity(0.1),
+                        const Color(0xFF0466c8).withOpacity(0.1),
+                        const Color(0xFF3A7BD5).withOpacity(0.1),
+                        const Color(0xFF5A8BD8).withOpacity(0.1),
                       ],
                     ),
                     borderRadius: BorderRadius.circular(screenWidth * 0.15),
                     border: Border.all(
-                      color: const Color(0xFFF56C23).withOpacity(0.2),
+                      color: const Color(0xFF0466c8).withOpacity(0.2),
                       width: 2,
                     ),
               ),
               child: Icon(
                 icon,
                     size: screenWidth * 0.15,
-                    color: const Color(0xFFF56C23).withOpacity(0.6),
+                    color: const Color(0xFF0466c8).withOpacity(0.6),
               ),
             ),
                 SizedBox(height: screenWidth * 0.06),
@@ -779,7 +779,7 @@ class _LibraryPageState extends State<LibraryPage> with TickerProviderStateMixin
                   style: TextStyle(
                     fontSize: screenWidth * 0.05,
                 fontWeight: FontWeight.bold,
-                    color: const Color(0xFFF56C23),
+                    color: const Color(0xFF0466c8),
               ),
               textAlign: TextAlign.center,
             ),
@@ -788,7 +788,7 @@ class _LibraryPageState extends State<LibraryPage> with TickerProviderStateMixin
               subtitle,
                   style: TextStyle(
                     fontSize: screenWidth * 0.04,
-                    color: const Color(0xFFF56C23).withOpacity(0.7),
+                    color: const Color(0xFF0466c8).withOpacity(0.7),
                     height: 1.4,
               ),
               textAlign: TextAlign.center,
@@ -808,7 +808,7 @@ class _LibraryPageState extends State<LibraryPage> with TickerProviderStateMixin
                     ),
                   ),
               style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFF56C23),
+                    backgroundColor: const Color(0xFF0466c8),
                     foregroundColor: Colors.white,
                     padding: EdgeInsets.symmetric(
                       horizontal: screenWidth * 0.06,
@@ -818,7 +818,7 @@ class _LibraryPageState extends State<LibraryPage> with TickerProviderStateMixin
                       borderRadius: BorderRadius.circular(16),
                 ),
                     elevation: 4,
-                    shadowColor: const Color(0xFFF56C23).withOpacity(0.3),
+                    shadowColor: const Color(0xFF0466c8).withOpacity(0.3),
               ),
             ),
           ],
@@ -952,7 +952,7 @@ class _LibraryPageState extends State<LibraryPage> with TickerProviderStateMixin
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFFF56C23).withOpacity(0.15),
+            color: const Color(0xFF0466c8).withOpacity(0.15),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -960,7 +960,7 @@ class _LibraryPageState extends State<LibraryPage> with TickerProviderStateMixin
       ),
       child: const Center(
         child: CircularProgressIndicator(
-          valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFF56C23)),
+          valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF0466c8)),
         ),
       ),
     );

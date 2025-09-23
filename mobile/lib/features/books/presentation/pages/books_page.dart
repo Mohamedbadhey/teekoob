@@ -209,13 +209,13 @@ class _BooksPageState extends State<BooksPage> {
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [
-                const Color(0xFFF56C23),
+                const Color(0xFF0466c8),
                 const Color(0xFFE55A1A),
               ],
             ),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFFF56C23).withOpacity(0.3),
+                color: const Color(0xFF0466c8).withOpacity(0.3),
                 blurRadius: 12,
                 offset: const Offset(0, 4),
               ),
@@ -277,7 +277,7 @@ class _BooksPageState extends State<BooksPage> {
                         Icon(
                     Icons.tune_rounded,
                     size: screenWidth * 0.06, // 6% of screen width
-                    color: const Color(0xFFF56C23),
+                    color: const Color(0xFF0466c8),
                   ),
                   if (_hasActiveFilters())
                     Positioned(
@@ -558,7 +558,7 @@ class _BooksPageState extends State<BooksPage> {
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    const Color(0xFFF56C23),
+                    const Color(0xFF0466c8),
                     const Color(0xFFE55A1A),
                   ],
                 )
@@ -566,13 +566,13 @@ class _BooksPageState extends State<BooksPage> {
           color: isSelected ? null : Colors.white,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: isSelected ? const Color(0xFFF56C23) : Colors.grey[200]!,
+            color: isSelected ? const Color(0xFF0466c8) : Colors.grey[200]!,
             width: isSelected ? 2 : 1,
           ),
           boxShadow: [
             BoxShadow(
               color: isSelected 
-                  ? const Color(0xFFF56C23).withOpacity(0.3)
+                  ? const Color(0xFF0466c8).withOpacity(0.3)
                   : Colors.black.withOpacity(0.05),
               blurRadius: isSelected ? 12 : 4,
               offset: const Offset(0, 2),
@@ -623,7 +623,7 @@ class _BooksPageState extends State<BooksPage> {
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  const Color(0xFFF56C23).withOpacity(0.1),
+                  const Color(0xFF0466c8).withOpacity(0.1),
                   const Color(0xFF1E3A8A).withOpacity(0.1),
                 ],
               ),
@@ -631,7 +631,7 @@ class _BooksPageState extends State<BooksPage> {
             ),
             child: const Center(
               child: CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFF56C23)),
+                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF0466c8)),
                 strokeWidth: 3,
               ),
             ),
@@ -703,7 +703,7 @@ class _BooksPageState extends State<BooksPage> {
             icon: const Icon(Icons.refresh),
             label: const Text('Try Again'),
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFF56C23),
+              backgroundColor: const Color(0xFF0466c8),
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
               shape: RoundedRectangleBorder(
@@ -732,7 +732,7 @@ class _BooksPageState extends State<BooksPage> {
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    const Color(0xFFF56C23).withOpacity(0.1),
+                    const Color(0xFF0466c8).withOpacity(0.1),
                     const Color(0xFF1E3A8A).withOpacity(0.1),
                   ],
                 ),
@@ -826,7 +826,7 @@ class _BooksPageState extends State<BooksPage> {
               end: Alignment.bottomRight,
               colors: [
                 const Color(0xFF1E3A8A).withOpacity(0.1),
-                const Color(0xFFF56C23).withOpacity(0.05),
+                const Color(0xFF0466c8).withOpacity(0.05),
               ],
             ),
             borderRadius: BorderRadius.circular(16),
@@ -887,7 +887,7 @@ class _BooksPageState extends State<BooksPage> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF56C23),
+                  color: const Color(0xFF0466c8),
                   borderRadius: BorderRadius.circular(20),
                 ),
           child: Text(
@@ -989,7 +989,7 @@ class _BooksPageState extends State<BooksPage> {
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         colors: [
-                          const Color(0xFFF56C23),
+                          const Color(0xFF0466c8),
                           const Color(0xFFE55A1A),
                         ],
                       ),

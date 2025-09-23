@@ -298,12 +298,6 @@ const UserActivityPage: React.FC = () => {
         </>
       )}
 
-      {/* Debug Info */}
-      <Paper sx={{ p: 2, mt: 3, backgroundColor: 'grey.100' }}>
-        <Typography variant="caption" color="text.secondary">
-          Debug: Period={selectedPeriod}, Data={JSON.stringify(activityData, null, 2)}
-        </Typography>
-      </Paper>
     </Box>
   );
 };

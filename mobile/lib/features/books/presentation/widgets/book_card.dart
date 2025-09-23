@@ -3,8 +3,9 @@ import 'package:teekoob/core/models/book_model.dart';
 import 'package:teekoob/core/config/app_config.dart';
 import 'package:teekoob/features/library/bloc/library_bloc.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
-class BookCard extends StatelessWidget {
+class BookCard extends StatefulWidget {
   final Book book;
   final VoidCallback? onTap;
   final double? width;
@@ -13,6 +14,7 @@ class BookCard extends StatelessWidget {
   final bool isInLibrary;
   final bool isFavorite;
   final String userId;
+  final bool enableAnimations;
 
   const BookCard({
     Key? key,
@@ -24,7 +26,61 @@ class BookCard extends StatelessWidget {
     this.isInLibrary = false,
     this.isFavorite = false,
     this.userId = 'current_user',
+    this.enableAnimations = true,
   }) : super(key: key);
+
+  @override
+  State<BookCard> createState() => _BookCardState();
+}
+
+class _BookCardState extends State<BookCard> with TickerProviderStateMixin {
+  late AnimationController _scaleController;
+  late AnimationController _fadeController;
+  late Animation<double> _scaleAnimation;
+  late Animation<double> _fadeAnimation;
+  bool _isPressed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.enableAnimations) {
+      _scaleController = AnimationController(
+        duration: const Duration(milliseconds: 150),
+        vsync: this,
+      );
+      _fadeController = AnimationController(
+        duration: const Duration(milliseconds: 300),
+        vsync: this,
+      );
+      
+      _scaleAnimation = Tween<double>(
+        begin: 1.0,
+        end: 0.95,
+      ).animate(CurvedAnimation(
+        parent: _scaleController,
+        curve: Curves.easeInOut,
+      ));
+      
+      _fadeAnimation = Tween<double>(
+        begin: 0.0,
+        end: 1.0,
+      ).animate(CurvedAnimation(
+        parent: _fadeController,
+        curve: Curves.easeInOut,
+      ));
+      
+      _fadeController.forward();
+    }
+  }
+
+  @override
+  void dispose() {
+    if (widget.enableAnimations) {
+      _scaleController.dispose();
+      _fadeController.dispose();
+    }
+    super.dispose();
+  }
 
   String _buildFullImageUrl(String relativeUrl) {
     if (relativeUrl.startsWith('http')) {
@@ -43,26 +99,38 @@ class BookCard extends StatelessWidget {
   }
 
   double _getResponsiveWidth(double screenWidth) {
-    if (screenWidth < 360) {
-      return screenWidth * 0.42; // Small phones: 42% of screen width
+    // More granular responsive breakpoints
+    if (screenWidth < 320) {
+      return screenWidth * 0.45; // Very small phones
+    } else if (screenWidth < 360) {
+      return screenWidth * 0.42; // Small phones
     } else if (screenWidth < 400) {
-      return screenWidth * 0.40; // Medium phones: 40% of screen width
+      return screenWidth * 0.40; // Medium phones
     } else if (screenWidth < 480) {
-      return screenWidth * 0.38; // Large phones: 38% of screen width
+      return screenWidth * 0.38; // Large phones
+    } else if (screenWidth < 600) {
+      return screenWidth * 0.35; // Very large phones
+    } else if (screenWidth < 768) {
+      return screenWidth * 0.30; // Small tablets
     } else {
-      return screenWidth * 0.35; // Very large phones/tablets: 35% of screen width
+      return screenWidth * 0.25; // Large tablets
     }
   }
 
   double _getResponsiveHeight(double screenHeight) {
-    if (screenHeight < 700) {
-      return screenHeight * 0.35; // Small screens: 35% of screen height
+    // Content-fitted responsive breakpoints - height adapts to content with overflow prevention
+    if (screenHeight < 600) {
+      return screenHeight * 0.26; // Very small screens - content fitted with overflow prevention
+    } else if (screenHeight < 700) {
+      return screenHeight * 0.24; // Small screens - content fitted with overflow prevention
     } else if (screenHeight < 800) {
-      return screenHeight * 0.32; // Medium screens: 32% of screen height
+      return screenHeight * 0.22; // Medium screens - content fitted with overflow prevention
     } else if (screenHeight < 900) {
-      return screenHeight * 0.30; // Large screens: 30% of screen height
+      return screenHeight * 0.20; // Large screens - content fitted with overflow prevention
+    } else if (screenHeight < 1000) {
+      return screenHeight * 0.18; // Very large screens - content fitted with overflow prevention
     } else {
-      return screenHeight * 0.28; // Very large screens: 28% of screen height
+      return screenHeight * 0.16; // Extra large screens - content fitted with overflow prevention
     }
   }
 
@@ -75,55 +143,98 @@ class BookCard extends StatelessWidget {
   }
 
   void _addToLibrary(BuildContext context) {
-    print('📚 BookCard: Adding book ${book.id} to library');
+    print('📚 BookCard: Adding book ${widget.book.id} to library');
     try {
       context.read<LibraryBloc>().add(AddBookToLibrary(
-        userId,
-        book.id,
+        widget.userId,
+        widget.book.id,
         status: 'reading',
         progress: 0.0,
       ));
       
-      // Show success message
+      // Show success message with animation
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Book added to library!'),
+          content: Row(
+            children: [
+              Icon(Icons.check_circle, color: Colors.white),
+              SizedBox(width: 8),
+              Text('Book added to library!'),
+            ],
+          ),
           backgroundColor: const Color(0xFF1E3A8A),
           duration: const Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
         ),
       );
     } catch (e) {
       print('❌ BookCard: Error adding book to library: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Failed to add book to library'),
+          content: Row(
+            children: [
+              Icon(Icons.error, color: Colors.white),
+              SizedBox(width: 8),
+              Text('Failed to add book to library'),
+            ],
+          ),
           backgroundColor: Colors.red,
           duration: const Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
         ),
       );
     }
   }
 
   void _toggleFavorite(BuildContext context) {
-    print('❤️ BookCard: Toggling favorite for book ${book.id}');
+    print('❤️ BookCard: Toggling favorite for book ${widget.book.id}');
     try {
-      context.read<LibraryBloc>().add(ToggleFavorite(userId, book.id));
+      context.read<LibraryBloc>().add(ToggleFavorite(widget.userId, widget.book.id));
       
-      // Show success message
+      // Show success message with animation
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(isFavorite ? 'Removed from favorites' : 'Added to favorites!'),
-          backgroundColor: const Color(0xFFF56C23),
+          content: Row(
+            children: [
+              Icon(
+                widget.isFavorite ? Icons.favorite_border : Icons.favorite,
+                color: Colors.white,
+              ),
+              SizedBox(width: 8),
+              Text(widget.isFavorite ? 'Removed from favorites' : 'Added to favorites!'),
+            ],
+          ),
+          backgroundColor: const Color(0xFF0466c8),
           duration: const Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
         ),
       );
     } catch (e) {
       print('❌ BookCard: Error toggling favorite: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Failed to update favorites'),
+          content: Row(
+            children: [
+              Icon(Icons.error, color: Colors.white),
+              SizedBox(width: 8),
+              Text('Failed to update favorites'),
+            ],
+          ),
           backgroundColor: Colors.red,
           duration: const Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
         ),
       );
     }
@@ -133,326 +244,294 @@ class BookCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
+    final theme = Theme.of(context);
     
     // Responsive sizing based on screen dimensions
-    final cardWidth = width ?? _getResponsiveWidth(screenWidth);
-    final cardHeight = height ?? _getResponsiveHeight(screenHeight);
+    final cardWidth = widget.width ?? _getResponsiveWidth(screenWidth);
+    final cardHeight = widget.height ?? _getResponsiveHeight(screenHeight);
     
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: cardWidth,
-        height: cardHeight,
-        margin: EdgeInsets.only(right: screenWidth * 0.04), // 4% of screen width
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFF1E3A8A).withOpacity(0.15),
-              blurRadius: 20,
-              offset: const Offset(0, 10),
-            ),
-            BoxShadow(
-              color: const Color(0xFF1E3A8A).withOpacity(0.08),
-              blurRadius: 8,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Book Cover - FULLY VISIBLE IMAGE
-            Stack(
-              children: [
-                // Cover Image Container - FULLY VISIBLE
-                Container(
-                  width: double.infinity,
-                  height: cardHeight * 0.65, // 65% of card height for image
+    Widget cardContent = Container(
+      width: cardWidth,
+      // height: cardHeight, // REMOVED FIXED HEIGHT - let content determine height
+      margin: EdgeInsets.only(right: widget.width != null ? 0 : screenWidth * 0.03), // No margin for grid layout, margin for horizontal scroll
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF1E3A8A).withOpacity(0.15),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+          BoxShadow(
+            color: const Color(0xFF1E3A8A).withOpacity(0.08),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min, // Let content determine height
+        children: [
+          // Book Cover - FILLS ENTIRE CARD VERTICALLY
+          Stack(
+            children: [
+              // Cover Image Container - FILLS ENTIRE CARD
+              Container(
+                width: double.infinity,
+                height: cardWidth * 0.8, // Slightly reduced height to prevent overflow - 0.8:1 aspect ratio
+                decoration: BoxDecoration(
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                  gradient: const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Color(0xFF1E3A8A), // Dark blue
+                      Color(0xFF3B82F6), // Medium blue
+                      Color(0xFF60A5FA), // Light blue
+                    ],
+                    stops: [0.0, 0.5, 1.0],
+                  ),
+                ),
+                child: widget.book.coverImageUrl != null
+                    ? ClipRRect(
+                        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                        child: CachedNetworkImage(
+                          imageUrl: _buildFullImageUrl(widget.book.coverImageUrl!),
+                          fit: BoxFit.cover,
+                          width: double.infinity,
+                          height: double.infinity,
+                          placeholder: (context, url) => _buildGradientBackground(cardWidth),
+                          errorWidget: (context, url, error) => _buildGradientBackground(cardWidth),
+                          fadeInDuration: const Duration(milliseconds: 300),
+                          fadeOutDuration: const Duration(milliseconds: 100),
+                        ),
+                      )
+                    : _buildGradientBackground(cardWidth),
+              ),
+                
+              // Title overlay - positioned to not cover image content
+              Positioned(
+                bottom: 0,
+                left: 0,
+                right: 0,
+                child: Container(
                   decoration: BoxDecoration(
                     borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-                    gradient: const LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
                       colors: [
-                        Color(0xFF1E3A8A), // Dark blue
-                        Color(0xFF3B82F6), // Medium blue
-                        Color(0xFF60A5FA), // Light blue
+                        Colors.transparent,
+                        Colors.black.withOpacity(0.7),
                       ],
-                      stops: [0.0, 0.5, 1.0],
+                      stops: const [0.0, 1.0],
                     ),
                   ),
-                  child: book.coverImageUrl != null
-                      ? ClipRRect(
-                          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-                          child: Image.network(
-                            _buildFullImageUrl(book.coverImageUrl!),
-                            fit: BoxFit.cover,
-                            width: double.infinity,
-                            height: double.infinity,
-                            errorBuilder: (context, error, stackTrace) {
-                              return _buildGradientBackground(cardWidth);
-                            },
-                            loadingBuilder: (context, child, loadingProgress) {
-                              if (loadingProgress == null) return child;
-                              return _buildGradientBackground(cardWidth);
-                            },
-                          ),
-                        )
-                      : _buildGradientBackground(cardWidth),
-                ),
-                
-                // Title overlay - positioned to not cover image content
-                Positioned(
-                  bottom: 0,
-                  left: 0,
-                  right: 0,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Colors.transparent,
-                          Colors.black.withOpacity(0.7),
-                        ],
-                        stops: const [0.0, 1.0],
-                      ),
-                    ),
-                    padding: EdgeInsets.all(cardWidth * 0.08),
-                    child: Text(
-                      book.title,
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: _getResponsiveFontSize(cardWidth, 0.075),
-                        fontWeight: FontWeight.bold,
-                        height: 1.2,
-                        shadows: [
-                          Shadow(
-                            offset: const Offset(0, 1),
-                            blurRadius: 3,
-                            color: Colors.black,
-                          ),
-                        ],
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ),
-                
-                // Library and Favorite Action Buttons
-                if (showLibraryActions)
-                  Positioned(
-                    top: 8,
-                    right: 8,
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        // Add to Library Button
-                        if (!isInLibrary)
-                          Container(
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(20),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.2),
-                                  blurRadius: 4,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ],
-                            ),
-                            child: IconButton(
-                              icon: Icon(
-                                Icons.library_add_rounded,
-                                color: const Color(0xFF1E3A8A),
-                                size: cardWidth * 0.06,
-                              ),
-                              onPressed: () => _addToLibrary(context),
-                              padding: EdgeInsets.all(cardWidth * 0.02),
-                              constraints: BoxConstraints(
-                                minWidth: cardWidth * 0.1,
-                                minHeight: cardWidth * 0.1,
-                              ),
-                            ),
-                          ),
-                        
-                        SizedBox(width: cardWidth * 0.02),
-                        
-                        // Favorite Button
-                        Container(
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(20),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.2),
-                                blurRadius: 4,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          child: IconButton(
-                            icon: Icon(
-                              isFavorite ? Icons.favorite_rounded : Icons.favorite_border_rounded,
-                              color: isFavorite ? const Color(0xFFF56C23) : const Color(0xFF1E3A8A),
-                              size: cardWidth * 0.06,
-                            ),
-                            onPressed: () => _toggleFavorite(context),
-                            padding: EdgeInsets.all(cardWidth * 0.02),
-                            constraints: BoxConstraints(
-                              minWidth: cardWidth * 0.1,
-                              minHeight: cardWidth * 0.1,
-                            ),
-                          ),
+                  padding: EdgeInsets.all(cardWidth * 0.08),
+                  child: Text(
+                    widget.book.title,
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: _getResponsiveFontSize(cardWidth, 0.075),
+                      fontWeight: FontWeight.bold,
+                      height: 1.2,
+                      shadows: [
+                        Shadow(
+                          offset: const Offset(0, 1),
+                          blurRadius: 3,
+                          color: Colors.black,
                         ),
                       ],
                     ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
+                ),
+              ),
+                
+              // Action buttons removed for cleaner design
               ],
             ),
             
-            // Book Info below cover
-            Expanded(
-              child: Padding(
-                padding: EdgeInsets.all(cardWidth * 0.06), // Reduced padding
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Book title
-                    Text(
-                      book.title,
-                      style: TextStyle(
-                        fontSize: _getResponsiveFontSize(cardWidth, 0.08), // Slightly smaller
-                        fontWeight: FontWeight.bold,
-                        color: const Color(0xFF1E3A8A),
-                        height: 1.2,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
+          // Book Info below cover - Dynamic content height
+          Container(
+            padding: EdgeInsets.fromLTRB(
+              cardWidth * 0.03, // Further reduced left padding for grid layout
+              cardWidth * 0.03, // Further reduced top padding for grid layout
+              cardWidth * 0.03, // Further reduced right padding for grid layout
+              cardWidth * 0.01, // Further reduced bottom padding for grid layout
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min, // Take only needed space
+              children: [
+                // Book title
+                Text(
+                  widget.book.title,
+                  style: TextStyle(
+                    fontSize: _getResponsiveFontSize(cardWidth, 0.07), // Smaller font
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFF1E3A8A),
+                    height: 1.1, // Tighter line height
+                  ),
+                  maxLines: 1, // Single line to save space
+                  overflow: TextOverflow.ellipsis,
+                ),
+                
+                SizedBox(height: cardWidth * 0.01), // Further reduced spacing for grid layout
+                
+                // Author name
+                if (widget.book.authors != null && widget.book.authors!.isNotEmpty)
+                  Text(
+                    widget.book.authors!,
+                    style: TextStyle(
+                      color: const Color(0xFF3B82F6),
+                      fontSize: _getResponsiveFontSize(cardWidth, 0.06), // Proper font size
+                      fontWeight: FontWeight.w500,
+                      height: 1.1, // Proper line height
                     ),
-                    
-                    SizedBox(height: cardWidth * 0.03), // Reduced spacing
-                    
-                    // Author name
-                    if (book.authors != null && book.authors!.isNotEmpty)
-                      Text(
-                        book.authors!,
-                        style: TextStyle(
-                          color: const Color(0xFF3B82F6),
-                          fontSize: _getResponsiveFontSize(cardWidth, 0.07), // Slightly smaller
-                          fontWeight: FontWeight.w500,
-                          height: 1.1,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                
+                SizedBox(height: cardWidth * 0.01), // Further reduced spacing before info row for grid layout
+                
+                // Info row with ratings and time - Dynamic layout
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    // Clock icon with time - Dynamic
+                    Flexible(
+                      flex: 1,
+                      child: Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: cardWidth * 0.02, // Further reduced padding for grid layout
+                          vertical: cardWidth * 0.005, // Further reduced padding for grid layout
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    
-                    const Spacer(),
-                    
-                    // Info row with ratings and time - More compact layout
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        // Clock icon with time - More compact
-                        Flexible(
-                          flex: 1,
-                          child: Container(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: cardWidth * 0.04, // Reduced padding
-                              vertical: cardWidth * 0.03, // Reduced padding
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF1E3A8A),
+                          borderRadius: BorderRadius.circular(cardWidth * 0.08),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF1E3A8A).withOpacity(0.3),
+                              blurRadius: 6,
+                              offset: const Offset(0, 2),
                             ),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF1E3A8A),
-                              borderRadius: BorderRadius.circular(cardWidth * 0.08), // Smaller radius
-                              boxShadow: [
-                                BoxShadow(
-                                  color: const Color(0xFF1E3A8A).withOpacity(0.3),
-                                  blurRadius: 6, // Reduced blur
-                                  offset: const Offset(0, 2), // Reduced offset
-                                ),
-                              ],
+                          ],
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.access_time_rounded,
+                              size: _getResponsiveFontSize(cardWidth, 0.06), // Smaller icon
+                              color: Colors.white,
                             ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Icons.access_time_rounded,
-                                  size: _getResponsiveFontSize(cardWidth, 0.08), // Smaller icon
+                            SizedBox(width: cardWidth * 0.02), // Reduced spacing
+                            Flexible(
+                              child: Text(
+                                _formatDuration(widget.book.duration),
+                                style: TextStyle(
                                   color: Colors.white,
+                                  fontSize: _getResponsiveFontSize(cardWidth, 0.05), // Smaller text
+                                  fontWeight: FontWeight.w600,
                                 ),
-                                SizedBox(width: cardWidth * 0.025), // Reduced spacing
-                                Flexible(
-                                  child: Text(
-                                    _formatDuration(book.duration),
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: _getResponsiveFontSize(cardWidth, 0.06), // Smaller text
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        
-                        SizedBox(width: cardWidth * 0.02), // Small spacing between elements
-                        
-                        // Star rating - More compact
-                        Flexible(
-                          flex: 1,
-                          child: Container(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: cardWidth * 0.04, // Reduced padding
-                              vertical: cardWidth * 0.03, // Reduced padding
-                            ),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF1E3A8A).withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(cardWidth * 0.08), // Smaller radius
-                              border: Border.all(
-                                color: const Color(0xFF1E3A8A),
-                                width: 1.0, // Thinner border
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Icons.star_rounded,
-                                  size: _getResponsiveFontSize(cardWidth, 0.08), // Smaller icon
-                                  color: const Color(0xFF1E3A8A),
-                                ),
-                                SizedBox(width: cardWidth * 0.025), // Reduced spacing
-                                Flexible(
-                                  child: Text(
-                                    (book.rating ?? 0.0).toStringAsFixed(1),
-                                    style: TextStyle(
-                                      color: const Color(0xFF1E3A8A),
-                                      fontSize: _getResponsiveFontSize(cardWidth, 0.07), // Smaller text
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              ],
-                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    
+                    SizedBox(width: cardWidth * 0.02),
+                    
+                    // Star rating - Dynamic
+                    Flexible(
+                      flex: 1,
+                      child: Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: cardWidth * 0.02, // Further reduced padding for grid layout
+                          vertical: cardWidth * 0.005, // Further reduced padding for grid layout
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF1E3A8A).withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(cardWidth * 0.08),
+                          border: Border.all(
+                            color: const Color(0xFF1E3A8A),
+                            width: 1.0,
                           ),
                         ),
-                      ],
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.star_rounded,
+                              size: _getResponsiveFontSize(cardWidth, 0.06), // Smaller icon
+                              color: const Color(0xFF1E3A8A),
+                            ),
+                            SizedBox(width: cardWidth * 0.02), // Reduced spacing
+                            Flexible(
+                              child: Text(
+                                (widget.book.rating ?? 0.0).toStringAsFixed(1),
+                                style: TextStyle(
+                                  color: const Color(0xFF1E3A8A),
+                                  fontSize: _getResponsiveFontSize(cardWidth, 0.05), // Smaller text
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                   ],
                 ),
-              ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
+
+    // Wrap with animations if enabled
+    if (widget.enableAnimations) {
+      return GestureDetector(
+        onTapDown: (_) {
+          setState(() => _isPressed = true);
+          _scaleController.forward();
+        },
+        onTapUp: (_) {
+          setState(() => _isPressed = false);
+          _scaleController.reverse();
+        },
+        onTapCancel: () {
+          setState(() => _isPressed = false);
+          _scaleController.reverse();
+        },
+        onTap: widget.onTap,
+        child: AnimatedBuilder(
+          animation: _fadeAnimation,
+          builder: (context, child) {
+            return Transform.scale(
+              scale: _scaleAnimation.value,
+              child: Opacity(
+                opacity: _fadeAnimation.value,
+                child: cardContent,
+              ),
+            );
+          },
+        ),
+      );
+    } else {
+      return GestureDetector(
+        onTap: widget.onTap,
+        child: cardContent,
+      );
+    }
   }
 
   Widget _buildGradientBackground(double cardWidth) {

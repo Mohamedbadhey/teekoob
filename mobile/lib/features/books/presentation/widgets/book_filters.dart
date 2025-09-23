@@ -190,7 +190,7 @@ class _BookFiltersState extends State<BookFilters> {
                       );
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFF56C23),
+                      backgroundColor: const Color(0xFF0466c8),
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
@@ -300,15 +300,15 @@ class _BookFiltersState extends State<BookFilters> {
                 ),
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
-                  color: isSelected ? const Color(0xFFF56C23) : Colors.grey[100],
+                  color: isSelected ? const Color(0xFF0466c8) : Colors.grey[100],
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
-                    color: isSelected ? const Color(0xFFF56C23) : Colors.grey[300]!,
+                    color: isSelected ? const Color(0xFF0466c8) : Colors.grey[300]!,
                     width: 1.5,
                   ),
                   boxShadow: isSelected ? [
                     BoxShadow(
-                      color: const Color(0xFFF56C23).withOpacity(0.3),
+                      color: const Color(0xFF0466c8).withOpacity(0.3),
                       blurRadius: 8,
                       offset: const Offset(0, 2),
                     ),
@@ -377,15 +377,15 @@ class _BookFiltersState extends State<BookFilters> {
                 ),
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
-                  color: isSelected ? const Color(0xFFF56C23) : Colors.grey[100],
+                  color: isSelected ? const Color(0xFF0466c8) : Colors.grey[100],
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
-                    color: isSelected ? const Color(0xFFF56C23) : Colors.grey[300]!,
+                    color: isSelected ? const Color(0xFF0466c8) : Colors.grey[300]!,
                     width: 1.5,
                   ),
                   boxShadow: isSelected ? [
                     BoxShadow(
-                      color: const Color(0xFFF56C23).withOpacity(0.3),
+                      color: const Color(0xFF0466c8).withOpacity(0.3),
                       blurRadius: 8,
                       offset: const Offset(0, 2),
                     ),
@@ -454,15 +454,15 @@ class _BookFiltersState extends State<BookFilters> {
                 ),
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
-                  color: isSelected ? const Color(0xFFF56C23) : Colors.grey[100],
+                  color: isSelected ? const Color(0xFF0466c8) : Colors.grey[100],
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
-                    color: isSelected ? const Color(0xFFF56C23) : Colors.grey[300]!,
+                    color: isSelected ? const Color(0xFF0466c8) : Colors.grey[300]!,
                     width: 1.5,
                   ),
                   boxShadow: isSelected ? [
                     BoxShadow(
-                      color: const Color(0xFFF56C23).withOpacity(0.3),
+                      color: const Color(0xFF0466c8).withOpacity(0.3),
                       blurRadius: 8,
                       offset: const Offset(0, 2),
                     ),

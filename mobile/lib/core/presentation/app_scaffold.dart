@@ -75,7 +75,7 @@ class _AppScaffoldState extends State<AppScaffold> {
             context.go(route);
           },
           backgroundColor: Colors.white,
-          selectedItemColor: const Color(0xFFF56C23),
+          selectedItemColor: const Color(0xFF0466c8),
           unselectedItemColor: Colors.grey.shade600,
           selectedLabelStyle: const TextStyle(
             fontWeight: FontWeight.w600,
@@ -89,28 +89,28 @@ class _AppScaffoldState extends State<AppScaffold> {
             BottomNavigationBarItem(
               icon: Icon(
                 Icons.home,
-                color: _currentIndex == 0 ? const Color(0xFFF56C23) : Colors.grey.shade600,
+                color: _currentIndex == 0 ? const Color(0xFF0466c8) : Colors.grey.shade600,
               ),
               label: 'Home',
             ),
             BottomNavigationBarItem(
               icon: Icon(
                 Icons.explore,
-                color: _currentIndex == 1 ? const Color(0xFFF56C23) : Colors.grey.shade600,
+                color: _currentIndex == 1 ? const Color(0xFF0466c8) : Colors.grey.shade600,
               ),
               label: 'Explore',
             ),
             BottomNavigationBarItem(
               icon: Icon(
                 Icons.library_books,
-                color: _currentIndex == 2 ? const Color(0xFFF56C23) : Colors.grey.shade600,
+                color: _currentIndex == 2 ? const Color(0xFF0466c8) : Colors.grey.shade600,
               ),
               label: 'Library',
             ),
             BottomNavigationBarItem(
               icon: Icon(
                 Icons.person,
-                color: _currentIndex == 3 ? const Color(0xFFF56C23) : Colors.grey.shade600,
+                color: _currentIndex == 3 ? const Color(0xFF0466c8) : Colors.grey.shade600,
               ),
               label: 'Profile',
             ),

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:teekoob/core/models/book_model.dart';
+import 'package:teekoob/core/config/app_config.dart';
 import 'package:teekoob/features/player/services/audio_player_service.dart';
 import 'package:teekoob/features/player/services/audio_state_manager.dart';
 
@@ -101,6 +103,13 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
         isLoading = false;
       });
     }
+  }
+
+  String _buildFullImageUrl(String relativeUrl) {
+    if (relativeUrl.startsWith('http')) {
+      return relativeUrl;
+    }
+    return '${AppConfig.mediaBaseUrl}$relativeUrl';
   }
 
   // Create placeholder book for testing - REMOVED: No more hardcoded books
@@ -225,6 +234,11 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // Book Cover Image
+                    _buildBookCoverImage(),
+                    
+                    const SizedBox(height: 24),
+                    
                     // Title and Author
                     _buildTitleSection(),
                     
@@ -253,76 +267,96 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
 
   Widget _buildHeader(BuildContext context) {
     return Container(
-      color: const Color(0xFFF56C23), // Orange - same as home page top bar
-      child: Column(
-        children: [
-          // Status Bar (simulated)
-          Container(
-            height: 24,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  '11:40',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.white, // White text on orange background
-                  ),
-                ),
-                Row(
-                  children: [
-                    Icon(Icons.wifi, size: 16, color: Colors.white),
-                    const SizedBox(width: 4),
-                    Icon(Icons.battery_full, size: 16, color: Colors.white),
-                    Text(
-                      '98%',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.white, // White text on orange background
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+      color: const Color(0xFF0466c8), // Blue - same as home page top bar
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            IconButton(
+              onPressed: () => context.pop(),
+              icon: const Icon(Icons.arrow_back, color: Colors.white), // White on orange
             ),
-          ),
-          
-          // Header Content
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                IconButton(
-                  onPressed: () => context.pop(),
-                  icon: const Icon(Icons.arrow_back, color: Colors.white), // White on orange
+            Expanded(
+              child: Text(
+                (book?.titleSomali?.isNotEmpty ?? false) ? book!.titleSomali! : book?.title ?? '',
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white, // White text on orange background
                 ),
-                Expanded(
-                  child: Text(
-                    (book?.titleSomali?.isNotEmpty ?? false) ? book!.titleSomali! : book?.title ?? '',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white, // White text on orange background
-                    ),
-                  ),
-                ),
-                IconButton(
-                  onPressed: () {
-                    // TODO: Implement download functionality
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Download started...')),
-                    );
-                  },
-                  icon: const Icon(Icons.download, color: Colors.white), // White on orange
-                ),
-              ],
+              ),
             ),
-          ),
-        ],
+            IconButton(
+              onPressed: () {
+                // TODO: Implement download functionality
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Download started...')),
+                );
+              },
+              icon: const Icon(Icons.download, color: Colors.white), // White on orange
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBookCoverImage() {
+    return Center(
+      child: Container(
+        width: 200,
+        height: 280,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: book?.coverImageUrl != null
+              ? CachedNetworkImage(
+                  imageUrl: _buildFullImageUrl(book!.coverImageUrl!),
+                  fit: BoxFit.cover,
+                  width: double.infinity,
+                  height: double.infinity,
+                  placeholder: (context, url) => _buildPlaceholderImage(),
+                  errorWidget: (context, url, error) => _buildPlaceholderImage(),
+                )
+              : _buildPlaceholderImage(),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPlaceholderImage() {
+    return Container(
+      width: double.infinity,
+      height: double.infinity,
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color(0xFF1E3A8A),
+            Color(0xFF3B82F6),
+            Color(0xFF60A5FA),
+          ],
+          stops: [0.0, 0.5, 1.0],
+        ),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: const Center(
+        child: Icon(
+          Icons.book,
+          size: 60,
+          color: Colors.white,
+        ),
       ),
     );
   }
@@ -528,7 +562,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
             // Play/Pause
             Container(
               decoration: BoxDecoration(
-                color: const Color(0xFFFFE4D6), // Light orange
+                color: const Color(0xFFE6F2FF), // Light blue
                 shape: BoxShape.circle,
               ),
               child: IconButton(
@@ -572,7 +606,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
                 }
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFF56C23), // Orange - same as home page
+                backgroundColor: const Color(0xFF0466c8), // Blue - same as home page
                 foregroundColor: Colors.white, // White text on orange background
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),

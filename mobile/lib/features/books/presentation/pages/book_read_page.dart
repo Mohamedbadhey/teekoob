@@ -156,7 +156,7 @@ Note: We attempted to extract text from the PDF but were unable to. We've provid
     return Container(
       height: 80,
       decoration: const BoxDecoration(
-        color: Color(0xFFF56C23), // Orange - same as home page top bar
+        color: Color(0xFF0466c8), // Blue - same as home page top bar
       ),
       child: Row(
         children: [
@@ -198,7 +198,7 @@ Note: We attempted to extract text from the PDF but were unable to. We've provid
           child: Container(
             height: 50,
             decoration: BoxDecoration(
-              color: const Color(0xFFF56C23), // Orange - same as home page
+              color: const Color(0xFF0466c8), // Blue - same as home page
               borderRadius: BorderRadius.circular(12),
             ),
             child: StreamBuilder<bool>(
@@ -336,7 +336,7 @@ Note: We attempted to extract text from the PDF but were unable to. We've provid
       color: Colors.white,
       child: const Center(
         child: CircularProgressIndicator(
-          valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFF56C23)),
+          valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF0466c8)),
         ),
       ),
     );
@@ -1105,7 +1105,7 @@ Note: We attempted to extract text from the PDF but were unable to. We've provid
             ElevatedButton.icon(
               onPressed: () => _openPdfInNewTab(),
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFF56C23),
+                backgroundColor: const Color(0xFF0466c8),
                 foregroundColor: Colors.white,
               ),
               icon: const Icon(Icons.open_in_new),

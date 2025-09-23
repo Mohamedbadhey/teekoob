@@ -59,7 +59,7 @@ class _AllBooksPageState extends State<AllBooksPage> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: const Color(0xFFF56C23),
+        backgroundColor: const Color(0xFF0466c8),
         foregroundColor: Colors.white,
         title: Row(
           children: [
@@ -140,36 +140,45 @@ class _AllBooksPageState extends State<AllBooksPage> {
   }
 
   Widget _buildBooksGrid() {
-    return GridView.builder(
-      padding: const EdgeInsets.all(16),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        childAspectRatio: 0.7,
-        crossAxisSpacing: 16,
-        mainAxisSpacing: 16,
-      ),
-      itemCount: _books.length,
-      itemBuilder: (context, index) {
-        final book = _books[index];
-        return BlocBuilder<LibraryBloc, LibraryState>(
-          builder: (context, libraryState) {
-            bool isInLibrary = false;
-            bool isFavorite = false;
-            
-            if (libraryState is LibraryLoaded) {
-              isInLibrary = libraryState.library.any((item) => item['bookId'] == book.id);
-              isFavorite = libraryState.library.any((item) => 
-                item['bookId'] == book.id && (item['isFavorite'] == true || item['status'] == 'favorite')
-              );
-            }
-            
-            return BookCard(
-              book: book,
-              onTap: () => _navigateToBookDetail(book),
-              showLibraryActions: true,
-              isInLibrary: isInLibrary,
-              isFavorite: isFavorite,
-              userId: 'current_user',
+    final screenWidth = MediaQuery.of(context).size.width;
+    final crossAxisCount = _getResponsiveGridColumns(); // Professional responsive columns
+    
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return GridView.builder(
+          padding: const EdgeInsets.all(16),
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: crossAxisCount,
+            childAspectRatio: _getResponsiveGridAspectRatioFromHeight(), // Use same height as horizontal cards
+            crossAxisSpacing: _getResponsiveGridSpacing(), // Responsive spacing
+            mainAxisSpacing: _getResponsiveGridSpacing(), // Responsive spacing
+          ),
+          itemCount: _books.length,
+          itemBuilder: (context, index) {
+            final book = _books[index];
+            return BlocBuilder<LibraryBloc, LibraryState>(
+              builder: (context, libraryState) {
+                bool isInLibrary = false;
+                bool isFavorite = false;
+                
+                if (libraryState is LibraryLoaded) {
+                  isInLibrary = libraryState.library.any((item) => item['bookId'] == book.id);
+                  isFavorite = libraryState.library.any((item) => 
+                    item['bookId'] == book.id && (item['isFavorite'] == true || item['status'] == 'favorite')
+                  );
+                }
+                
+                return BookCard(
+                  book: book,
+                  onTap: () => _navigateToBookDetail(book),
+                  showLibraryActions: false, // Disabled for cleaner design
+                  isInLibrary: isInLibrary,
+                  isFavorite: isFavorite,
+                  userId: 'current_user',
+                  width: _getResponsiveGridCardWidth(), // Responsive width for grid layout
+                  enableAnimations: true,
+                );
+              },
             );
           },
         );
@@ -179,5 +188,103 @@ class _AllBooksPageState extends State<AllBooksPage> {
 
   void _navigateToBookDetail(Book book) {
     context.go('/book/${book.id}');
+  }
+
+  // Responsive grid helper methods for professional card layout - prevent overflow
+  int _getResponsiveGridColumns() {
+    final screenWidth = MediaQuery.of(context).size.width;
+    if (screenWidth < 320) {
+      return 2; // Very small phones - 2 columns
+    } else if (screenWidth < 360) {
+      return 2; // Small phones - 2 columns
+    } else if (screenWidth < 400) {
+      return 2; // Medium phones - 2 columns (conservative to prevent overflow)
+    } else if (screenWidth < 480) {
+      return 2; // Large phones - 2 columns (conservative to prevent overflow)
+    } else if (screenWidth < 600) {
+      return 2; // Very large phones - 2 columns (reduced from 3 to prevent overflow)
+    } else if (screenWidth < 768) {
+      return 3; // Small tablets - 3 columns
+    } else if (screenWidth < 1024) {
+      return 4; // Medium tablets - 4 columns
+    } else {
+      return 5; // Large tablets/desktop - 5 columns
+    }
+  }
+
+  double _getResponsiveGridAspectRatio() {
+    final screenWidth = MediaQuery.of(context).size.width;
+    if (screenWidth < 360) {
+      return 0.75; // More compact aspect ratio for small screens
+    } else if (screenWidth < 480) {
+      return 0.80; // More compact aspect ratio for medium screens
+    } else if (screenWidth < 600) {
+      return 0.85; // More compact aspect ratio for large phones
+    } else if (screenWidth < 768) {
+      return 0.90; // More compact aspect ratio for tablets
+    } else {
+      return 0.95; // More compact aspect ratio for large screens
+    }
+  }
+
+  // Calculate aspect ratio based on same height as horizontal cards
+  double _getResponsiveGridAspectRatioFromHeight() {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+    final crossAxisCount = _getResponsiveGridColumns();
+    final cardHeight = _getResponsiveHorizontalCardHeight();
+    
+    // Calculate available width per card (accounting for spacing and proper padding)
+    final availableWidth = screenWidth - 32 - (_getResponsiveGridSpacing() * (crossAxisCount - 1)); // 32 for proper padding, spacing between cards
+    final cardWidth = availableWidth / crossAxisCount;
+    
+    // Add extra height to prevent overflow in grid layout
+    final adjustedCardHeight = cardHeight + 10; // Add 10px extra height for grid layout
+    
+    // Calculate aspect ratio: width / height
+    return cardWidth / adjustedCardHeight;
+  }
+
+  // Get responsive horizontal card height (same as HomePage)
+  double _getResponsiveHorizontalCardHeight() {
+    final screenHeight = MediaQuery.of(context).size.height;
+    if (screenHeight < 600) {
+      return screenHeight * 0.26; // Very small screens - content fitted with overflow prevention
+    } else if (screenHeight < 700) {
+      return screenHeight * 0.24; // Small screens - content fitted with overflow prevention
+    } else if (screenHeight < 800) {
+      return screenHeight * 0.22; // Medium screens - content fitted with overflow prevention
+    } else if (screenHeight < 900) {
+      return screenHeight * 0.20; // Large screens - content fitted with overflow prevention
+    } else if (screenHeight < 1000) {
+      return screenHeight * 0.18; // Very large screens - content fitted with overflow prevention
+    } else {
+      return screenHeight * 0.16; // Extra large screens - content fitted with overflow prevention
+    }
+  }
+
+  double _getResponsiveGridSpacing() {
+    final screenWidth = MediaQuery.of(context).size.width;
+    if (screenWidth < 360) {
+      return 8.0; // Proper spacing for small screens
+    } else if (screenWidth < 480) {
+      return 10.0; // Proper spacing
+    } else if (screenWidth < 600) {
+      return 12.0; // Proper spacing
+    } else if (screenWidth < 768) {
+      return 14.0; // Professional spacing for tablets
+    } else {
+      return 16.0; // Professional spacing for large screens
+    }
+  }
+
+  // Get responsive card width for grid layout (same as horizontal cards)
+  double _getResponsiveGridCardWidth() {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final crossAxisCount = _getResponsiveGridColumns();
+    
+    // Calculate available width per card (accounting for spacing and proper padding)
+    final availableWidth = screenWidth - 32 - (_getResponsiveGridSpacing() * (crossAxisCount - 1)); // 32 for proper padding, spacing between cards
+    return availableWidth / crossAxisCount;
   }
 }

@@ -47,7 +47,7 @@ class _SettingsPageState extends State<SettingsPage> {
             fontWeight: FontWeight.w600,
           ),
         ),
-        backgroundColor: const Color(0xFFF56C23),
+        backgroundColor: const Color(0xFF0466c8),
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.white),
       ),
@@ -109,7 +109,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xFFF56C23).withOpacity(0.1),
+                    color: const Color(0xFF0466c8).withOpacity(0.1),
                     blurRadius: 10,
                     offset: const Offset(0, 4),
                   ),
@@ -119,7 +119,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 contentPadding: const EdgeInsets.all(16),
           leading: CircleAvatar(
                   radius: 30,
-                  backgroundColor: const Color(0xFFF56C23),
+                  backgroundColor: const Color(0xFF0466c8),
                   backgroundImage: avatarUrl != null ? NetworkImage(avatarUrl) : null,
                   child: avatarUrl == null
                       ? const Icon(
@@ -146,13 +146,13 @@ class _SettingsPageState extends State<SettingsPage> {
                 ),
                 trailing: Container(
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF56C23).withOpacity(0.1),
+                    color: const Color(0xFF0466c8).withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: IconButton(
                     icon: const Icon(
                       Icons.edit_rounded,
-                      color: Color(0xFFF56C23),
+                      color: Color(0xFF0466c8),
                     ),
             onPressed: () {
                       _showEditProfileDialog(context, authState);
@@ -223,7 +223,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   trailing: Switch(
                     value: notificationsEnabled,
                     onChanged: (value) => _updateNotifications(value, authState),
-                    activeColor: const Color(0xFFF56C23),
+                    activeColor: const Color(0xFF0466c8),
                   ),
         ),
         
@@ -241,7 +241,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   trailing: Switch(
                     value: autoDownloadEnabled,
                     onChanged: (value) => _updateAutoDownload(value, authState),
-                    activeColor: const Color(0xFFF56C23),
+                    activeColor: const Color(0xFF0466c8),
                   ),
                 ),
               ],
@@ -523,7 +523,7 @@ class _SettingsPageState extends State<SettingsPage> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFFF56C23).withOpacity(0.1),
+            color: const Color(0xFF0466c8).withOpacity(0.1),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -534,12 +534,12 @@ class _SettingsPageState extends State<SettingsPage> {
         leading: Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: const Color(0xFFF56C23).withOpacity(0.1),
+            color: const Color(0xFF0466c8).withOpacity(0.1),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Icon(
             icon,
-            color: const Color(0xFFF56C23),
+            color: const Color(0xFF0466c8),
             size: 24,
           ),
         ),
@@ -567,16 +567,16 @@ class _SettingsPageState extends State<SettingsPage> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       decoration: BoxDecoration(
-        color: const Color(0xFFF56C23).withOpacity(0.1),
+        color: const Color(0xFF0466c8).withOpacity(0.1),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: const Color(0xFFF56C23).withOpacity(0.3),
+          color: const Color(0xFF0466c8).withOpacity(0.3),
         ),
       ),
       child: DropdownButton<String>(
         value: currentLanguage,
         underline: Container(),
-        icon: const Icon(Icons.keyboard_arrow_down, color: Color(0xFFF56C23)),
+        icon: const Icon(Icons.keyboard_arrow_down, color: Color(0xFF0466c8)),
         dropdownColor: AppTheme.cardColor,
         items: [
           DropdownMenuItem(
@@ -607,16 +607,16 @@ class _SettingsPageState extends State<SettingsPage> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       decoration: BoxDecoration(
-        color: const Color(0xFFF56C23).withOpacity(0.1),
+        color: const Color(0xFF0466c8).withOpacity(0.1),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: const Color(0xFFF56C23).withOpacity(0.3),
+          color: const Color(0xFF0466c8).withOpacity(0.3),
         ),
       ),
       child: DropdownButton<String>(
         value: currentTheme,
         underline: Container(),
-        icon: const Icon(Icons.keyboard_arrow_down, color: Color(0xFFF56C23)),
+        icon: const Icon(Icons.keyboard_arrow_down, color: Color(0xFF0466c8)),
         dropdownColor: AppTheme.cardColor,
         items: [
           DropdownMenuItem(
@@ -754,7 +754,7 @@ class _SettingsPageState extends State<SettingsPage> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFFF56C23).withOpacity(0.1),
+            color: const Color(0xFF0466c8).withOpacity(0.1),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -767,12 +767,12 @@ class _SettingsPageState extends State<SettingsPage> {
           decoration: BoxDecoration(
             color: isDestructive 
                 ? Colors.red.withOpacity(0.1)
-                : const Color(0xFFF56C23).withOpacity(0.1),
+                : const Color(0xFF0466c8).withOpacity(0.1),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Icon(
             icon,
-            color: isDestructive ? Colors.red : const Color(0xFFF56C23),
+            color: isDestructive ? Colors.red : const Color(0xFF0466c8),
             size: 24,
           ),
         ),
@@ -821,12 +821,12 @@ class _SettingsPageState extends State<SettingsPage> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF56C23).withOpacity(0.1),
+                  color: const Color(0xFF0466c8).withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Icon(
                   Icons.security_rounded,
-                  color: Color(0xFFF56C23),
+                  color: Color(0xFF0466c8),
                   size: 24,
                 ),
               ),
@@ -860,7 +860,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: Color(0xFFF56C23)),
+                      borderSide: const BorderSide(color: Color(0xFF0466c8)),
                     ),
                     suffixIcon: IconButton(
                       icon: Icon(
@@ -888,7 +888,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: Color(0xFFF56C23)),
+                      borderSide: const BorderSide(color: Color(0xFF0466c8)),
                     ),
                     suffixIcon: IconButton(
                       icon: Icon(
@@ -916,7 +916,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: Color(0xFFF56C23)),
+                      borderSide: const BorderSide(color: Color(0xFF0466c8)),
                     ),
                     suffixIcon: IconButton(
                       icon: Icon(
@@ -970,7 +970,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 }
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFF56C23),
+                backgroundColor: const Color(0xFF0466c8),
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -1004,12 +1004,12 @@ class _SettingsPageState extends State<SettingsPage> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF56C23).withOpacity(0.1),
+                  color: const Color(0xFF0466c8).withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Icon(
                   Icons.privacy_tip_rounded,
-                  color: Color(0xFFF56C23),
+                  color: Color(0xFF0466c8),
                   size: 24,
                 ),
               ),
@@ -1045,7 +1045,7 @@ class _SettingsPageState extends State<SettingsPage> {
                       profileVisibility = value;
                     });
                   },
-                  activeColor: const Color(0xFFF56C23),
+                  activeColor: const Color(0xFF0466c8),
                 ),
                 SwitchListTile(
                   title: Text(LocalizationService.getLocalizedText(
@@ -1062,7 +1062,7 @@ class _SettingsPageState extends State<SettingsPage> {
                       readingHistory = value;
                     });
                   },
-                  activeColor: const Color(0xFFF56C23),
+                  activeColor: const Color(0xFF0466c8),
                 ),
                 SwitchListTile(
                   title: Text(LocalizationService.getLocalizedText(
@@ -1079,7 +1079,7 @@ class _SettingsPageState extends State<SettingsPage> {
                       personalizedAds = value;
                     });
                   },
-                  activeColor: const Color(0xFFF56C23),
+                  activeColor: const Color(0xFF0466c8),
                 ),
               ],
             ),
@@ -1101,7 +1101,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 ));
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFF56C23),
+                backgroundColor: const Color(0xFF0466c8),
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -1130,12 +1130,12 @@ class _SettingsPageState extends State<SettingsPage> {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: const Color(0xFFF56C23).withOpacity(0.1),
+                color: const Color(0xFF0466c8).withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: const Icon(
                 Icons.storage_rounded,
-                color: Color(0xFFF56C23),
+                color: Color(0xFF0466c8),
                 size: 24,
               ),
             ),
@@ -1166,14 +1166,14 @@ class _SettingsPageState extends State<SettingsPage> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: const Color(0xFFF56C23).withOpacity(0.1),
+                color: const Color(0xFF0466c8).withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Row(
                 children: [
                   const Icon(
                     Icons.info_outline,
-                    color: Color(0xFFF56C23),
+                    color: Color(0xFF0466c8),
                     size: 20,
                   ),
                   const SizedBox(width: 8),
@@ -1214,7 +1214,7 @@ class _SettingsPageState extends State<SettingsPage> {
               }
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFF56C23),
+              backgroundColor: const Color(0xFF0466c8),
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -1256,7 +1256,7 @@ class _SettingsPageState extends State<SettingsPage> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFFF56C23).withOpacity(0.1),
+            color: const Color(0xFF0466c8).withOpacity(0.1),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -1267,12 +1267,12 @@ class _SettingsPageState extends State<SettingsPage> {
         leading: Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: const Color(0xFFF56C23).withOpacity(0.1),
+            color: const Color(0xFF0466c8).withOpacity(0.1),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Icon(
             icon,
-            color: const Color(0xFFF56C23),
+            color: const Color(0xFF0466c8),
             size: 24,
           ),
         ),
@@ -1313,12 +1313,12 @@ class _SettingsPageState extends State<SettingsPage> {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: const Color(0xFFF56C23).withOpacity(0.1),
+                color: const Color(0xFF0466c8).withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: const Icon(
                 Icons.help_rounded,
-                color: Color(0xFFF56C23),
+                color: Color(0xFF0466c8),
                 size: 24,
               ),
             ),
@@ -1364,7 +1364,7 @@ class _SettingsPageState extends State<SettingsPage> {
           ElevatedButton(
             onPressed: () => Navigator.of(context).pop(),
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFF56C23),
+              backgroundColor: const Color(0xFF0466c8),
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -1385,10 +1385,10 @@ class _SettingsPageState extends State<SettingsPage> {
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const Color(0xFFF56C23).withOpacity(0.05),
+        color: const Color(0xFF0466c8).withOpacity(0.05),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: const Color(0xFFF56C23).withOpacity(0.2),
+          color: const Color(0xFF0466c8).withOpacity(0.2),
         ),
       ),
       child: Column(
@@ -1431,12 +1431,12 @@ class _SettingsPageState extends State<SettingsPage> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF56C23).withOpacity(0.1),
+                  color: const Color(0xFF0466c8).withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Icon(
                   Icons.feedback_rounded,
-                  color: Color(0xFFF56C23),
+                  color: Color(0xFF0466c8),
                   size: 24,
                 ),
               ),
@@ -1476,7 +1476,7 @@ class _SettingsPageState extends State<SettingsPage> {
                       },
                       child: Icon(
                         index < selectedRating ? Icons.star : Icons.star_border,
-                        color: const Color(0xFFF56C23),
+                        color: const Color(0xFF0466c8),
                         size: 32,
                       ),
                     );
@@ -1500,7 +1500,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: Color(0xFFF56C23)),
+                      borderSide: const BorderSide(color: Color(0xFF0466c8)),
                     ),
                   ),
                 ),
@@ -1524,7 +1524,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 ));
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFF56C23),
+                backgroundColor: const Color(0xFF0466c8),
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -1595,7 +1595,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: Color(0xFFF56C23)),
+                      borderSide: const BorderSide(color: Color(0xFF0466c8)),
                     ),
                   ),
                   items: [
@@ -1652,7 +1652,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: Color(0xFFF56C23)),
+                      borderSide: const BorderSide(color: Color(0xFF0466c8)),
                     ),
                   ),
                 ),
@@ -1705,12 +1705,12 @@ class _SettingsPageState extends State<SettingsPage> {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: const Color(0xFFF56C23).withOpacity(0.1),
+                color: const Color(0xFF0466c8).withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: const Icon(
                 Icons.contact_support_rounded,
-                color: Color(0xFFF56C23),
+                color: Color(0xFF0466c8),
                 size: 24,
               ),
             ),
@@ -1754,7 +1754,7 @@ class _SettingsPageState extends State<SettingsPage> {
           ElevatedButton(
             onPressed: () => Navigator.of(context).pop(),
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFF56C23),
+              backgroundColor: const Color(0xFF0466c8),
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -1777,12 +1777,12 @@ class _SettingsPageState extends State<SettingsPage> {
         leading: Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: const Color(0xFFF56C23).withOpacity(0.1),
+            color: const Color(0xFF0466c8).withOpacity(0.1),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Icon(
             icon,
-            color: const Color(0xFFF56C23),
+            color: const Color(0xFF0466c8),
             size: 20,
           ),
         ),
@@ -1824,12 +1824,12 @@ class _SettingsPageState extends State<SettingsPage> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF56C23).withOpacity(0.1),
+                  color: const Color(0xFF0466c8).withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Icon(
                   Icons.star_rounded,
-                  color: Color(0xFFF56C23),
+                  color: Color(0xFF0466c8),
                   size: 24,
                 ),
               ),
@@ -1869,7 +1869,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     },
                     child: Icon(
                       index < selectedRating ? Icons.star : Icons.star_border,
-                      color: const Color(0xFFF56C23),
+                      color: const Color(0xFF0466c8),
                       size: 40,
                     ),
                   );
@@ -1905,7 +1905,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   ));
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFF56C23),
+                  backgroundColor: const Color(0xFF0466c8),
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -1935,7 +1935,7 @@ class _SettingsPageState extends State<SettingsPage> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFFF56C23).withOpacity(0.1),
+            color: const Color(0xFF0466c8).withOpacity(0.1),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -1946,12 +1946,12 @@ class _SettingsPageState extends State<SettingsPage> {
         leading: Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: const Color(0xFFF56C23).withOpacity(0.1),
+            color: const Color(0xFF0466c8).withOpacity(0.1),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Icon(
             icon,
-            color: const Color(0xFFF56C23),
+            color: const Color(0xFF0466c8),
             size: 24,
           ),
         ),
@@ -1992,12 +1992,12 @@ class _SettingsPageState extends State<SettingsPage> {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: const Color(0xFFF56C23).withOpacity(0.1),
+                color: const Color(0xFF0466c8).withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: const Icon(
                 Icons.info_rounded,
-                color: Color(0xFFF56C23),
+                color: Color(0xFF0466c8),
                 size: 24,
               ),
             ),
@@ -2020,7 +2020,7 @@ class _SettingsPageState extends State<SettingsPage> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: const Color(0xFFF56C23).withOpacity(0.1),
+                color: const Color(0xFF0466c8).withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Column(
@@ -2039,7 +2039,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w600,
-                      color: Color(0xFFF56C23),
+                      color: Color(0xFF0466c8),
                     ),
                   ),
                   const Text(
@@ -2067,7 +2067,7 @@ class _SettingsPageState extends State<SettingsPage> {
           ElevatedButton(
             onPressed: () => Navigator.of(context).pop(),
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFF56C23),
+              backgroundColor: const Color(0xFF0466c8),
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -2095,12 +2095,12 @@ class _SettingsPageState extends State<SettingsPage> {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: const Color(0xFFF56C23).withOpacity(0.1),
+                color: const Color(0xFF0466c8).withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: const Icon(
                 Icons.description_rounded,
-                color: Color(0xFFF56C23),
+                color: Color(0xFF0466c8),
                 size: 24,
               ),
             ),
@@ -2149,7 +2149,7 @@ class _SettingsPageState extends State<SettingsPage> {
           ElevatedButton(
             onPressed: () => Navigator.of(context).pop(),
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFF56C23),
+              backgroundColor: const Color(0xFF0466c8),
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -2177,12 +2177,12 @@ class _SettingsPageState extends State<SettingsPage> {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: const Color(0xFFF56C23).withOpacity(0.1),
+                color: const Color(0xFF0466c8).withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: const Icon(
                 Icons.privacy_tip_rounded,
-                color: Color(0xFFF56C23),
+                color: Color(0xFF0466c8),
                 size: 24,
               ),
             ),
@@ -2231,7 +2231,7 @@ class _SettingsPageState extends State<SettingsPage> {
           ElevatedButton(
             onPressed: () => Navigator.of(context).pop(),
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFF56C23),
+              backgroundColor: const Color(0xFF0466c8),
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -2259,12 +2259,12 @@ class _SettingsPageState extends State<SettingsPage> {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: const Color(0xFFF56C23).withOpacity(0.1),
+                color: const Color(0xFF0466c8).withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: const Icon(
                 Icons.open_in_new_rounded,
-                color: Color(0xFFF56C23),
+                color: Color(0xFF0466c8),
                 size: 24,
               ),
             ),
@@ -2301,7 +2301,7 @@ class _SettingsPageState extends State<SettingsPage> {
           ElevatedButton(
             onPressed: () => Navigator.of(context).pop(),
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFF56C23),
+              backgroundColor: const Color(0xFF0466c8),
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -2329,12 +2329,12 @@ class _SettingsPageState extends State<SettingsPage> {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: const Color(0xFFF56C23).withOpacity(0.1),
+                color: const Color(0xFF0466c8).withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: const Icon(
                 Icons.apps_rounded,
-                color: Color(0xFFF56C23),
+                color: Color(0xFF0466c8),
                 size: 24,
               ),
             ),
@@ -2368,7 +2368,7 @@ class _SettingsPageState extends State<SettingsPage> {
           ElevatedButton(
             onPressed: () => Navigator.of(context).pop(),
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFF56C23),
+              backgroundColor: const Color(0xFF0466c8),
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -2416,10 +2416,10 @@ class _SettingsPageState extends State<SettingsPage> {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const Color(0xFFF56C23).withOpacity(0.05),
+        color: const Color(0xFF0466c8).withOpacity(0.05),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: const Color(0xFFF56C23).withOpacity(0.2),
+          color: const Color(0xFF0466c8).withOpacity(0.2),
         ),
       ),
       child: Row(
@@ -2472,7 +2472,7 @@ class _SettingsPageState extends State<SettingsPage> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: const Color(0xFFF56C23),
+        backgroundColor: const Color(0xFF0466c8),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
@@ -2503,12 +2503,12 @@ class _SettingsPageState extends State<SettingsPage> {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: const Color(0xFFF56C23).withOpacity(0.1),
+                color: const Color(0xFF0466c8).withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: const Icon(
                 Icons.edit_rounded,
-                color: Color(0xFFF56C23),
+                color: Color(0xFF0466c8),
                 size: 24,
               ),
             ),
@@ -2541,7 +2541,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: Color(0xFFF56C23)),
+                    borderSide: const BorderSide(color: Color(0xFF0466c8)),
                   ),
                 ),
               ),
@@ -2558,7 +2558,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: Color(0xFFF56C23)),
+                    borderSide: const BorderSide(color: Color(0xFF0466c8)),
                   ),
                 ),
               ),
@@ -2575,7 +2575,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: Color(0xFFF56C23)),
+                    borderSide: const BorderSide(color: Color(0xFF0466c8)),
                   ),
                 ),
               ),
@@ -2605,13 +2605,13 @@ class _SettingsPageState extends State<SettingsPage> {
                       englishText: 'Profile updated successfully!',
                       somaliText: 'Profile si guul leh ayaa loo cusboonaysiiyay!',
                     )),
-                    backgroundColor: const Color(0xFFF56C23),
+                    backgroundColor: const Color(0xFF0466c8),
                   ),
                 );
               }
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFF56C23),
+              backgroundColor: const Color(0xFF0466c8),
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),

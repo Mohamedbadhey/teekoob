@@ -33,11 +33,11 @@ import { addNotification } from '@/store/slices/uiSlice'
 interface Category {
   id: string
   name: string
-  nameSomali: string
+  name_somali: string
   description?: string
-  bookCount?: number
-  createdAt: string
-  updatedAt: string
+  book_count: number
+  created_at: string
+  updated_at: string
 }
 
 const CategoriesPage: React.FC = () => {
@@ -48,7 +48,7 @@ const CategoriesPage: React.FC = () => {
   const [editingCategory, setEditingCategory] = useState<Category | null>(null)
   const [formData, setFormData] = useState({
     name: '',
-    nameSomali: '',
+    name_somali: '',
     description: '',
   })
 
@@ -60,7 +60,7 @@ const CategoriesPage: React.FC = () => {
 
   // Create/Update category mutation
   const categoryMutation = useMutation({
-    mutationFn: (data: { name: string; nameSomali: string; description?: string }) =>
+    mutationFn: (data: { name: string; name_somali: string; description?: string }) =>
       editingCategory
         ? updateCategory(editingCategory.id, data)
         : createCategory(data),
@@ -103,14 +103,14 @@ const CategoriesPage: React.FC = () => {
       setEditingCategory(category)
       setFormData({
         name: category.name,
-        nameSomali: category.nameSomali,
+        name_somali: category.name_somali,
         description: category.description || '',
       })
     } else {
       setEditingCategory(null)
       setFormData({
         name: '',
-        nameSomali: '',
+        name_somali: '',
         description: '',
       })
     }
@@ -122,19 +122,28 @@ const CategoriesPage: React.FC = () => {
     setEditingCategory(null)
     setFormData({
       name: '',
-      nameSomali: '',
+      name_somali: '',
       description: '',
     })
   }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (formData.name && formData.nameSomali) {
+    if (formData.name && formData.name_somali) {
       categoryMutation.mutate(formData)
     }
   }
 
   const handleDelete = (id: string) => {
+    const category = categories?.find(cat => cat.id === id)
+    if (category && category.book_count > 0) {
+      dispatch(addNotification({
+        type: 'error',
+        message: `Cannot delete category "${category.name}" because it is assigned to ${category.book_count} book(s). Please remove all books from this category first.`,
+      }))
+      return
+    }
+    
     if (window.confirm('Are you sure you want to delete this category?')) {
       deleteCategoryMutation.mutate(id)
     }
@@ -148,7 +157,7 @@ const CategoriesPage: React.FC = () => {
       minWidth: 200,
     },
     {
-      field: 'nameSomali',
+      field: 'name_somali',
       headerName: 'Name (Somali)',
       flex: 1,
       minWidth: 200,
@@ -165,20 +174,24 @@ const CategoriesPage: React.FC = () => {
       ),
     },
     {
-      field: 'bookCount',
+      field: 'book_count',
       headerName: 'Books',
-      width: 100,
+      width: 120,
       renderCell: (params) => (
         <Chip
           label={params.value || 0}
           size="small"
-          color="primary"
-          variant="outlined"
+          color={params.value > 0 ? "primary" : "default"}
+          variant={params.value > 0 ? "filled" : "outlined"}
+          sx={{ 
+            fontWeight: params.value > 0 ? 'bold' : 'normal',
+            minWidth: '40px'
+          }}
         />
       ),
     },
     {
-      field: 'createdAt',
+      field: 'created_at',
       headerName: 'Created',
       width: 120,
       valueGetter: (params) => new Date(params.value).toLocaleDateString(),
@@ -196,8 +209,15 @@ const CategoriesPage: React.FC = () => {
         />,
         <GridActionsCellItem
           icon={<DeleteIcon />}
-          label="Delete"
+          label={params.row.book_count > 0 ? "Cannot delete (has books)" : "Delete"}
           onClick={() => handleDelete(params.id as string)}
+          disabled={params.row.book_count > 0}
+          sx={{ 
+            color: params.row.book_count > 0 ? 'text.disabled' : 'error.main',
+            '&:hover': {
+              backgroundColor: params.row.book_count > 0 ? 'transparent' : 'error.light'
+            }
+          }}
         />,
       ],
     },
@@ -253,8 +273,8 @@ const CategoriesPage: React.FC = () => {
             <TextField
               fullWidth
               label="Name (Somali)"
-              value={formData.nameSomali}
-              onChange={(e) => setFormData(prev => ({ ...prev, nameSomali: e.target.value }))}
+              value={formData.name_somali}
+              onChange={(e) => setFormData(prev => ({ ...prev, name_somali: e.target.value }))}
               required
               sx={{ mb: 2 }}
             />
@@ -273,7 +293,7 @@ const CategoriesPage: React.FC = () => {
           <Button
             onClick={handleSubmit}
             variant="contained"
-            disabled={categoryMutation.isPending || !formData.name || !formData.nameSomali}
+            disabled={categoryMutation.isPending || !formData.name || !formData.name_somali}
           >
             {editingCategory ? 'Update' : 'Create'}
           </Button>
