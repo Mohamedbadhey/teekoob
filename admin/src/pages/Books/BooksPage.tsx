@@ -72,7 +72,8 @@ import {
   bulkUpdateBooks,
   deleteBook,
   createBook,
-  updateBook
+  updateBook,
+  getBookCategories
 } from '../../services/adminAPI';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
@@ -103,6 +104,9 @@ interface Book {
   metadata?: any;
   created_at: string;
   updated_at: string;
+  categories?: string[];
+  categoryNames?: string[];
+  categoryNamesSomali?: string[];
 }
 
 interface BookStats {
@@ -123,8 +127,7 @@ interface BookFormData {
   description_somali: string;
   authors: string;
   authors_somali: string;
-  genre: string;
-  genre_somali: string;
+  selectedCategories: string[];  // Changed from genre to selectedCategories
   language: 'en' | 'so' | 'ar';
   format: 'ebook' | 'audiobook' | 'both';
   duration?: number;
@@ -175,8 +178,7 @@ const BooksPage: React.FC = () => {
     description_somali: '',
     authors: '',
     authors_somali: '',
-    genre: '',
-    genre_somali: '',
+    selectedCategories: [],  // Changed from genre to selectedCategories
     language: 'en',
     format: 'ebook',
     duration: undefined,
@@ -211,6 +213,13 @@ const BooksPage: React.FC = () => {
     queryKey: ['bookStats'],
     queryFn: () => getBookStats(),
     staleTime: 60000,
+  });
+
+  // Fetch categories for genre filter
+  const { data: categories } = useQuery({
+    queryKey: ['bookCategories'],
+    queryFn: () => getBookCategories(),
+    staleTime: 300000, // 5 minutes
   });
 
   // Force DataGrid to re-render after initial load to fix scroll issues
@@ -333,16 +342,32 @@ const BooksPage: React.FC = () => {
       ),
     },
     {
-      field: 'genre',
-      headerName: 'Genre',
-      width: isMobile ? 100 : 140,
+      field: 'categories',
+      headerName: 'Categories',
+      width: isMobile ? 120 : 180,
       renderCell: (params) => (
-        <Chip 
-          label={params.row.genre} 
-          size="small"
-          color="primary"
-          variant="outlined"
-        />
+        <Box display="flex" flexWrap="wrap" gap={0.5}>
+          {params.row.categoryNames && params.row.categoryNames.length > 0 ? (
+            params.row.categoryNames.map((category: string, index: number) => (
+              <Chip 
+                key={index}
+                label={category} 
+                size="small"
+                color="primary"
+                variant="outlined"
+                sx={{ fontSize: '0.7rem', height: 20 }}
+              />
+            ))
+          ) : (
+            <Chip 
+              label={params.row.genre || 'No categories'} 
+              size="small"
+              color="default"
+              variant="outlined"
+              sx={{ fontSize: '0.7rem', height: 20 }}
+            />
+          )}
+        </Box>
       ),
     },
     {
@@ -544,20 +569,18 @@ const BooksPage: React.FC = () => {
             </Grid>
             <Grid item xs={6} md={2}>
               <FormControl fullWidth size="small">
-                <InputLabel>Genre</InputLabel>
+                <InputLabel>Category</InputLabel>
                 <Select
                   value={genreFilter}
                   onChange={(e) => setGenreFilter(e.target.value)}
-                  label="Genre"
+                  label="Category"
                 >
-                  <MenuItem value="all">All Genres</MenuItem>
-                  <MenuItem value="fiction">Fiction</MenuItem>
-                  <MenuItem value="non-fiction">Non-Fiction</MenuItem>
-                  <MenuItem value="educational">Educational</MenuItem>
-                  <MenuItem value="children">Children</MenuItem>
-                  <MenuItem value="religious">Religious</MenuItem>
-                  <MenuItem value="history">History</MenuItem>
-                  <MenuItem value="science">Science</MenuItem>
+                  <MenuItem value="all">All Categories</MenuItem>
+                  {categories?.map((category: any) => (
+                    <MenuItem key={category.id} value={category.id}>
+                      {category.name}
+                    </MenuItem>
+                  ))}
                 </Select>
               </FormControl>
             </Grid>
@@ -729,23 +752,50 @@ const BooksPage: React.FC = () => {
                 required
               />
             </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Genre (English) *"
-                value={formData.genre}
-                onChange={(e) => setFormData(prev => ({ ...prev, genre: e.target.value }))}
-                required
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Genre (Somali) *"
-                value={formData.genre_somali}
-                onChange={(e) => setFormData(prev => ({ ...prev, genre_somali: e.target.value }))}
-                required
-              />
+            <Grid item xs={12}>
+              <FormControl fullWidth required>
+                <InputLabel>Categories *</InputLabel>
+                <Select
+                  multiple
+                  value={formData.selectedCategories}
+                  onChange={(e) => setFormData(prev => ({ ...prev, selectedCategories: e.target.value as string[] }))}
+                  label="Categories *"
+                  renderValue={(selected) => (
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                      {selected.map((value) => {
+                        const category = categories?.find(cat => cat.id === value);
+                        return (
+                          <Chip 
+                            key={value} 
+                            label={category?.name || value} 
+                            size="small"
+                            color="primary"
+                            variant="outlined"
+                          />
+                        );
+                      })}
+                    </Box>
+                  )}
+                >
+                  {categories?.map((category: any) => (
+                    <MenuItem key={category.id} value={category.id}>
+                      <Box>
+                        <Typography variant="body2" fontWeight="medium">
+                          {category.name}
+                        </Typography>
+                        {category.name_somali && (
+                          <Typography variant="caption" color="text.secondary">
+                            {category.name_somali}
+                          </Typography>
+                        )}
+                      </Box>
+                    </MenuItem>
+                  ))}
+                </Select>
+                <FormHelperText>
+                  Select one or more categories for this book
+                </FormHelperText>
+              </FormControl>
             </Grid>
             <Grid item xs={12} sm={6}>
               <FormControl fullWidth required>
@@ -1040,7 +1090,7 @@ const BooksPage: React.FC = () => {
       case 0:
         return formData.title && formData.title_somali && formData.description && 
                formData.description_somali && formData.authors && formData.authors_somali && 
-               formData.genre && formData.genre_somali;
+               formData.selectedCategories.length > 0;
       case 1:
         return true; // Optional fields
       case 2:
@@ -1065,8 +1115,7 @@ const BooksPage: React.FC = () => {
       description_somali: '',
       authors: '',
       authors_somali: '',
-      genre: '',
-      genre_somali: '',
+      selectedCategories: [],
       language: 'en',
       format: 'ebook',
       duration: undefined,
@@ -1088,6 +1137,9 @@ const BooksPage: React.FC = () => {
   };
 
   const handleEditBook = (book: Book) => {
+    console.log('🔍 Editing book:', book.title);
+    console.log('🔍 Book ebook_content:', book.ebook_content ? `${book.ebook_content.length} characters` : 'null/empty');
+    
     setSelectedBook(book);
     setFormData({
       title: book.title,
@@ -1096,8 +1148,7 @@ const BooksPage: React.FC = () => {
       description_somali: book.description_somali,
       authors: book.authors,
       authors_somali: book.authors_somali,
-      genre: book.genre,
-      genre_somali: book.genre_somali,
+      selectedCategories: book.categories || [],  // Use categories from book
       language: book.language,
       format: book.format,
       duration: book.duration,
@@ -1157,8 +1208,6 @@ const BooksPage: React.FC = () => {
         description_somali: 'description_somali',
         authors: 'authors',
         authors_somali: 'authors_somali',
-        genre: 'genre',
-        genre_somali: 'genre_somali',
         language: 'language',
         format: 'format',
         duration: 'duration',
@@ -1170,10 +1219,15 @@ const BooksPage: React.FC = () => {
       };
 
       Object.entries(formData).forEach(([key, value]) => {
-        if (value !== undefined && value !== null) {
+        if (value !== undefined && value !== null && key !== 'selectedCategories') {
           const backendKey = fieldMapping[key as keyof typeof fieldMapping] || key;
           formDataToSend.append(backendKey, value.toString());
         }
+      });
+
+      // Add selected categories
+      formData.selectedCategories.forEach((categoryId, index) => {
+        formDataToSend.append(`categories[${index}]`, categoryId);
       });
 
       // Add files with correct field names for backend

@@ -136,6 +136,7 @@ const CategoriesPage: React.FC = () => {
 
   const handleDelete = (id: string) => {
     const category = categories?.find(cat => cat.id === id)
+    
     if (category && category.book_count > 0) {
       dispatch(addNotification({
         type: 'error',
@@ -203,11 +204,13 @@ const CategoriesPage: React.FC = () => {
       type: 'actions',
       getActions: (params) => [
         <GridActionsCellItem
+          key="edit"
           icon={<EditIcon />}
           label="Edit"
           onClick={() => handleOpenDialog(params.row)}
         />,
         <GridActionsCellItem
+          key="delete"
           icon={<DeleteIcon />}
           label={params.row.book_count > 0 ? "Cannot delete (has books)" : "Delete"}
           onClick={() => handleDelete(params.id as string)}
@@ -245,6 +248,7 @@ const CategoriesPage: React.FC = () => {
           rows={categories || []}
           columns={columns}
           loading={isLoading}
+          getRowId={(row) => row.id}
           disableRowSelectionOnClick
           pageSizeOptions={[25, 50, 100]}
           initialState={{

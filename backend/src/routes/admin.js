@@ -99,7 +99,13 @@ router.get('/books', asyncHandler(async (req, res) => {
   }
   
   if (genre && genre !== 'all') {
-    query = query.where('genre', genre);
+    // Filter by category ID instead of genre
+    query = query.whereExists(function() {
+      this.select('*')
+        .from('book_categories')
+        .whereRaw('book_categories.book_id = books.id')
+        .where('book_categories.category_id', genre);
+    });
   }
   
   if (language && language !== 'all') {
@@ -129,7 +135,13 @@ router.get('/books', asyncHandler(async (req, res) => {
     });
   }
   if (genre && genre !== 'all') {
-    countQuery = countQuery.where('genre', genre);
+    // Filter by category ID instead of genre
+    countQuery = countQuery.whereExists(function() {
+      this.select('*')
+        .from('book_categories')
+        .whereRaw('book_categories.book_id = books.id')
+        .where('book_categories.category_id', genre);
+    });
   }
   if (language && language !== 'all') {
     countQuery = countQuery.where('language', language);
@@ -149,6 +161,26 @@ router.get('/books', asyncHandler(async (req, res) => {
     .orderBy('created_at', 'desc')
     .limit(parseInt(limit))
     .offset(offset);
+
+  // Get categories for each book
+  const booksWithCategories = await Promise.all(
+    books.map(async (book) => {
+      // Get categories for this book from the book_categories table
+      const categories = await db('book_categories')
+        .join('categories', 'book_categories.category_id', 'categories.id')
+        .where('book_categories.book_id', book.id)
+        .where('categories.is_active', true)
+        .select('categories.id', 'categories.name', 'categories.name_somali')
+        .orderBy('categories.sort_order', 'asc');
+
+      return {
+        ...book,
+        categories: categories.map(cat => cat.id),
+        categoryNames: categories.map(cat => cat.name),
+        categoryNamesSomali: categories.map(cat => cat.name_somali)
+      };
+    })
+  );
   
   // Process books to ensure proper data types and full URLs
   const baseUrl = process.env.RAILWAY_PUBLIC_DOMAIN 
@@ -157,25 +189,33 @@ router.get('/books', asyncHandler(async (req, res) => {
     
   console.log('🔍 Base URL for file serving:', baseUrl);
     
-  const processedBooks = books.map(book => ({
-    ...book,
-    authors: book.authors || '',
-    authors_somali: book.authors_somali || '',
-    is_featured: Boolean(book.is_featured),
-    is_new_release: Boolean(book.is_new_release),
-    is_premium: Boolean(book.is_premium),
-    rating: book.rating ? parseFloat(book.rating) : 0,
-    review_count: book.review_count ? parseInt(book.review_count) : 0,
-    page_count: book.page_count ? parseInt(book.page_count) : null,
-    duration: book.duration ? parseInt(book.duration) : null,
-    // Convert relative URLs to full URLs
-    cover_image_url: book.cover_image_url && book.cover_image_url.startsWith('/uploads/') 
-      ? `${baseUrl}${book.cover_image_url}` 
-      : book.cover_image_url,
-    audio_url: book.audio_url && book.audio_url.startsWith('/uploads/') 
-      ? `${baseUrl}${book.audio_url}` 
-      : book.audio_url
-  }));
+  const processedBooks = booksWithCategories.map((book, index) => {
+    // Debug: Log ebook content for first few books
+    if (index < 3) {
+      console.log(`🔍 Book "${book.title}" ebook_content:`, book.ebook_content ? `${book.ebook_content.length} characters` : 'null/empty');
+    }
+    
+    return {
+      ...book,
+      authors: book.authors || '',
+      authors_somali: book.authors_somali || '',
+      is_featured: Boolean(book.is_featured),
+      is_new_release: Boolean(book.is_new_release),
+      is_premium: Boolean(book.is_premium),
+      rating: book.rating ? parseFloat(book.rating) : 0,
+      review_count: book.review_count ? parseInt(book.review_count) : 0,
+      page_count: book.page_count ? parseInt(book.page_count) : null,
+      duration: book.duration ? parseInt(book.duration) : null,
+      ebook_content: book.ebook_content || null, // Ensure ebook content is included
+      // Convert relative URLs to full URLs
+      cover_image_url: book.cover_image_url && book.cover_image_url.startsWith('/uploads/') 
+        ? `${baseUrl}${book.cover_image_url}` 
+        : book.cover_image_url,
+      audio_url: book.audio_url && book.audio_url.startsWith('/uploads/') 
+        ? `${baseUrl}${book.audio_url}` 
+        : book.audio_url
+    };
+  });
   
   res.json({
     books: processedBooks,
@@ -211,6 +251,7 @@ router.get('/books/:id', asyncHandler(async (req, res) => {
     }
     
     console.log('✅ Admin: Successfully fetched book:', book.title);
+    console.log('🔍 Single book - ebook_content:', book.ebook_content ? `${book.ebook_content.length} characters` : 'null/empty');
     
     // Convert relative URLs to full URLs
     const baseUrl = process.env.RAILWAY_PUBLIC_DOMAIN 
@@ -222,6 +263,7 @@ router.get('/books/:id', asyncHandler(async (req, res) => {
     
     const processedBook = {
       ...book,
+      ebook_content: book.ebook_content || null, // Ensure ebook content is included
       cover_image_url: book.cover_image_url && book.cover_image_url.startsWith('/uploads/') 
         ? `${baseUrl}${book.cover_image_url}` 
         : book.cover_image_url,
@@ -262,8 +304,6 @@ router.post('/books', upload.fields([
       author,  // Frontend might send 'author'
       authors,  // Frontend might send 'authors'
       authors_somali,
-      genre,
-      genre_somali,
       language,
       format,
       duration,
@@ -273,11 +313,19 @@ router.post('/books', upload.fields([
       is_premium,
       ebook_content  // New field for text content
     } = req.body;
+
+    // Extract categories from request body
+    const categories = [];
+    Object.keys(req.body).forEach(key => {
+      if (key.startsWith('categories[') && key.endsWith(']')) {
+        categories.push(req.body[key]);
+      }
+    });
     
     // Use authors if provided, otherwise fall back to author
     const finalAuthors = authors || author;
   // Validate required fields
-  if (!title || !language || !format || !genre || !finalAuthors) {
+  if (!title || !language || !format || categories.length === 0 || !finalAuthors) {
     return res.status(400).json({ 
       error: 'Missing required fields',
       code: 'MISSING_FIELDS',
@@ -285,7 +333,7 @@ router.post('/books', upload.fields([
         title: !title,
         language: !language,
         format: !format,
-        genre: !genre,
+        categories: categories.length === 0,
         authors: !finalAuthors
       }
     });
@@ -315,8 +363,8 @@ router.post('/books', upload.fields([
       description_somali: description_somali || null,
       authors: finalAuthors || null,
       authors_somali: authors_somali || null,
-      genre,
-      genre_somali: genre_somali || genre,
+      genre: null, // Keep genre field for backward compatibility but set to null
+      genre_somali: null, // Keep genre_somali field for backward compatibility but set to null
       language,
       format,
       cover_image_url: fileUrls.coverImage || null,
@@ -345,6 +393,19 @@ router.post('/books', upload.fields([
     
     // Get the inserted ID from the result - MySQL returns an object with insertId
     const bookId = result[0];
+    
+    // Create category relationships
+    if (categories.length > 0) {
+      const categoryRelations = categories.map(categoryId => ({
+        id: crypto.randomUUID(),
+        book_id: bookId,
+        category_id: categoryId,
+        created_at: new Date()
+      }));
+      
+      await db('book_categories').insert(categoryRelations);
+      logger.info('Category relationships created:', { bookId, categories });
+    }
     
     logger.info('Book created:', { bookId, title });
     
@@ -376,6 +437,14 @@ router.put('/books/:id', upload.fields([
   console.log('🔍 Admin Update Book - Received data:');
   console.log('Authors:', updateData.authors, '(type:', typeof updateData.authors, ')');
   console.log('Authors Somali:', updateData.authors_somali, '(type:', typeof updateData.authors_somali, ')');
+  
+  // Extract categories from request body
+  const categories = [];
+  Object.keys(req.body).forEach(key => {
+    if (key.startsWith('categories[') && key.endsWith(']')) {
+      categories.push(req.body[key]);
+    }
+  });
   
   // Check if book exists
   const existingBook = await db('books').where('id', id).first();
@@ -456,6 +525,25 @@ router.put('/books/:id', upload.fields([
         ...updateData,
         updated_at: new Date()
       });
+
+    // Update category relationships if categories are provided
+    if (categories.length >= 0) { // Allow empty array to clear categories
+      // Remove existing category relationships
+      await db('book_categories').where('book_id', id).del();
+      
+      // Add new category relationships
+      if (categories.length > 0) {
+        const categoryRelations = categories.map(categoryId => ({
+          id: crypto.randomUUID(),
+          book_id: id,
+          category_id: categoryId,
+          created_at: new Date()
+        }));
+        
+        await db('book_categories').insert(categoryRelations);
+        logger.info('Category relationships updated:', { bookId: id, categories });
+      }
+    }
     
     logger.info('Book updated:', { bookId: id });
     

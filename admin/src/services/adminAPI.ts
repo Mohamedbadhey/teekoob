@@ -605,3 +605,9 @@ export const deleteCategory = async (id: string) => {
   const response = await api.delete(`/categories/${id}`)
   return response.data
 }
+
+// Get categories for books (for genre filter)
+export const getBookCategories = async () => {
+  const response = await api.get('/books/categories')
+  return response.data.categories || []
+}
