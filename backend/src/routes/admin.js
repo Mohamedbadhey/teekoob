@@ -233,13 +233,50 @@ router.get('/books/:id', asyncHandler(async (req, res) => {
   try {
     const { id } = req.params;
     console.log('🔍 Admin: Fetching book with ID:', id);
+    console.log('🔍 Admin: ID type:', typeof id);
+    console.log('🔍 Admin: ID length:', id.length);
     
-    const book = await db('books')
-      .select('*')
-      .where('id', id)
-      .first();
+    // Validate ID format
+    if (!id || typeof id !== 'string' || id.length === 0) {
+      console.log('❌ Admin: Invalid book ID provided');
+      return res.status(400).json({ 
+        error: 'Invalid book ID',
+        code: 'INVALID_BOOK_ID',
+        providedId: id
+      });
+    }
+    
+    let book;
+    try {
+      book = await db('books')
+        .select('*')
+        .where('id', id)
+        .first();
+    } catch (dbError) {
+      console.error('💥 Admin: Database error while fetching book:', dbError);
+      console.error('💥 Admin: Database error details:', {
+        message: dbError.message,
+        code: dbError.code,
+        errno: dbError.errno,
+        sqlState: dbError.sqlState,
+        sqlMessage: dbError.sqlMessage
+      });
+      return res.status(500).json({
+        error: 'Database error while fetching book',
+        code: 'DATABASE_ERROR',
+        details: dbError.message
+      });
+    }
     
     console.log('🔍 Admin: Database query result:', book ? 'Book found' : 'Book not found');
+    if (book) {
+      console.log('🔍 Admin: Book details:', {
+        id: book.id,
+        title: book.title,
+        hasEbookContent: !!book.ebook_content,
+        ebookContentLength: book.ebook_content ? book.ebook_content.length : 0
+      });
+    }
     
     if (!book) {
       console.log('❌ Admin: Book not found with ID:', id);
