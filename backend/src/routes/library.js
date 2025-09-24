@@ -51,7 +51,7 @@ router.get('/', asyncHandler(async (req, res) => {
   const books = await query
     .select(
       'b.id', 'b.title', 'b.title_somali', 'b.author', 'b.narrator',
-      'b.cover_image_url', 'b.language', 'b.format', 'b.genre',
+      'b.cover_image_url', 'b.language', 'b.format',
       'b.duration_minutes', 'b.page_count', 'b.is_free', 'b.price',
       'ul.status', 'ul.current_page', 'ul.current_audio_position',
       'ul.progress_percentage', 'ul.is_downloaded', 'ul.last_read_at',

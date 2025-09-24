@@ -19,23 +19,19 @@ class _HomePageState extends State<HomePage> {
   List<Book> _newReleases = [];
   List<Book> _recentBooks = [];
   List<Book> _randomBooks = [];
-  List<Book> _filteredBooks = [];
   List<Category> _categories = [];
   bool _isLoadingFeatured = false;
   bool _isLoadingNewReleases = false;
   bool _isLoadingRecentBooks = false;
   bool _isLoadingRandomBooks = false;
   bool _isLoadingCategories = false;
-  String? _selectedLanguage;
   String? _selectedCategoryId;
-
-  // Language options
-  final List<Map<String, dynamic>> _languages = [
-    {'name': 'All Books', 'code': null, 'color': '#1E3A8A'},
-    {'name': 'English', 'code': 'en', 'color': '#0466c8'},
-    {'name': 'Somali', 'code': 'so', 'color': '#10B981'},
-    {'name': 'Arabic', 'code': 'ar', 'color': '#8B5CF6'},
-  ];
+  
+  // Store original unfiltered lists
+  List<Book> _originalFeaturedBooks = [];
+  List<Book> _originalNewReleases = [];
+  List<Book> _originalRecentBooks = [];
+  List<Book> _originalRandomBooks = [];
 
   @override
   void initState() {
@@ -66,44 +62,58 @@ class _HomePageState extends State<HomePage> {
     context.read<LibraryBloc>().add(const LoadLibrary('current_user'));
   }
 
-  void _filterBooksByLanguage(String? languageCode) {
-    print('🏠 HomePage: Filtering by language: $languageCode');
-    setState(() {
-      _selectedLanguage = languageCode;
-      _selectedCategoryId = null; // Reset category when language changes
-    });
-    
-    if (languageCode == null) {
-      // Show all books
-      print('🏠 HomePage: Clearing language filter');
-      setState(() {
-        _filteredBooks = [];
-      });
-    } else {
-      // Filter books by language
-      print('🏠 HomePage: Dispatching FilterBooksByLanguage event for: $languageCode');
-      context.read<BooksBloc>().add(FilterBooksByLanguage(languageCode));
-    }
-  }
 
   void _filterBooksByCategory(String? categoryId) {
     print('🏠 HomePage: Filtering by category: $categoryId');
     setState(() {
       _selectedCategoryId = categoryId;
-      _selectedLanguage = null; // Reset language when category changes
     });
     
     if (categoryId == null) {
-      // Show all books
-      print('🏠 HomePage: Clearing category filter');
+      // Show all books - restore original lists
+      print('🏠 HomePage: Clearing category filter - restoring original lists');
       setState(() {
-        _filteredBooks = [];
+        _featuredBooks = List.from(_originalFeaturedBooks);
+        _newReleases = List.from(_originalNewReleases);
+        _recentBooks = List.from(_originalRecentBooks);
+        _randomBooks = List.from(_originalRandomBooks);
       });
     } else {
-      // Filter books by category
-      print('🏠 HomePage: Dispatching FilterBooksByCategory event for: $categoryId');
-      context.read<BooksBloc>().add(FilterBooksByCategory(categoryId));
+      // Filter all book sections by category
+      print('🏠 HomePage: Filtering all sections by category: $categoryId');
+      _filterAllSectionsByCategory(categoryId);
     }
+  }
+
+  void _filterAllSectionsByCategory(String categoryId) {
+    // Filter featured books from original list
+    final filteredFeatured = _originalFeaturedBooks.where((book) => 
+      book.categories != null && book.categories!.contains(categoryId)
+    ).toList();
+    
+    // Filter new releases from original list
+    final filteredNewReleases = _originalNewReleases.where((book) => 
+      book.categories != null && book.categories!.contains(categoryId)
+    ).toList();
+    
+    // Filter recent books from original list
+    final filteredRecent = _originalRecentBooks.where((book) => 
+      book.categories != null && book.categories!.contains(categoryId)
+    ).toList();
+    
+    // Filter random books (recommendations) from original list
+    final filteredRandom = _originalRandomBooks.where((book) => 
+      book.categories != null && book.categories!.contains(categoryId)
+    ).toList();
+    
+    setState(() {
+      _featuredBooks = filteredFeatured;
+      _newReleases = filteredNewReleases;
+      _recentBooks = filteredRecent;
+      _randomBooks = filteredRandom;
+    });
+    
+    print('🏠 HomePage: Filtered results - Featured: ${filteredFeatured.length}, New Releases: ${filteredNewReleases.length}, Recent: ${filteredRecent.length}, Random: ${filteredRandom.length}');
   }
 
   @override
@@ -113,6 +123,7 @@ class _HomePageState extends State<HomePage> {
         if (state is FeaturedBooksLoaded) {
           setState(() {
             _featuredBooks = state.books;
+            _originalFeaturedBooks = List.from(state.books); // Store original
             _isLoadingFeatured = false;
           });
           print('🏠 HomePage: Featured books loaded: ${state.books.length}');
@@ -120,6 +131,7 @@ class _HomePageState extends State<HomePage> {
         } else if (state is NewReleasesLoaded) {
           setState(() {
             _newReleases = state.books;
+            _originalNewReleases = List.from(state.books); // Store original
             _isLoadingNewReleases = false;
           });
           print('🏠 HomePage: New releases loaded: ${state.books.length}');
@@ -127,6 +139,7 @@ class _HomePageState extends State<HomePage> {
         } else if (state is RecentBooksLoaded) {
           setState(() {
             _recentBooks = state.books;
+            _originalRecentBooks = List.from(state.books); // Store original
             _isLoadingRecentBooks = false;
           });
           print('🏠 HomePage: Recent books loaded: ${state.books.length}');
@@ -136,6 +149,7 @@ class _HomePageState extends State<HomePage> {
           print('📚 HomePage: Book titles: ${state.books.map((b) => b.title).toList()}');
           setState(() {
             _randomBooks = state.books;
+            _originalRandomBooks = List.from(state.books); // Store original
             _isLoadingRandomBooks = false;
           });
           print('✅ HomePage: Updated _randomBooks state with ${_randomBooks.length} books');
@@ -146,11 +160,6 @@ class _HomePageState extends State<HomePage> {
             _isLoadingCategories = false;
           });
           print('🏠 HomePage: Categories loaded: ${state.categories.length}');
-        } else if (state is BooksLoaded && (_selectedLanguage != null || _selectedCategoryId != null)) {
-          setState(() {
-            _filteredBooks = state.books;
-          });
-          print('🏠 HomePage: Filtered books loaded: ${state.books.length}');
         } else if (state is BooksError) {
           print('🏠 HomePage: Books error: ${state.message}');
         }
@@ -161,7 +170,6 @@ class _HomePageState extends State<HomePage> {
           child: Column(
             children: [
               _buildHeader(),
-              _buildLanguageFiltersSection(),
               _buildCategoryFiltersSection(),
               Expanded(
                 child: SingleChildScrollView(
@@ -174,11 +182,6 @@ class _HomePageState extends State<HomePage> {
                       _buildNewReleasesSection(),
                       const SizedBox(height: 32),
                       
-                      // Filtered Books Section (shown when filters are applied)
-                      if (_selectedLanguage != null || _selectedCategoryId != null) ...[
-                        _buildFilteredBooksSection(),
-                        const SizedBox(height: 32),
-                      ],
                       
                       _buildRecommendedBooksSection(),
                       const SizedBox(height: 32),
@@ -230,76 +233,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildLanguageFiltersSection() {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Filter by Language',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF1E3A8A),
-            ),
-          ),
-          const SizedBox(height: 12),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: _languages.map((language) {
-                final isSelected = _selectedLanguage == language['code'];
-                return Padding(
-                  padding: const EdgeInsets.only(right: 12),
-                  child: _buildLanguageChip(
-                    language['name'],
-                    language['code'],
-                    language['color'],
-                    isSelected,
-                  ),
-                );
-              }).toList(),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
-  Widget _buildLanguageChip(String name, String? languageCode, String color, bool isSelected) {
-    final chipColor = Color(int.parse(color.replaceAll('#', '0xFF')));
-    
-    return GestureDetector(
-      onTap: () => _filterBooksByLanguage(languageCode),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected ? chipColor : Colors.grey[100],
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: isSelected ? chipColor : Colors.grey[300]!,
-            width: 1.5,
-          ),
-          boxShadow: isSelected ? [
-            BoxShadow(
-              color: chipColor.withOpacity(0.3),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ] : null,
-        ),
-        child: Text(
-          name,
-          style: TextStyle(
-            color: isSelected ? Colors.white : Colors.grey[700],
-            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-            fontSize: 14,
-          ),
-        ),
-      ),
-    );
-  }
 
   Widget _buildCategoryFiltersSection() {
     return Container(
@@ -814,105 +748,6 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildFilteredBooksSection() {
-    String filterTitle = '';
-    String filterColor = '#1E3A8A';
-    
-    if (_selectedLanguage != null) {
-      final selectedLanguage = _languages.firstWhere(
-        (lang) => lang['code'] == _selectedLanguage,
-        orElse: () => {'name': 'Unknown', 'code': null, 'color': '#1E3A8A'},
-      );
-      filterTitle = '${selectedLanguage['name']} Books';
-      filterColor = selectedLanguage['color'];
-    } else if (_selectedCategoryId != null) {
-      final selectedCategory = _categories.firstWhere(
-        (cat) => cat.id == _selectedCategoryId,
-        orElse: () => Category(
-          id: '',
-          name: 'Unknown',
-          nameSomali: '',
-          color: '#1E3A8A',
-          createdAt: DateTime.now(),
-          updatedAt: DateTime.now(),
-        ),
-      );
-      filterTitle = '${selectedCategory.name} Books';
-      filterColor = selectedCategory.color;
-    }
-    
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 4,
-                height: 24,
-                decoration: BoxDecoration(
-                  color: Color(int.parse(filterColor.replaceAll('#', '0xFF'))),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Text(
-                filterTitle,
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          
-          if (_filteredBooks.isEmpty)
-            _buildEmptyState('No $filterTitle available')
-          else
-            GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                childAspectRatio: 0.7,
-                crossAxisSpacing: 16,
-                mainAxisSpacing: 16,
-              ),
-              itemCount: _filteredBooks.length,
-              itemBuilder: (context, index) {
-                final book = _filteredBooks[index];
-                return BlocBuilder<LibraryBloc, LibraryState>(
-                  builder: (context, libraryState) {
-                    bool isInLibrary = false;
-                    bool isFavorite = false;
-                    
-                    if (libraryState is LibraryLoaded) {
-                      isInLibrary = libraryState.library.any((item) => item['bookId'] == book.id);
-                      isFavorite = libraryState.library.any((item) => 
-                        item['bookId'] == book.id && (item['isFavorite'] == true || item['status'] == 'favorite')
-                      );
-                    }
-                    
-                    return BookCard(
-                      book: book,
-                      onTap: () => _navigateToBookDetail(book),
-                      showLibraryActions: false, // Disabled for cleaner design
-                      isInLibrary: isInLibrary,
-                      isFavorite: isFavorite,
-                      userId: 'current_user', // TODO: Get from auth service
-                      enableAnimations: true,
-                    );
-                  },
-                );
-              },
-            ),
-        ],
-      ),
-    );
-  }
 
   void _navigateToBookDetail(Book book) {
     context.go('/book/${book.id}');

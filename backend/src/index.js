@@ -168,7 +168,21 @@ try {
     res.sendFile(filePath, (err) => {
       if (err) {
         console.error('❌ Error serving file:', err);
-        res.status(404).json({ error: 'File not found' });
+        // Try to serve a default placeholder image for missing cover images
+        if (filename.startsWith('coverImage-')) {
+          console.log('🖼️ Attempting to serve default cover image for missing file:', filename);
+          // You can add a default cover image here or return a 404
+          res.status(404).json({ 
+            error: 'Cover image not found',
+            filename: filename,
+            suggestion: 'Please re-upload the cover image'
+          });
+        } else {
+          res.status(404).json({ 
+            error: 'File not found',
+            filename: filename
+          });
+        }
       }
     });
   });

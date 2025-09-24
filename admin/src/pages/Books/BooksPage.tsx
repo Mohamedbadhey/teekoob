@@ -87,8 +87,6 @@ interface Book {
   description_somali: string;
   authors: string;
   authors_somali: string;
-  genre: string;
-  genre_somali: string;
   language: 'en' | 'so' | 'ar';
   format: 'ebook' | 'audiobook' | 'both';
   cover_image_url?: string;
@@ -146,7 +144,7 @@ const BooksPage: React.FC = () => {
   
   // State
   const [searchTerm, setSearchTerm] = useState('');
-  const [genreFilter, setGenreFilter] = useState<string>('all');
+  const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [languageFilter, setLanguageFilter] = useState<string>('all');
   const [formatFilter, setFormatFilter] = useState<string>('all');
   const [featuredFilter, setFeaturedFilter] = useState<string>('all');
@@ -197,10 +195,10 @@ const BooksPage: React.FC = () => {
 
   // Fetch books with enhanced query
   const { data: booksData, isLoading, error } = useQuery({
-    queryKey: ['books', { search: searchTerm, genre: genreFilter, language: languageFilter, format: formatFilter, featured: featuredFilter }],
+    queryKey: ['books', { search: searchTerm, category: categoryFilter, language: languageFilter, format: formatFilter, featured: featuredFilter }],
     queryFn: () => getBooks({ 
       search: searchTerm, 
-      genre: genreFilter === 'all' ? undefined : genreFilter,
+      category: categoryFilter === 'all' ? undefined : categoryFilter,
       language: languageFilter === 'all' ? undefined : languageFilter,
       format: formatFilter === 'all' ? undefined : formatFilter,
       featured: featuredFilter === 'all' ? undefined : featuredFilter === 'true'
@@ -215,7 +213,7 @@ const BooksPage: React.FC = () => {
     staleTime: 60000,
   });
 
-  // Fetch categories for genre filter
+  // Fetch categories for category filter
   const { data: categories } = useQuery({
     queryKey: ['bookCategories'],
     queryFn: () => getBookCategories(),
@@ -360,7 +358,7 @@ const BooksPage: React.FC = () => {
             ))
           ) : (
             <Chip 
-              label={params.row.genre || 'No categories'} 
+              label={params.row.categoryNames?.join(', ') || 'No categories'} 
               size="small"
               color="default"
               variant="outlined"
@@ -571,8 +569,8 @@ const BooksPage: React.FC = () => {
               <FormControl fullWidth size="small">
                 <InputLabel>Category</InputLabel>
                 <Select
-                  value={genreFilter}
-                  onChange={(e) => setGenreFilter(e.target.value)}
+                  value={categoryFilter}
+                  onChange={(e) => setCategoryFilter(e.target.value)}
                   label="Category"
                 >
                   <MenuItem value="all">All Categories</MenuItem>

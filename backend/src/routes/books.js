@@ -116,48 +116,11 @@ router.get('/categories', asyncHandler(async (req, res) => {
         total: categoriesWithCounts.length
       });
     } else {
-      // Fallback to old genre system if categories table doesn't exist yet
-      const oldCategories = await db('books')
-        .select('genre', 'genre_somali')
-        .whereNotNull('genre')
-        .where('genre', '!=', '')
-        .distinct();
-      
-      // Extract unique categories and format them
-      const uniqueCategories = [...new Set(oldCategories.map(cat => cat.genre))].filter(Boolean);
-      
-      // Create category objects with display names
-      const formattedCategories = uniqueCategories.map(category => {
-        // Find the Somali translation if available
-        const somaliCat = oldCategories.find(cat => cat.genre === category);
-        const somaliName = somaliCat?.genre_somali || category;
-        
-        return {
-          id: category, // Use genre as temporary ID
-          name: category.charAt(0).toUpperCase() + category.slice(1).replace(/-/g, ' '),
-          name_somali: somaliName.charAt(0).toUpperCase() + somaliName.slice(1).replace(/-/g, ' '),
-          description: null,
-          description_somali: null,
-          color: '#1E3A8A',
-          icon: 'book',
-          is_active: true,
-          sort_order: 0,
-          created_at: new Date(),
-          updated_at: new Date(),
-          book_count: oldCategories.filter(cat => cat.genre === category).length
-        };
-      });
-      
-      // Sort by count (most popular first) then alphabetically
-      formattedCategories.sort((a, b) => {
-        if (b.book_count !== a.book_count) return b.book_count - a.book_count;
-        return a.name.localeCompare(b.name);
-      });
-      
+      // No categories found - return empty array
       res.json({
         success: true,
-        categories: formattedCategories,
-        total: formattedCategories.length
+        categories: [],
+        total: 0
       });
     }
   } catch (error) {
@@ -244,9 +207,9 @@ router.get('/language/:language', asyncHandler(async (req, res) => {
 router.get('/', asyncHandler(async (req, res) => {
   try {
     console.log('🔍 Books endpoint called with query:', req.query);
-    const { page = 1, limit = 20, search, genre, author, language, format, sortBy = 'created_at', sortOrder = 'desc' } = req.query;
+    const { page = 1, limit = 20, search, category, author, language, format, sortBy = 'created_at', sortOrder = 'desc' } = req.query;
     const offset = (page - 1) * limit;
-    console.log('📊 Books endpoint params:', { page, limit, offset, search, genre, author, language, format, sortBy, sortOrder });
+    console.log('📊 Books endpoint params:', { page, limit, offset, search, category, author, language, format, sortBy, sortOrder });
 
     let query = db('books')
       .select(
@@ -269,9 +232,14 @@ router.get('/', asyncHandler(async (req, res) => {
       });
     }
 
-    // Apply genre filter (simplified - use old genre field for now)
-    if (genre) {
-      query = query.where('genre', 'like', `%${genre}%`);
+    // Apply category filter
+    if (category) {
+      query = query.whereExists(function() {
+        this.select('*')
+          .from('book_categories')
+          .whereRaw('book_categories.book_id = books.id')
+          .where('book_categories.category_id', category);
+      });
     }
 
     // Apply author filter
@@ -304,8 +272,13 @@ router.get('/', asyncHandler(async (req, res) => {
           .orWhere('authors_somali', 'like', `%${search}%`);
       });
     }
-    if (genre) {
-      countQuery = countQuery.where('genre', 'like', `%${genre}%`);
+    if (category) {
+      countQuery = countQuery.whereExists(function() {
+        this.select('*')
+          .from('book_categories')
+          .whereRaw('book_categories.book_id = books.id')
+          .where('book_categories.category_id', category);
+      });
     }
     if (author) {
       countQuery = countQuery.where('authors', 'like', `%${author}%`);
@@ -340,31 +313,44 @@ router.get('/', asyncHandler(async (req, res) => {
       .offset(offset);
     console.log('📚 Retrieved books:', books.length);
 
-    // Process books to handle JSON fields
-    const processedBooks = books.map(book => ({
-      id: book.id,
-      title: book.title,
-      titleSomali: book.title_somali,
-      description: book.description,
-      descriptionSomali: book.description_somali,
-      authors: book.authors || '',
-      authorsSomali: book.authors_somali || '',
-      language: book.language,
-      format: book.format,
-      coverImageUrl: book.cover_image_url,
-      audioUrl: book.audio_url,
-      ebookContent: book.ebook_content,  // Changed from ebookUrl to ebookContent
-      sampleUrl: book.sample_url,
-      duration: book.duration,
-      pageCount: book.page_count,
-      rating: book.rating,
-      reviewCount: book.review_count,
-      isFeatured: Boolean(book.is_featured),
-      isNewRelease: Boolean(book.is_new_release),
-      isPremium: Boolean(book.is_premium),
-      metadata: book.metadata,
-      createdAt: book.created_at,
-      updatedAt: book.updated_at,
+    // Process books to handle JSON fields and fetch categories
+    const processedBooks = await Promise.all(books.map(async (book) => {
+      // Fetch categories for this book
+      const categories = await db('book_categories')
+        .join('categories', 'book_categories.category_id', 'categories.id')
+        .where('book_categories.book_id', book.id)
+        .where('categories.is_active', true)
+        .select('categories.id', 'categories.name', 'categories.name_somali')
+        .orderBy('categories.sort_order', 'asc');
+
+      return {
+        id: book.id,
+        title: book.title,
+        titleSomali: book.title_somali,
+        description: book.description,
+        descriptionSomali: book.description_somali,
+        authors: book.authors || '',
+        authorsSomali: book.authors_somali || '',
+        language: book.language,
+        format: book.format,
+        coverImageUrl: book.cover_image_url,
+        audioUrl: book.audio_url,
+        ebookContent: book.ebook_content,  // Changed from ebookUrl to ebookContent
+        sampleUrl: book.sample_url,
+        duration: book.duration,
+        pageCount: book.page_count,
+        rating: book.rating,
+        reviewCount: book.review_count,
+        isFeatured: Boolean(book.is_featured),
+        isNewRelease: Boolean(book.is_new_release),
+        isPremium: Boolean(book.is_premium),
+        metadata: book.metadata,
+        createdAt: book.created_at,
+        updatedAt: book.updated_at,
+        categories: categories.map(cat => cat.id),
+        categoryNames: categories.map(cat => cat.name),
+        categoryNamesSomali: categories.map(cat => cat.name_somali),
+      };
     }));
 
     res.json({
@@ -421,25 +407,22 @@ router.get('/:id', asyncHandler(async (req, res) => {
       ebookContent: book.ebook_content ? `${book.ebook_content.length} chars` : 'null'
     });
 
-    // TODO: Uncomment when categories table is created
-    // // Get categories for this book
-    // const categories = await db('book_categories')
-    //   .join('categories', 'book_categories.category_id', 'categories.id')
-    //   .where('book_categories.book_id', id)
-    //   .where('categories.is_active', true)
-    //   .select('categories.id', 'categories.name', 'categories.name_somali')
-    //   .orderBy('categories.sort_order', 'asc');
+    // Get categories for this book
+    const categories = await db('book_categories')
+      .join('categories', 'book_categories.category_id', 'categories.id')
+      .where('book_categories.book_id', id)
+      .where('categories.is_active', true)
+      .select('categories.id', 'categories.name', 'categories.name_somali')
+      .orderBy('categories.sort_order', 'asc');
 
     // Process book data
     const processedBook = {
       ...book,
       authors: book.authors || '',
       authorsSomali: book.authors_somali || '',
-      // TODO: Uncomment when categories table is created
-      // categories: categories.map(cat => cat.id),
-      // categoryNames: categories.map(cat => cat.name),
-      categories: [], // Temporary empty array
-      categoryNames: [], // Temporary empty array
+      categories: categories.map(cat => cat.id),
+      categoryNames: categories.map(cat => cat.name),
+      categoryNamesSomali: categories.map(cat => cat.name_somali),
       ebookContent: book.ebook_content,  // Changed from ebookUrl to ebookContent
       isFeatured: Boolean(book.is_featured),
       isNewRelease: Boolean(book.is_new_release),
@@ -509,6 +492,14 @@ router.put('/:id', asyncHandler(async (req, res) => {
     // Get the updated book
     const updatedBook = await db('books').where('id', id).first();
     
+    // Get categories for this book
+    const categories = await db('book_categories')
+      .join('categories', 'book_categories.category_id', 'categories.id')
+      .where('book_categories.book_id', id)
+      .where('categories.is_active', true)
+      .select('categories.id', 'categories.name', 'categories.name_somali')
+      .orderBy('categories.sort_order', 'asc');
+    
     // Process the book data
     const processedBook = {
       id: updatedBook.id,
@@ -518,8 +509,9 @@ router.put('/:id', asyncHandler(async (req, res) => {
       descriptionSomali: updatedBook.description_somali,
       authors: updatedBook.authors || '',
       authorsSomali: updatedBook.authors_somali || '',
-      categories: updatedBook.genre ? [updatedBook.genre] : [],
-      categoryNames: updatedBook.genre_somali ? [updatedBook.genre_somali] : [],
+      categories: categories.map(cat => cat.id),
+      categoryNames: categories.map(cat => cat.name),
+      categoryNamesSomali: categories.map(cat => cat.name_somali),
       language: updatedBook.language,
       format: updatedBook.format,
       coverImageUrl: updatedBook.cover_image_url,
@@ -755,14 +747,6 @@ router.get('/:id/recommendations', asyncHandler(async (req, res) => {
   }
 }));
 
-// Get genres
-router.get('/genres/list', asyncHandler(async (req, res) => {
-  const genres = await db('books')
-    .distinct('genre')
-    .orderBy('genre');
-  
-  res.json({ genres });
-}));
 
 // Get languages
 router.get('/languages/list', asyncHandler(async (req, res) => {
@@ -783,7 +767,7 @@ router.get('/featured/list', asyncHandler(async (req, res) => {
       .where('is_featured', true)
       .select(
         'id', 'title', 'title_somali', 'description', 'description_somali',
-        'authors', 'authors_somali', 'genre', 'genre_somali', 'language', 'format', 
+        'authors', 'authors_somali', 'language', 'format', 
         'cover_image_url', 'audio_url', 'ebook_url', 'sample_url', 'duration', 
         'page_count', 'rating', 'review_count', 'is_featured', 'is_new_release', 
         'is_premium', 'metadata', 'created_at', 'updated_at'
@@ -791,33 +775,44 @@ router.get('/featured/list', asyncHandler(async (req, res) => {
       .orderBy('created_at', 'desc')
       .limit(parseInt(limit));
 
-    // Process books to handle JSON fields
-    const processedBooks = featuredBooks.map(book => ({
-      id: book.id,
-      title: book.title,
-      titleSomali: book.title_somali,
-      description: book.description,
-      descriptionSomali: book.description_somali,
-      authors: book.authors || '',
-      authorsSomali: book.authors_somali || '',
-      categories: book.genre ? [book.genre] : [],
-      categoryNames: book.genre_somali ? [book.genre_somali] : [],
-      language: book.language,
-      format: book.format,
-      coverImageUrl: book.cover_image_url,
-      audioUrl: book.audio_url,
-      ebookContent: book.ebook_content,
-      sampleUrl: book.sample_url,
-      duration: book.duration,
-      pageCount: book.page_count,
-      rating: book.rating,
-      reviewCount: book.review_count,
-      isFeatured: Boolean(book.is_featured),
-      isNewRelease: Boolean(book.is_new_release),
-      isPremium: Boolean(book.is_premium),
-      metadata: book.metadata,
-      createdAt: book.created_at,
-      updatedAt: book.updated_at,
+    // Process books to handle JSON fields and fetch categories
+    const processedBooks = await Promise.all(featuredBooks.map(async (book) => {
+      // Fetch categories for this book
+      const categories = await db('book_categories')
+        .join('categories', 'book_categories.category_id', 'categories.id')
+        .where('book_categories.book_id', book.id)
+        .where('categories.is_active', true)
+        .select('categories.id', 'categories.name', 'categories.name_somali')
+        .orderBy('categories.sort_order', 'asc');
+
+      return {
+        id: book.id,
+        title: book.title,
+        titleSomali: book.title_somali,
+        description: book.description,
+        descriptionSomali: book.description_somali,
+        authors: book.authors || '',
+        authorsSomali: book.authors_somali || '',
+        categories: categories.map(cat => cat.id),
+        categoryNames: categories.map(cat => cat.name),
+        categoryNamesSomali: categories.map(cat => cat.name_somali),
+        language: book.language,
+        format: book.format,
+        coverImageUrl: book.cover_image_url,
+        audioUrl: book.audio_url,
+        ebookContent: book.ebook_content,
+        sampleUrl: book.sample_url,
+        duration: book.duration,
+        pageCount: book.page_count,
+        rating: book.rating,
+        reviewCount: book.review_count,
+        isFeatured: Boolean(book.is_featured),
+        isNewRelease: Boolean(book.is_new_release),
+        isPremium: Boolean(book.is_premium),
+        metadata: book.metadata,
+        createdAt: book.created_at,
+        updatedAt: book.updated_at,
+      };
     }));
 
     console.log('📤 Sending featured books:', {
@@ -854,7 +849,7 @@ router.get('/new-releases/list', asyncHandler(async (req, res) => {
       .where('is_new_release', true)
       .select(
         'id', 'title', 'title_somali', 'description', 'description_somali',
-        'authors', 'authors_somali', 'genre', 'genre_somali', 'language', 'format', 
+        'authors', 'authors_somali', 'language', 'format', 
         'cover_image_url', 'audio_url', 'ebook_url', 'sample_url', 'duration', 
         'page_count', 'rating', 'review_count', 'is_featured', 'is_new_release', 
         'is_premium', 'metadata', 'created_at', 'updated_at'
@@ -862,33 +857,44 @@ router.get('/new-releases/list', asyncHandler(async (req, res) => {
       .orderBy('created_at', 'desc')
       .limit(parseInt(limit));
 
-    // Process books to handle JSON fields
-    const processedBooks = newReleases.map(book => ({
-      id: book.id,
-      title: book.title,
-      titleSomali: book.title_somali,
-      description: book.description,
-      descriptionSomali: book.description_somali,
-      authors: book.authors || '',
-      authorsSomali: book.authors_somali || '',
-      categories: book.genre ? [book.genre] : [],
-      categoryNames: book.genre_somali ? [book.genre_somali] : [],
-      language: book.language,
-      format: book.format,
-      coverImageUrl: book.cover_image_url,
-      audioUrl: book.audio_url,
-      ebookContent: book.ebook_content,
-      sampleUrl: book.sample_url,
-      duration: book.duration,
-      pageCount: book.page_count,
-      rating: book.rating,
-      reviewCount: book.review_count,
-      isFeatured: Boolean(book.is_featured),
-      isNewRelease: Boolean(book.is_new_release),
-      isPremium: Boolean(book.is_premium),
-      metadata: book.metadata,
-      createdAt: book.created_at,
-      updatedAt: book.updated_at,
+    // Process books to handle JSON fields and fetch categories
+    const processedBooks = await Promise.all(newReleases.map(async (book) => {
+      // Fetch categories for this book
+      const categories = await db('book_categories')
+        .join('categories', 'book_categories.category_id', 'categories.id')
+        .where('book_categories.book_id', book.id)
+        .where('categories.is_active', true)
+        .select('categories.id', 'categories.name', 'categories.name_somali')
+        .orderBy('categories.sort_order', 'asc');
+
+      return {
+        id: book.id,
+        title: book.title,
+        titleSomali: book.title_somali,
+        description: book.description,
+        descriptionSomali: book.description_somali,
+        authors: book.authors || '',
+        authorsSomali: book.authors_somali || '',
+        categories: categories.map(cat => cat.id),
+        categoryNames: categories.map(cat => cat.name),
+        categoryNamesSomali: categories.map(cat => cat.name_somali),
+        language: book.language,
+        format: book.format,
+        coverImageUrl: book.cover_image_url,
+        audioUrl: book.audio_url,
+        ebookContent: book.ebook_content,
+        sampleUrl: book.sample_url,
+        duration: book.duration,
+        pageCount: book.page_count,
+        rating: book.rating,
+        reviewCount: book.review_count,
+        isFeatured: Boolean(book.is_featured),
+        isNewRelease: Boolean(book.is_new_release),
+        isPremium: Boolean(book.is_premium),
+        metadata: book.metadata,
+        createdAt: book.created_at,
+        updatedAt: book.updated_at,
+      };
     }));
 
     console.log('📤 Sending new releases:', {
@@ -924,7 +930,7 @@ router.get('/recent/list', asyncHandler(async (req, res) => {
     const recentBooks = await db('books')
       .select(
         'id', 'title', 'title_somali', 'description', 'description_somali',
-        'authors', 'authors_somali', 'genre', 'genre_somali', 'language', 'format', 
+        'authors', 'authors_somali', 'language', 'format', 
         'cover_image_url', 'audio_url', 'ebook_content', 'sample_url', 'duration', 
         'page_count', 'rating', 'review_count', 'is_featured', 'is_new_release', 
         'is_premium', 'metadata', 'created_at', 'updated_at'
@@ -936,33 +942,44 @@ router.get('/recent/list', asyncHandler(async (req, res) => {
     console.log('📖 Recent book titles:', recentBooks.map(b => b.title));
     console.log('📅 Recent book dates:', recentBooks.map(b => b.created_at));
 
-    // Process books to handle JSON fields
-    const processedBooks = recentBooks.map(book => ({
-      id: book.id,
-      title: book.title,
-      titleSomali: book.title_somali,
-      description: book.description,
-      descriptionSomali: book.description_somali,
-      authors: book.authors || '',
-      authorsSomali: book.authors_somali || '',
-      categories: book.genre ? [book.genre] : [],
-      categoryNames: book.genre_somali ? [book.genre_somali] : [],
-      language: book.language,
-      format: book.format,
-      coverImageUrl: book.cover_image_url,
-      audioUrl: book.audio_url,
-      ebookContent: book.ebook_content,
-      sampleUrl: book.sample_url,
-      duration: book.duration,
-      pageCount: book.page_count,
-      rating: book.rating,
-      reviewCount: book.review_count,
-      isFeatured: Boolean(book.is_featured),
-      isNewRelease: Boolean(book.is_new_release),
-      isPremium: Boolean(book.is_premium),
-      metadata: book.metadata,
-      createdAt: book.created_at,
-      updatedAt: book.updated_at,
+    // Process books to handle JSON fields and fetch categories
+    const processedBooks = await Promise.all(recentBooks.map(async (book) => {
+      // Fetch categories for this book
+      const categories = await db('book_categories')
+        .join('categories', 'book_categories.category_id', 'categories.id')
+        .where('book_categories.book_id', book.id)
+        .where('categories.is_active', true)
+        .select('categories.id', 'categories.name', 'categories.name_somali')
+        .orderBy('categories.sort_order', 'asc');
+
+      return {
+        id: book.id,
+        title: book.title,
+        titleSomali: book.title_somali,
+        description: book.description,
+        descriptionSomali: book.description_somali,
+        authors: book.authors || '',
+        authorsSomali: book.authors_somali || '',
+        categories: categories.map(cat => cat.id),
+        categoryNames: categories.map(cat => cat.name),
+        categoryNamesSomali: categories.map(cat => cat.name_somali),
+        language: book.language,
+        format: book.format,
+        coverImageUrl: book.cover_image_url,
+        audioUrl: book.audio_url,
+        ebookContent: book.ebook_content,
+        sampleUrl: book.sample_url,
+        duration: book.duration,
+        pageCount: book.page_count,
+        rating: book.rating,
+        reviewCount: book.review_count,
+        isFeatured: Boolean(book.is_featured),
+        isNewRelease: Boolean(book.is_new_release),
+        isPremium: Boolean(book.is_premium),
+        metadata: book.metadata,
+        createdAt: book.created_at,
+        updatedAt: book.updated_at,
+      };
     }));
 
     console.log('✅ Processed', processedBooks.length, 'recent books for response');
@@ -999,7 +1016,7 @@ router.get('/random/list', asyncHandler(async (req, res) => {
     const randomBooks = await db('books')
       .select(
         'id', 'title', 'title_somali', 'description', 'description_somali',
-        'authors', 'authors_somali', 'genre', 'genre_somali', 'language', 'format', 
+        'authors', 'authors_somali', 'language', 'format', 
         'cover_image_url', 'audio_url', 'ebook_url', 'sample_url', 'duration', 
         'page_count', 'rating', 'review_count', 'is_featured', 'is_new_release', 
         'is_premium', 'metadata', 'created_at', 'updated_at'
@@ -1011,33 +1028,44 @@ router.get('/random/list', asyncHandler(async (req, res) => {
     console.log('📖 Book titles:', randomBooks.map(b => b.title));
     console.log('🔍 First book data:', randomBooks[0]);
 
-    // Process books to handle JSON fields
-    const processedBooks = randomBooks.map(book => ({
-      id: book.id,
-      title: book.title,
-      titleSomali: book.title_somali,
-      description: book.description,
-      descriptionSomali: book.description_somali,
-      authors: book.authors || '',
-      authorsSomali: book.authors_somali || '',
-      categories: book.genre ? [book.genre] : [],
-      categoryNames: book.genre_somali ? [book.genre_somali] : [],
-      language: book.language,
-      format: book.format,
-      coverImageUrl: book.cover_image_url,
-      audioUrl: book.audio_url,
-      ebookContent: book.ebook_content,  // Changed from ebookUrl to ebookContent
-      sampleUrl: book.sample_url,
-      duration: book.duration,
-      pageCount: book.page_count,
-      rating: book.rating,
-      reviewCount: book.review_count,
-      isFeatured: Boolean(book.is_featured),
-      isNewRelease: Boolean(book.is_new_release),
-      isPremium: Boolean(book.is_premium),
-      metadata: book.metadata,
-      createdAt: book.created_at,
-      updatedAt: book.updated_at,
+    // Process books to handle JSON fields and fetch categories
+    const processedBooks = await Promise.all(randomBooks.map(async (book) => {
+      // Fetch categories for this book
+      const categories = await db('book_categories')
+        .join('categories', 'book_categories.category_id', 'categories.id')
+        .where('book_categories.book_id', book.id)
+        .where('categories.is_active', true)
+        .select('categories.id', 'categories.name', 'categories.name_somali')
+        .orderBy('categories.sort_order', 'asc');
+
+      return {
+        id: book.id,
+        title: book.title,
+        titleSomali: book.title_somali,
+        description: book.description,
+        descriptionSomali: book.description_somali,
+        authors: book.authors || '',
+        authorsSomali: book.authors_somali || '',
+        categories: categories.map(cat => cat.id),
+        categoryNames: categories.map(cat => cat.name),
+        categoryNamesSomali: categories.map(cat => cat.name_somali),
+        language: book.language,
+        format: book.format,
+        coverImageUrl: book.cover_image_url,
+        audioUrl: book.audio_url,
+        ebookContent: book.ebook_content,  // Changed from ebookUrl to ebookContent
+        sampleUrl: book.sample_url,
+        duration: book.duration,
+        pageCount: book.page_count,
+        rating: book.rating,
+        reviewCount: book.review_count,
+        isFeatured: Boolean(book.is_featured),
+        isNewRelease: Boolean(book.is_new_release),
+        isPremium: Boolean(book.is_premium),
+        metadata: book.metadata,
+        createdAt: book.created_at,
+        updatedAt: book.updated_at,
+      };
     }));
 
     console.log('✅ Processed', processedBooks.length, 'books for response');

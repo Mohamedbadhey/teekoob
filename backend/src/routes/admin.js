@@ -351,13 +351,13 @@ router.post('/books', upload.fields([
       ebook_content  // New field for text content
     } = req.body;
 
-    // Extract categories from request body
-    const categories = [];
-    Object.keys(req.body).forEach(key => {
-      if (key.startsWith('categories[') && key.endsWith(']')) {
-        categories.push(req.body[key]);
-      }
-    });
+  // Extract categories from request body (multiple categories support)
+  const categories = [];
+  Object.keys(req.body).forEach(key => {
+    if (key.startsWith('categories[') && key.endsWith(']')) {
+      categories.push(req.body[key]);
+    }
+  });
     
     // Use authors if provided, otherwise fall back to author
     const finalAuthors = authors || author;
@@ -400,8 +400,6 @@ router.post('/books', upload.fields([
       description_somali: description_somali || null,
       authors: finalAuthors || null,
       authors_somali: authors_somali || null,
-      genre: null, // Keep genre field for backward compatibility but set to null
-      genre_somali: null, // Keep genre_somali field for backward compatibility but set to null
       language,
       format,
       cover_image_url: fileUrls.coverImage || null,
@@ -475,7 +473,7 @@ router.put('/books/:id', upload.fields([
   console.log('Authors:', updateData.authors, '(type:', typeof updateData.authors, ')');
   console.log('Authors Somali:', updateData.authors_somali, '(type:', typeof updateData.authors_somali, ')');
   
-  // Extract categories from request body
+  // Extract categories from request body (multiple categories support)
   const categories = [];
   Object.keys(req.body).forEach(key => {
     if (key.startsWith('categories[') && key.endsWith(']')) {
@@ -555,11 +553,14 @@ router.put('/books/:id', upload.fields([
     console.log('Authors field:', updateData.authors, '(type:', typeof updateData.authors, ')');
     console.log('Authors Somali field:', updateData.authors_somali, '(type:', typeof updateData.authors_somali, ')');
     
+    // Remove fields that are not columns in the books table
+    const { categories: _, selectedCategories: __, ...bookUpdateData } = updateData;
+    
     // Update book
     await db('books')
       .where('id', id)
       .update({
-        ...updateData,
+        ...bookUpdateData,
         updated_at: new Date()
       });
 
@@ -2939,8 +2940,8 @@ router.delete('/categories/:id', [
   const { id } = req.params;
 
   // Check if category is being used by any books
-  const booksUsingCategory = await db('books')
-    .where('genre', id)
+  const booksUsingCategory = await db('book_categories')
+    .where('category_id', id)
     .count('* as count')
     .first();
 

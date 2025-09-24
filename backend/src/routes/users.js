@@ -416,13 +416,15 @@ router.get('/stats', asyncHandler(async (req, res) => {
     WHERE activity_date = expected_date
   `, [userId]);
   
-  // Get favorite genres
-  const favoriteGenres = await db('user_library as ul')
-    .join('books as b', 'ul.book_id', 'b.id')
+  // Get favorite categories
+  const favoriteCategories = await db('user_library as ul')
+    .join('book_categories as bc', 'ul.book_id', 'bc.book_id')
+    .join('categories as c', 'bc.category_id', 'c.id')
     .where('ul.user_id', userId)
-    .select('b.genre')
+    .where('ul.is_favorite', true)
+    .select('c.id', 'c.name', 'c.name_somali')
     .count('* as count')
-    .groupBy('b.genre')
+    .groupBy('c.id', 'c.name', 'c.name_somali')
     .orderBy('count', 'desc')
     .limit(5);
   
@@ -438,7 +440,7 @@ router.get('/stats', asyncHandler(async (req, res) => {
   res.json({
     readingStats,
     readingStreak: readingStreak.rows[0]?.streak || 0,
-    favoriteGenres,
+    favoriteCategories,
     favoriteLanguages
   });
 }));

@@ -6,7 +6,7 @@ export const getBooks = async (params?: {
   page?: number
   limit?: number
   search?: string
-  genre?: string
+  category?: string
   language?: string
   format?: string
   featured?: boolean
@@ -24,8 +24,7 @@ export const getBooks = async (params?: {
       description_somali: book.description_somali,
       authors: book.authors, // Already in correct format from backend
       authors_somali: book.authors_somali, // Already in correct format from backend
-      genre: book.genre,
-      genre_somali: book.genre_somali,
+      // Categories are handled separately via book_categories table
       language: book.language,
       format: book.format,
       cover_image_url: book.cover_image_url,
@@ -606,7 +605,7 @@ export const deleteCategory = async (id: string) => {
   return response.data
 }
 
-// Get categories for books (for genre filter)
+// Get categories for books (for category filter)
 export const getBookCategories = async () => {
   const response = await api.get('/books/categories')
   return response.data.categories || []
