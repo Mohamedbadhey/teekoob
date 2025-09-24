@@ -352,13 +352,13 @@ const BooksPage: React.FC = () => {
                 label={category} 
                 size="small"
                 color="primary"
-                variant="outlined"
+                variant="filled"
                 sx={{ fontSize: '0.7rem', height: 20 }}
               />
             ))
           ) : (
             <Chip 
-              label={params.row.categoryNames?.join(', ') || 'No categories'} 
+              label="No categories" 
               size="small"
               color="default"
               variant="outlined"
@@ -1135,9 +1135,6 @@ const BooksPage: React.FC = () => {
   };
 
   const handleEditBook = (book: Book) => {
-    console.log('🔍 Editing book:', book.title);
-    console.log('🔍 Book ebook_content:', book.ebook_content ? `${book.ebook_content.length} characters` : 'null/empty');
-    
     setSelectedBook(book);
     setFormData({
       title: book.title,
@@ -1238,6 +1235,15 @@ const BooksPage: React.FC = () => {
 
 
       
+      // Debug: Log exact data being sent to backend
+      console.log('📤 EXACT DATA SENT TO BACKEND:');
+      console.log('📋 FormData entries:');
+      for (let [key, value] of formDataToSend.entries()) {
+        console.log(`  ${key}:`, value);
+      }
+      console.log('📋 Selected categories:', formData.selectedCategories);
+      console.log('📋 Book ID:', selectedBook?.id || 'NEW BOOK');
+      
       if (selectedBook) {
         // Update existing book
         const result = await updateBookMutation.mutateAsync({ id: selectedBook.id, bookData: formDataToSend });
@@ -1246,7 +1252,16 @@ const BooksPage: React.FC = () => {
         const result = await createBookMutation.mutateAsync(formDataToSend);
       }
     } catch (error) {
-      alert(`Error saving book: ${error.message || 'Unknown error'}`);
+      console.error('💥 Error saving book:', error);
+      
+      // Handle specific error cases
+      if (error.response?.data?.code === 'INVALID_CATEGORIES') {
+        alert(`Error: ${error.response.data.details}\n\nPlease select valid categories from the dropdown.`);
+      } else if (error.response?.data?.error) {
+        alert(`Error saving book: ${error.response.data.error}`);
+      } else {
+        alert(`Error saving book: ${error.message || 'Unknown error'}`);
+      }
     }
   };
 

@@ -83,7 +83,7 @@ const upload = multer({
 
 // Get all books
 router.get('/books', asyncHandler(async (req, res) => {
-  const { page = 1, limit = 20, search, genre, language, format, featured } = req.query;
+  const { page = 1, limit = 20, search, category, language, format, featured } = req.query;
   
   const offset = (page - 1) * limit;
   
@@ -98,13 +98,13 @@ router.get('/books', asyncHandler(async (req, res) => {
     });
   }
   
-  if (genre && genre !== 'all') {
-    // Filter by category ID instead of genre
+  if (category && category !== 'all') {
+    // Filter by category ID
     query = query.whereExists(function() {
       this.select('*')
         .from('book_categories')
         .whereRaw('book_categories.book_id = books.id')
-        .where('book_categories.category_id', genre);
+        .where('book_categories.category_id', category);
     });
   }
   
@@ -134,13 +134,13 @@ router.get('/books', asyncHandler(async (req, res) => {
         .orWhere('authors_somali', 'like', `%${search}%`);
     });
   }
-  if (genre && genre !== 'all') {
-    // Filter by category ID instead of genre
+  if (category && category !== 'all') {
+    // Filter by category ID
     countQuery = countQuery.whereExists(function() {
       this.select('*')
         .from('book_categories')
         .whereRaw('book_categories.book_id = books.id')
-        .where('book_categories.category_id', genre);
+        .where('book_categories.category_id', category);
     });
   }
   if (language && language !== 'all') {
@@ -190,11 +190,6 @@ router.get('/books', asyncHandler(async (req, res) => {
   console.log('🔍 Base URL for file serving:', baseUrl);
     
   const processedBooks = booksWithCategories.map((book, index) => {
-    // Debug: Log ebook content for first few books
-    if (index < 3) {
-      console.log(`🔍 Book "${book.title}" ebook_content:`, book.ebook_content ? `${book.ebook_content.length} characters` : 'null/empty');
-    }
-    
     return {
       ...book,
       authors: book.authors || '',
@@ -207,6 +202,10 @@ router.get('/books', asyncHandler(async (req, res) => {
       page_count: book.page_count ? parseInt(book.page_count) : null,
       duration: book.duration ? parseInt(book.duration) : null,
       ebook_content: book.ebook_content || null, // Ensure ebook content is included
+      // Preserve categories from book_categories relationship
+      categories: book.categories || [],
+      categoryNames: book.categoryNames || [],
+      categoryNamesSomali: book.categoryNamesSomali || [],
       // Convert relative URLs to full URLs
       cover_image_url: book.cover_image_url && book.cover_image_url.startsWith('/uploads/') 
         ? `${baseUrl}${book.cover_image_url}` 
@@ -287,8 +286,13 @@ router.get('/books/:id', asyncHandler(async (req, res) => {
       });
     }
     
-    console.log('✅ Admin: Successfully fetched book:', book.title);
-    console.log('🔍 Single book - ebook_content:', book.ebook_content ? `${book.ebook_content.length} characters` : 'null/empty');
+    // Get categories for this book from the book_categories table
+    const categories = await db('book_categories')
+      .join('categories', 'book_categories.category_id', 'categories.id')
+      .where('book_categories.book_id', id)
+      .where('categories.is_active', true)
+      .select('categories.id', 'categories.name', 'categories.name_somali')
+      .orderBy('categories.sort_order', 'asc');
     
     // Convert relative URLs to full URLs
     const baseUrl = process.env.RAILWAY_PUBLIC_DOMAIN 
@@ -301,6 +305,10 @@ router.get('/books/:id', asyncHandler(async (req, res) => {
     const processedBook = {
       ...book,
       ebook_content: book.ebook_content || null, // Ensure ebook content is included
+      // Include categories from book_categories relationship
+      categories: categories.map(cat => cat.id),
+      categoryNames: categories.map(cat => cat.name),
+      categoryNamesSomali: categories.map(cat => cat.name_somali),
       cover_image_url: book.cover_image_url && book.cover_image_url.startsWith('/uploads/') 
         ? `${baseUrl}${book.cover_image_url}` 
         : book.cover_image_url,
@@ -431,6 +439,28 @@ router.post('/books', upload.fields([
     
     // Create category relationships
     if (categories.length > 0) {
+      // Verify that all categories exist in the categories table
+      const existingCategories = await db('categories')
+        .whereIn('id', categories)
+        .where('is_active', true)
+        .select('id', 'name');
+      
+      if (existingCategories.length !== categories.length) {
+        const missingCategories = categories.filter(catId => 
+          !existingCategories.find(existing => existing.id === catId)
+        );
+        
+        // Delete the book that was just created since categories are invalid
+        await db('books').where('id', bookId).del();
+        
+        return res.status(400).json({
+          error: 'Invalid categories selected',
+          code: 'INVALID_CATEGORIES',
+          details: `The following categories do not exist or are inactive: ${missingCategories.join(', ')}`,
+          missingCategories: missingCategories
+        });
+      }
+      
       const categoryRelations = categories.map(categoryId => ({
         id: crypto.randomUUID(),
         book_id: bookId,
@@ -438,7 +468,16 @@ router.post('/books', upload.fields([
         created_at: new Date()
       }));
       
+      console.log(`📝 Creating new book with ${categoryRelations.length} category relationships:`, categoryRelations);
       await db('book_categories').insert(categoryRelations);
+      console.log(`✅ Successfully created ${categoryRelations.length} category relationships for new book ${bookId}`);
+      
+      // Verify the insertion
+      const verifyInsert = await db('book_categories')
+        .where('book_id', bookId)
+        .select('category_id');
+      console.log(`🔍 Verification: New book ${bookId} has ${verifyInsert.length} categories:`, verifyInsert.map(c => c.category_id));
+      
       logger.info('Category relationships created:', { bookId, categories });
     }
     
@@ -468,11 +507,6 @@ router.put('/books/:id', upload.fields([
   const { id } = req.params;
   const updateData = req.body;
   
-  // Debug: Log what we're receiving
-  console.log('🔍 Admin Update Book - Received data:');
-  console.log('Authors:', updateData.authors, '(type:', typeof updateData.authors, ')');
-  console.log('Authors Somali:', updateData.authors_somali, '(type:', typeof updateData.authors_somali, ')');
-  
   // Extract categories from request body (multiple categories support)
   const categories = [];
   Object.keys(req.body).forEach(key => {
@@ -480,6 +514,13 @@ router.put('/books/:id', upload.fields([
       categories.push(req.body[key]);
     }
   });
+  
+  // Debug: Log exact data received from frontend
+  console.log('📥 EXACT DATA RECEIVED FROM FRONTEND:');
+  console.log('📋 Request body keys:', Object.keys(req.body));
+  console.log('📋 All request body data:', req.body);
+  console.log('📋 Extracted categories:', categories);
+  console.log('📋 Book ID:', id);
   
   // Check if book exists
   const existingBook = await db('books').where('id', id).first();
@@ -548,10 +589,6 @@ router.put('/books/:id', upload.fields([
       updateData.rating = parseFloat(updateData.rating) || 0;
     }
     
-    // Debug: Log what we're about to save to database
-    console.log('🔍 About to save to database:');
-    console.log('Authors field:', updateData.authors, '(type:', typeof updateData.authors, ')');
-    console.log('Authors Somali field:', updateData.authors_somali, '(type:', typeof updateData.authors_somali, ')');
     
     // Remove fields that are not columns in the books table
     const { categories: _, selectedCategories: __, ...bookUpdateData } = updateData;
@@ -567,10 +604,37 @@ router.put('/books/:id', upload.fields([
     // Update category relationships if categories are provided
     if (categories.length >= 0) { // Allow empty array to clear categories
       // Remove existing category relationships
-      await db('book_categories').where('book_id', id).del();
+      const deletedCount = await db('book_categories').where('book_id', id).del();
+      console.log(`🗑️ Deleted ${deletedCount} existing category relationships for book ${id}`);
       
       // Add new category relationships
       if (categories.length > 0) {
+        console.log(`➕ Processing ${categories.length} categories for book ${id}:`, categories);
+        
+        // Verify that all categories exist in the categories table
+        const existingCategories = await db('categories')
+          .whereIn('id', categories)
+          .where('is_active', true)
+          .select('id', 'name');
+        
+        console.log(`🔍 Found ${existingCategories.length} valid categories:`, existingCategories.map(c => ({ id: c.id, name: c.name })));
+        
+        if (existingCategories.length !== categories.length) {
+          const missingCategories = categories.filter(catId => 
+            !existingCategories.find(existing => existing.id === catId)
+          );
+          
+          console.log(`❌ Missing categories:`, missingCategories);
+          
+          // Return error if categories don't exist
+          return res.status(400).json({
+            error: 'Invalid categories selected',
+            code: 'INVALID_CATEGORIES',
+            details: `The following categories do not exist or are inactive: ${missingCategories.join(', ')}`,
+            missingCategories: missingCategories
+          });
+        }
+        
         const categoryRelations = categories.map(categoryId => ({
           id: crypto.randomUUID(),
           book_id: id,
@@ -578,15 +642,40 @@ router.put('/books/:id', upload.fields([
           created_at: new Date()
         }));
         
+        console.log(`📝 Inserting ${categoryRelations.length} category relationships:`, categoryRelations);
         await db('book_categories').insert(categoryRelations);
+        console.log(`✅ Successfully inserted ${categoryRelations.length} category relationships`);
+        
+        // Verify the insertion
+        const verifyInsert = await db('book_categories')
+          .where('book_id', id)
+          .select('category_id');
+        console.log(`🔍 Verification: Book ${id} now has ${verifyInsert.length} categories:`, verifyInsert.map(c => c.category_id));
+        
         logger.info('Category relationships updated:', { bookId: id, categories });
+      } else {
+        console.log(`ℹ️ No categories to assign - book ${id} will have no categories`);
       }
     }
     
     logger.info('Book updated:', { bookId: id });
     
+    // Final verification - get the updated book with categories
+    const finalBook = await db('books').where('id', id).first();
+    const finalCategories = await db('book_categories')
+      .join('categories', 'book_categories.category_id', 'categories.id')
+      .where('book_categories.book_id', id)
+      .where('categories.is_active', true)
+      .select('categories.id', 'categories.name')
+      .orderBy('categories.sort_order', 'asc');
+    
+    console.log(`🎯 FINAL RESULT: Book "${finalBook.title}" now has ${finalCategories.length} categories:`, finalCategories.map(c => ({ id: c.id, name: c.name })));
+    
     res.json({
-      message: 'Book updated successfully'
+      message: 'Book updated successfully',
+      bookId: id,
+      categoriesCount: finalCategories.length,
+      categories: finalCategories.map(c => ({ id: c.id, name: c.name }))
     });
     
   } catch (error) {

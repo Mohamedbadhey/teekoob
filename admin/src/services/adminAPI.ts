@@ -24,7 +24,10 @@ export const getBooks = async (params?: {
       description_somali: book.description_somali,
       authors: book.authors, // Already in correct format from backend
       authors_somali: book.authors_somali, // Already in correct format from backend
-      // Categories are handled separately via book_categories table
+      // Include categories from book_categories relationship
+      categories: book.categories || [],
+      categoryNames: book.categoryNames || [],
+      categoryNamesSomali: book.categoryNamesSomali || [],
       language: book.language,
       format: book.format,
       cover_image_url: book.cover_image_url,
