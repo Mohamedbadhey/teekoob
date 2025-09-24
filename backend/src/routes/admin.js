@@ -360,12 +360,19 @@ router.post('/books', upload.fields([
     } = req.body;
 
   // Extract categories from request body (multiple categories support)
-  const categories = [];
-  Object.keys(req.body).forEach(key => {
-    if (key.startsWith('categories[') && key.endsWith(']')) {
-      categories.push(req.body[key]);
-    }
-  });
+  let categories = [];
+  
+  // Check if categories is sent as an array
+  if (req.body.categories && Array.isArray(req.body.categories)) {
+    categories = req.body.categories;
+  } else {
+    // Fallback: check for categories[0], categories[1], etc.
+    Object.keys(req.body).forEach(key => {
+      if (key.startsWith('categories[') && key.endsWith(']')) {
+        categories.push(req.body[key]);
+      }
+    });
+  }
     
     // Use authors if provided, otherwise fall back to author
     const finalAuthors = authors || author;
@@ -508,12 +515,19 @@ router.put('/books/:id', upload.fields([
   const updateData = req.body;
   
   // Extract categories from request body (multiple categories support)
-  const categories = [];
-  Object.keys(req.body).forEach(key => {
-    if (key.startsWith('categories[') && key.endsWith(']')) {
-      categories.push(req.body[key]);
-    }
-  });
+  let categories = [];
+  
+  // Check if categories is sent as an array
+  if (req.body.categories && Array.isArray(req.body.categories)) {
+    categories = req.body.categories;
+  } else {
+    // Fallback: check for categories[0], categories[1], etc.
+    Object.keys(req.body).forEach(key => {
+      if (key.startsWith('categories[') && key.endsWith(']')) {
+        categories.push(req.body[key]);
+      }
+    });
+  }
   
   // Debug: Log exact data received from frontend
   console.log('📥 EXACT DATA RECEIVED FROM FRONTEND:');
