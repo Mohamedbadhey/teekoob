@@ -15,6 +15,8 @@ class BookCard extends StatefulWidget {
   final bool isFavorite;
   final String userId;
   final bool enableAnimations;
+  final bool compact;
+  final Color? backgroundColor;
 
   const BookCard({
     Key? key,
@@ -27,6 +29,8 @@ class BookCard extends StatefulWidget {
     this.isFavorite = false,
     this.userId = 'current_user',
     this.enableAnimations = true,
+    this.compact = false,
+    this.backgroundColor,
   }) : super(key: key);
 
   @override
@@ -247,28 +251,42 @@ class _BookCardState extends State<BookCard> with TickerProviderStateMixin {
     final theme = Theme.of(context);
     
     // Responsive sizing based on screen dimensions
-    final cardWidth = widget.width ?? _getResponsiveWidth(screenWidth);
+    final cardWidth = widget.compact
+        ? (widget.width ?? (screenWidth - (screenWidth * 0.10)))
+        : (widget.width ?? _getResponsiveWidth(screenWidth));
     final cardHeight = widget.height ?? _getResponsiveHeight(screenHeight);
     
-    Widget cardContent = Container(
+    Widget cardContent = widget.compact
+        ? _buildCompactContent(cardWidth)
+        : Container(
       width: cardWidth,
       // height: cardHeight, // REMOVED FIXED HEIGHT - let content determine height
-      margin: EdgeInsets.only(right: widget.width != null ? 0 : screenWidth * 0.03), // No margin for grid layout, margin for horizontal scroll
+      margin: widget.compact
+          ? const EdgeInsets.symmetric(vertical: 6)
+          : EdgeInsets.only(right: widget.width != null ? 0 : screenWidth * 0.03), // No margin for grid layout, margin for horizontal scroll
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF1E3A8A).withOpacity(0.15),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-          BoxShadow(
-            color: const Color(0xFF1E3A8A).withOpacity(0.08),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        borderRadius: BorderRadius.circular(widget.compact ? 12 : 20),
+        boxShadow: widget.compact
+            ? [
+                BoxShadow(
+                  color: const Color(0xFF1E3A8A).withOpacity(0.06),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
+                ),
+              ]
+            : [
+                BoxShadow(
+                  color: const Color(0xFF1E3A8A).withOpacity(0.15),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
+                ),
+                BoxShadow(
+                  color: const Color(0xFF1E3A8A).withOpacity(0.08),
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
+                ),
+              ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -280,9 +298,9 @@ class _BookCardState extends State<BookCard> with TickerProviderStateMixin {
               // Cover Image Container - FILLS ENTIRE CARD
               Container(
                 width: double.infinity,
-                height: cardWidth * 0.8, // Slightly reduced height to prevent overflow - 0.8:1 aspect ratio
+                height: widget.compact ? cardWidth * 0.35 : cardWidth * 0.8, // More compact cover in list mode
                 decoration: BoxDecoration(
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(widget.compact ? 12 : 20)),
                   gradient: const LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
@@ -296,7 +314,7 @@ class _BookCardState extends State<BookCard> with TickerProviderStateMixin {
                 ),
                 child: widget.book.coverImageUrl != null
                     ? ClipRRect(
-                        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                        borderRadius: BorderRadius.vertical(top: Radius.circular(widget.compact ? 12 : 20)),
                         child: CachedNetworkImage(
                           imageUrl: _buildFullImageUrl(widget.book.coverImageUrl!),
                           fit: BoxFit.cover,
@@ -318,7 +336,7 @@ class _BookCardState extends State<BookCard> with TickerProviderStateMixin {
                 right: 0,
                 child: Container(
                   decoration: BoxDecoration(
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                    borderRadius: BorderRadius.vertical(top: Radius.circular(widget.compact ? 12 : 20)),
                     gradient: LinearGradient(
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
@@ -329,12 +347,12 @@ class _BookCardState extends State<BookCard> with TickerProviderStateMixin {
                       stops: const [0.0, 1.0],
                     ),
                   ),
-                  padding: EdgeInsets.all(cardWidth * 0.08),
+                  padding: EdgeInsets.all(widget.compact ? cardWidth * 0.04 : cardWidth * 0.08),
                   child: Text(
                     widget.book.title,
                     style: TextStyle(
                       color: Colors.white,
-                      fontSize: _getResponsiveFontSize(cardWidth, 0.075),
+                      fontSize: _getResponsiveFontSize(cardWidth, widget.compact ? 0.055 : 0.075),
                       fontWeight: FontWeight.bold,
                       height: 1.2,
                       shadows: [
@@ -358,10 +376,10 @@ class _BookCardState extends State<BookCard> with TickerProviderStateMixin {
           // Book Info below cover - Dynamic content height
           Container(
             padding: EdgeInsets.fromLTRB(
-              cardWidth * 0.03, // Further reduced left padding for grid layout
-              cardWidth * 0.03, // Further reduced top padding for grid layout
-              cardWidth * 0.03, // Further reduced right padding for grid layout
-              cardWidth * 0.01, // Further reduced bottom padding for grid layout
+              cardWidth * (widget.compact ? 0.025 : 0.03),
+              cardWidth * (widget.compact ? 0.02 : 0.03),
+              cardWidth * (widget.compact ? 0.025 : 0.03),
+              cardWidth * (widget.compact ? 0.005 : 0.01),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -371,7 +389,7 @@ class _BookCardState extends State<BookCard> with TickerProviderStateMixin {
                 Text(
                   widget.book.title,
                   style: TextStyle(
-                    fontSize: _getResponsiveFontSize(cardWidth, 0.07), // Smaller font
+                    fontSize: _getResponsiveFontSize(cardWidth, widget.compact ? 0.06 : 0.07), // Smaller font
                     fontWeight: FontWeight.bold,
                     color: const Color(0xFF1E3A8A),
                     height: 1.1, // Tighter line height
@@ -380,7 +398,7 @@ class _BookCardState extends State<BookCard> with TickerProviderStateMixin {
                   overflow: TextOverflow.ellipsis,
                 ),
                 
-                SizedBox(height: cardWidth * 0.01), // Further reduced spacing for grid layout
+                SizedBox(height: cardWidth * (widget.compact ? 0.006 : 0.01)),
                 
                 // Author name
                 if (widget.book.authors != null && widget.book.authors!.isNotEmpty)
@@ -388,7 +406,7 @@ class _BookCardState extends State<BookCard> with TickerProviderStateMixin {
                     widget.book.authors!,
                     style: TextStyle(
                       color: const Color(0xFF3B82F6),
-                      fontSize: _getResponsiveFontSize(cardWidth, 0.06), // Proper font size
+                      fontSize: _getResponsiveFontSize(cardWidth, widget.compact ? 0.05 : 0.06),
                       fontWeight: FontWeight.w500,
                       height: 1.1, // Proper line height
                     ),
@@ -396,7 +414,7 @@ class _BookCardState extends State<BookCard> with TickerProviderStateMixin {
                     overflow: TextOverflow.ellipsis,
                   ),
                 
-                SizedBox(height: cardWidth * 0.01), // Further reduced spacing before info row for grid layout
+                SizedBox(height: cardWidth * (widget.compact ? 0.006 : 0.01)),
                 
                 // Info row with ratings and time - Dynamic layout
                 Row(
@@ -426,16 +444,16 @@ class _BookCardState extends State<BookCard> with TickerProviderStateMixin {
                           children: [
                             Icon(
                               Icons.access_time_rounded,
-                              size: _getResponsiveFontSize(cardWidth, 0.06), // Smaller icon
+                              size: _getResponsiveFontSize(cardWidth, widget.compact ? 0.05 : 0.06),
                               color: Colors.white,
                             ),
-                            SizedBox(width: cardWidth * 0.02), // Reduced spacing
+                            SizedBox(width: cardWidth * (widget.compact ? 0.015 : 0.02)),
                             Flexible(
                               child: Text(
                                 _formatDuration(widget.book.duration),
                                 style: TextStyle(
                                   color: Colors.white,
-                                  fontSize: _getResponsiveFontSize(cardWidth, 0.05), // Smaller text
+                                  fontSize: _getResponsiveFontSize(cardWidth, widget.compact ? 0.045 : 0.05),
                                   fontWeight: FontWeight.w600,
                                 ),
                                 overflow: TextOverflow.ellipsis,
@@ -446,7 +464,7 @@ class _BookCardState extends State<BookCard> with TickerProviderStateMixin {
                       ),
                     ),
                     
-                    SizedBox(width: cardWidth * 0.02),
+                    SizedBox(width: cardWidth * (widget.compact ? 0.015 : 0.02)),
                     
                     // Star rating - Dynamic
                     Flexible(
@@ -469,16 +487,16 @@ class _BookCardState extends State<BookCard> with TickerProviderStateMixin {
                           children: [
                             Icon(
                               Icons.star_rounded,
-                              size: _getResponsiveFontSize(cardWidth, 0.06), // Smaller icon
+                              size: _getResponsiveFontSize(cardWidth, widget.compact ? 0.05 : 0.06),
                               color: const Color(0xFF1E3A8A),
                             ),
-                            SizedBox(width: cardWidth * 0.02), // Reduced spacing
+                            SizedBox(width: cardWidth * (widget.compact ? 0.015 : 0.02)),
                             Flexible(
                               child: Text(
                                 (widget.book.rating ?? 0.0).toStringAsFixed(1),
                                 style: TextStyle(
                                   color: const Color(0xFF1E3A8A),
-                                  fontSize: _getResponsiveFontSize(cardWidth, 0.05), // Smaller text
+                                  fontSize: _getResponsiveFontSize(cardWidth, widget.compact ? 0.045 : 0.05),
                                   fontWeight: FontWeight.bold,
                                 ),
                                 overflow: TextOverflow.ellipsis,
@@ -532,6 +550,135 @@ class _BookCardState extends State<BookCard> with TickerProviderStateMixin {
         child: cardContent,
       );
     }
+  }
+
+  Widget _buildCompactContent(double cardWidth) {
+    return Container(
+      width: cardWidth,
+      margin: const EdgeInsets.symmetric(vertical: 6),
+      decoration: BoxDecoration(
+        color: widget.backgroundColor ?? Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF1E3A8A).withOpacity(0.06),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(10),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: Container(
+                width: 72,
+                height: 96,
+                color: const Color(0xFFE5E7EB),
+                child: widget.book.coverImageUrl != null
+                    ? CachedNetworkImage(
+                        imageUrl: _buildFullImageUrl(widget.book.coverImageUrl!),
+                        fit: BoxFit.cover,
+                        width: 72,
+                        height: 96,
+                        placeholder: (context, url) => _buildGradientBackground(72),
+                        errorWidget: (context, url, error) => _buildGradientBackground(72),
+                        fadeInDuration: const Duration(milliseconds: 200),
+                        fadeOutDuration: const Duration(milliseconds: 100),
+                      )
+                    : _buildGradientBackground(72),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    widget.book.title,
+                    style: TextStyle(
+                      fontSize: _getResponsiveFontSize(cardWidth, 0.06),
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF1E3A8A),
+                      height: 1.15,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                  if (widget.book.authors != null && widget.book.authors!.isNotEmpty)
+                    Text(
+                      widget.book.authors!,
+                      style: TextStyle(
+                        color: const Color(0xFF3B82F6),
+                        fontSize: _getResponsiveFontSize(cardWidth, 0.05),
+                        fontWeight: FontWeight.w500,
+                        height: 1.1,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF1E3A8A),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.access_time_rounded, size: 12, color: Colors.white),
+                            const SizedBox(width: 4),
+                            Text(
+                              _formatDuration(widget.book.duration),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF1E3A8A).withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: const Color(0xFF1E3A8A), width: 1),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.star_rounded, size: 12, color: Color(0xFF1E3A8A)),
+                            const SizedBox(width: 4),
+                            Text(
+                              (widget.book.rating ?? 0.0).toStringAsFixed(1),
+                              style: const TextStyle(
+                                color: Color(0xFF1E3A8A),
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _buildGradientBackground(double cardWidth) {

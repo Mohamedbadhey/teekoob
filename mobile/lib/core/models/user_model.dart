@@ -61,25 +61,61 @@ class User extends Equatable {
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
+    final String id = (json['id'] ?? json['userId']) as String;
+    final String email = json['email'] as String;
+
+    final String username = (json['username']
+          ?? json['displayName']
+          ?? (email.contains('@') ? email.split('@')[0] : email)) as String;
+
+    final String? profilePicture = (json['profilePicture'] ?? json['avatarUrl']) as String?;
+
+    final String preferredLanguage = (json['preferredLanguage'] ?? json['languagePreference'] ?? 'en') as String;
+
+    final String subscriptionPlan = (json['subscriptionPlan'] ?? 'free') as String;
+
+    final bool isEmailVerified = (json['isEmailVerified'] ?? json['isVerified'] ?? false) as bool;
+
+    final DateTime createdAt = (() {
+      final v = json['createdAt'];
+      if (v is String) return DateTime.parse(v);
+      if (v is int) return DateTime.fromMillisecondsSinceEpoch(v);
+      return DateTime.now();
+    })();
+
+    final DateTime updatedAt = (() {
+      final v = json['updatedAt'];
+      if (v is String) return DateTime.parse(v);
+      if (v is int) return DateTime.fromMillisecondsSinceEpoch(v);
+      return createdAt;
+    })();
+
+    final DateTime? lastLoginAt = (() {
+      final v = json['lastLoginAt'];
+      if (v is String) return DateTime.parse(v);
+      if (v is int) return DateTime.fromMillisecondsSinceEpoch(v);
+      return null;
+    })();
+
     return User(
-      id: json['id'] as String,
-      email: json['email'] as String,
-      username: json['username'] as String,
+      id: id,
+      email: email,
+      username: username,
       firstName: json['firstName'] as String?,
       lastName: json['lastName'] as String?,
-      profilePicture: json['profilePicture'] as String?,
-      preferredLanguage: json['preferredLanguage'] as String? ?? 'en',
+      profilePicture: profilePicture,
+      preferredLanguage: preferredLanguage,
       phoneNumber: json['phoneNumber'] as String?,
       dateOfBirth: json['dateOfBirth'] != null ? DateTime.parse(json['dateOfBirth'] as String) : null,
       country: json['country'] as String?,
       city: json['city'] as String?,
-      subscriptionPlan: json['subscriptionPlan'] as String? ?? 'free',
+      subscriptionPlan: subscriptionPlan,
       subscriptionExpiry: json['subscriptionExpiry'] != null ? DateTime.parse(json['subscriptionExpiry'] as String) : null,
-      isEmailVerified: json['isEmailVerified'] as bool? ?? false,
+      isEmailVerified: isEmailVerified,
       isPhoneVerified: json['isPhoneVerified'] as bool? ?? false,
-      createdAt: DateTime.parse(json['createdAt'] as String),
-      updatedAt: DateTime.parse(json['updatedAt'] as String),
-      lastLoginAt: json['lastLoginAt'] != null ? DateTime.parse(json['lastLoginAt'] as String) : null,
+      createdAt: createdAt,
+      updatedAt: updatedAt,
+      lastLoginAt: lastLoginAt,
       preferences: Map<String, dynamic>.from(json['preferences'] as Map? ?? {}),
       favoriteGenres: List<String>.from(json['favoriteGenres'] as List? ?? []),
       totalBooksRead: json['totalBooksRead'] as int? ?? 0,

@@ -18,15 +18,13 @@ class BooksPage extends StatefulWidget {
 
 class _BooksPageState extends State<BooksPage> {
   final TextEditingController _searchController = TextEditingController();
-  String _selectedGenre = '';
-  String _selectedLanguage = '';
-  String _selectedFormat = '';
+  List<String> _selectedCategories = [];
+  String _selectedYear = '';
   String _sortBy = 'title';
   String _sortOrder = 'asc';
-  bool _showFeatured = false;
-  bool _showNewReleases = false;
   bool _hasLoadedInitialData = false;
   bool _isInitialBuild = true;
+  String _currentSearchQuery = '';
 
   @override
   void initState() {
@@ -79,10 +77,23 @@ class _BooksPageState extends State<BooksPage> {
   void _searchBooks(String query) {
     print('🔍 BooksPage: Search called with query: "$query"');
     if (query.trim().isNotEmpty) {
-      print('🔍 BooksPage: Dispatching SearchBooks event for: "${query.trim()}"');
-      context.read<BooksBloc>().add(SearchBooks(query.trim()));
+      final q = query.trim();
+      print('🔍 BooksPage: Dispatching LoadBooks with search and filters for: "$q"');
+      setState(() {
+        _currentSearchQuery = q;
+      });
+      context.read<BooksBloc>().add(LoadBooks(
+        search: q,
+        categories: _selectedCategories.isNotEmpty ? _selectedCategories : null,
+        year: _selectedYear.isEmpty ? null : _selectedYear,
+        sortBy: _sortBy,
+        sortOrder: _sortOrder,
+      ));
     } else {
       print('🔍 BooksPage: Empty query, loading books with filters');
+      setState(() {
+        _currentSearchQuery = '';
+      });
       _loadBooksWithFilters();
     }
   }
@@ -95,16 +106,13 @@ class _BooksPageState extends State<BooksPage> {
     }
     
     print('🔧 BooksPage: Loading books with filters');
-    print('🔧 BooksPage: Filters - genre: $_selectedGenre, language: $_selectedLanguage, format: $_selectedFormat');
-    print('🔧 BooksPage: Filters - featured: $_showFeatured, newReleases: $_showNewReleases');
+    print('🔧 BooksPage: Filters - categories: $_selectedCategories, year: $_selectedYear');
     print('🔧 BooksPage: Filters - sortBy: $_sortBy, sortOrder: $_sortOrder');
     
     context.read<BooksBloc>().add(LoadBooks(
-      genre: _selectedGenre.isEmpty ? null : _selectedGenre,
-      language: _selectedLanguage.isEmpty ? null : _selectedLanguage,
-      format: _selectedFormat.isEmpty ? null : _selectedFormat,
-      isFeatured: _showFeatured ? true : null,
-      isNewRelease: _showNewReleases ? true : null,
+      search: _currentSearchQuery.isNotEmpty ? _currentSearchQuery : null,
+      categories: _selectedCategories.isNotEmpty ? _selectedCategories : null,
+      year: _selectedYear.isEmpty ? null : _selectedYear,
       sortBy: _sortBy,
       sortOrder: _sortOrder,
     ));
@@ -117,13 +125,10 @@ class _BooksPageState extends State<BooksPage> {
 
   void _clearFilters() {
     setState(() {
-      _selectedGenre = '';
-      _selectedLanguage = '';
-      _selectedFormat = '';
+      _selectedCategories.clear();
+      _selectedYear = '';
       _sortBy = 'title';
       _sortOrder = 'asc';
-      _showFeatured = false;
-      _showNewReleases = false;
     });
     _isInitialBuild = false; // Allow loading when filters are cleared
     _loadBooksWithFilters();
@@ -159,7 +164,6 @@ class _BooksPageState extends State<BooksPage> {
             children: [
               _buildModernHeader(),
               _buildSearchSection(),
-              _buildQuickActionsSection(),
           Expanded(
             child: BlocBuilder<BooksBloc, BooksState>(
                   buildWhen: (previous, current) {
@@ -181,7 +185,15 @@ class _BooksPageState extends State<BooksPage> {
                       return _buildErrorState(state);
                     } else if (state is SearchResultsLoaded) {
                       print('🔍 BooksPage: Showing search results - ${state.books.length} books');
-                      return _buildSearchResults(state);
+                      // Show the same compact list without a separate search header
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: _buildBooksList(state.books),
+                          ),
+                        ],
+                      );
                     } else if (state is BooksLoaded) {
                       print('📚 BooksPage: Showing books grid - ${state.books.length} books');
                       return _buildBooksGrid(state);
@@ -305,11 +317,8 @@ class _BooksPageState extends State<BooksPage> {
   }
 
   bool _hasActiveFilters() {
-    return _selectedGenre.isNotEmpty || 
-           _selectedLanguage.isNotEmpty || 
-           _selectedFormat.isNotEmpty ||
-           _showFeatured || 
-           _showNewReleases;
+    return _selectedCategories.isNotEmpty || 
+           _selectedYear.isNotEmpty;
   }
 
   Widget _buildSearchSection() {
@@ -353,39 +362,7 @@ class _BooksPageState extends State<BooksPage> {
             ),
           ),
           
-          // Search suggestions or tips
-          if (_searchController.text.isEmpty)
-            Container(
-              margin: const EdgeInsets.only(top: 12),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              decoration: BoxDecoration(
-                color: const Color(0xFF1E3A8A).withOpacity(0.05),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: const Color(0xFF1E3A8A).withOpacity(0.1),
-                ),
-              ),
-              child: Row(
-                      children: [
-                        Icon(
-                    Icons.lightbulb_outline,
-                    size: 16,
-                    color: const Color(0xFF1E3A8A).withOpacity(0.7),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Try searching for "fiction", "romance", or author names',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: const Color(0xFF1E3A8A).withOpacity(0.7),
-                        fontStyle: FontStyle.italic,
-                      ),
-                          ),
-                        ),
-                      ],
-            ),
-          ),
+          // Search suggestions removed per request
         ],
       ),
         );
@@ -393,221 +370,7 @@ class _BooksPageState extends State<BooksPage> {
     );
   }
 
-  Widget _buildQuickActionsSection() {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final screenWidth = constraints.maxWidth;
-    return Container(
-          margin: EdgeInsets.symmetric(
-            horizontal: screenWidth * 0.05, // 5% of screen width
-            vertical: screenWidth * 0.02, // 2% of screen width
-          ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: EdgeInsets.all(screenWidth * 0.015), // 1.5% of screen width
-                decoration: BoxDecoration(
-                  color: const Color(0xFF1E3A8A).withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(screenWidth * 0.02), // 2% of screen width
-                ),
-                child: Icon(
-                  Icons.flash_on_rounded,
-                  size: screenWidth * 0.04, // 4% of screen width
-                  color: const Color(0xFF1E3A8A),
-                ),
-              ),
-              SizedBox(width: screenWidth * 0.02), // 2% of screen width
-              Text(
-                'Quick Filters',
-                style: TextStyle(
-                  fontSize: screenWidth * 0.045, // 4.5% of screen width
-                  fontWeight: FontWeight.bold,
-                  color: const Color(0xFF1E3A8A),
-                  letterSpacing: 0.3,
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: screenWidth * 0.04), // 4% of screen width
-          LayoutBuilder(
-            builder: (context, constraints) {
-              return SizedBox(
-                height: screenWidth * 0.18, // 18% of screen width for chip height
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.01), // 1% of screen width
-        children: [
-                    _buildModernQuickActionChip(
-            label: LocalizationService.getLocalizedText(
-                        englishText: 'All Books',
-              somaliText: 'Dhammaan',
-            ),
-                      icon: Icons.library_books_rounded,
-            isSelected: _selectedGenre.isEmpty && !_showFeatured && !_showNewReleases,
-            onTap: () {
-              setState(() {
-                _selectedGenre = '';
-                _showFeatured = false;
-                _showNewReleases = false;
-              });
-              _isInitialBuild = false; // Allow loading when user taps
-              _loadBooksWithFilters();
-            },
-                      maxWidth: constraints.maxWidth * 0.25,
-          ),
-                    _buildModernQuickActionChip(
-            label: LocalizationService.getLocalizedText(
-              englishText: 'Featured',
-              somaliText: 'Mudan',
-            ),
-                      icon: Icons.star_rounded,
-            isSelected: _showFeatured,
-            onTap: () {
-              setState(() {
-                _showFeatured = !_showFeatured;
-                _showNewReleases = false;
-                _selectedGenre = '';
-              });
-              _isInitialBuild = false; // Allow loading when user taps
-              _loadBooksWithFilters();
-            },
-                      maxWidth: constraints.maxWidth * 0.25,
-          ),
-                    _buildModernQuickActionChip(
-            label: LocalizationService.getLocalizedText(
-              englishText: 'New',
-              somaliText: 'Cusub',
-            ),
-                      icon: Icons.new_releases_rounded,
-            isSelected: _showNewReleases,
-            onTap: () {
-              setState(() {
-                _showNewReleases = !_showNewReleases;
-                _showFeatured = false;
-                _selectedGenre = '';
-              });
-              _isInitialBuild = false; // Allow loading when user taps
-              _loadBooksWithFilters();
-            },
-                      maxWidth: constraints.maxWidth * 0.25,
-          ),
-                    _buildModernQuickActionChip(
-            label: LocalizationService.getLocalizedText(
-              englishText: 'Audio',
-              somaliText: 'Codka',
-            ),
-                      icon: Icons.headphones_rounded,
-            isSelected: _selectedFormat == 'audio',
-            onTap: () {
-              setState(() {
-                _selectedFormat = _selectedFormat == 'audio' ? '' : 'audio';
-              });
-              _isInitialBuild = false; // Allow loading when user taps
-              _loadBooksWithFilters();
-            },
-                      maxWidth: constraints.maxWidth * 0.25,
-          ),
-                    _buildModernQuickActionChip(
-            label: LocalizationService.getLocalizedText(
-              englishText: 'Ebook',
-              somaliText: 'Kitaabka',
-            ),
-                      icon: Icons.menu_book_rounded,
-            isSelected: _selectedFormat == 'ebook',
-            onTap: () {
-              setState(() {
-                _selectedFormat = _selectedFormat == 'ebook' ? '' : 'ebook';
-              });
-              _isInitialBuild = false; // Allow loading when user taps
-              _loadBooksWithFilters();
-            },
-                      maxWidth: constraints.maxWidth * 0.25,
-          ),
-        ],
-      ),
-              );
-            },
-          ),
-        ],
-      ),
-        );
-      },
-    );
-  }
 
-  Widget _buildModernQuickActionChip({
-    required String label,
-    required bool isSelected,
-    required VoidCallback onTap,
-    required IconData icon,
-    double? maxWidth,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        margin: const EdgeInsets.only(right: 12),
-        constraints: maxWidth != null ? BoxConstraints(maxWidth: maxWidth) : null,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          gradient: isSelected 
-              ? LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    const Color(0xFF0466c8),
-                    const Color(0xFFE55A1A),
-                  ],
-                )
-              : null,
-          color: isSelected ? null : Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: isSelected ? const Color(0xFF0466c8) : Colors.grey[200]!,
-            width: isSelected ? 2 : 1,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: isSelected 
-                  ? const Color(0xFF0466c8).withOpacity(0.3)
-                  : Colors.black.withOpacity(0.05),
-              blurRadius: isSelected ? 12 : 4,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: IntrinsicHeight(
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                icon,
-                size: 16,
-                color: isSelected ? Colors.white : const Color(0xFF1E3A8A),
-              ),
-              const SizedBox(width: 6),
-              Flexible(
-                child: Text(
-                  label,
-                  style: TextStyle(
-                    color: isSelected ? Colors.white : const Color(0xFF1E3A8A),
-                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                    fontSize: 12,
-                  ),
-                  textAlign: TextAlign.center,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 
   Widget _buildLoadingState() {
     return Center(
@@ -646,15 +409,7 @@ class _BooksPageState extends State<BooksPage> {
               letterSpacing: 0.3,
             ),
           ),
-          const SizedBox(height: 8),
-          Text(
-            'Please wait while we fetch the latest collection',
-            style: TextStyle(
-              color: Colors.grey[600],
-              fontSize: 14,
-            ),
-            textAlign: TextAlign.center,
-          ),
+          // Removed extra loading subtitle per request
         ],
       ),
     );
@@ -913,103 +668,7 @@ class _BooksPageState extends State<BooksPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (state.books.isNotEmpty)
-          Container(
-            margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Colors.white,
-                  const Color(0xFF1E3A8A).withOpacity(0.02),
-                ],
-              ),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: const Color(0xFF1E3A8A).withOpacity(0.1),
-                width: 1,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFF1E3A8A).withOpacity(0.05),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF1E3A8A).withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(
-                    Icons.library_books_rounded,
-                    color: const Color(0xFF1E3A8A),
-                    size: 20,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  LocalizationService.getLocalizedText(
-                          englishText: 'Book Collection',
-                          somaliText: 'Kutubta',
-                        ),
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF1E3A8A),
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        LocalizationService.getLocalizedText(
-                          englishText: '${state.total} books available',
-                    somaliText: '${state.total} kutub ayaa la helay',
-                  ),
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey[600],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                if (state.totalPages > 1)
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          const Color(0xFF0466c8),
-                          const Color(0xFFE55A1A),
-                        ],
-                      ),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                    LocalizationService.getLocalizedText(
-                        englishText: 'Page ${state.page}/${state.totalPages}',
-                        somaliText: 'Bogga ${state.page}/${state.totalPages}',
-                      ),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
+        // Removed "Book Collection" header per request
         Expanded(
           child: _buildBooksList(state.books),
         ),
@@ -1022,11 +681,9 @@ class _BooksPageState extends State<BooksPage> {
                   context.read<BooksBloc>().add(LoadBooks(
                     page: state.page + 1,
                     limit: state.limit,
-                    genre: _selectedGenre.isEmpty ? null : _selectedGenre,
-                    language: _selectedLanguage.isEmpty ? null : _selectedLanguage,
-                    format: _selectedFormat.isEmpty ? null : _selectedFormat,
-                    isFeatured: _showFeatured ? true : null,
-                    isNewRelease: _showNewReleases ? true : null,
+                    search: _currentSearchQuery.isNotEmpty ? _currentSearchQuery : null,
+                    categories: _selectedCategories.isNotEmpty ? _selectedCategories : null,
+                    year: _selectedYear.isEmpty ? null : _selectedYear,
                     sortBy: _sortBy,
                     sortOrder: _sortOrder,
                   ));
@@ -1157,59 +814,15 @@ class _BooksPageState extends State<BooksPage> {
         final screenWidth = constraints.maxWidth;
         final screenHeight = MediaQuery.of(context).size.height;
         
-        // Responsive grid configuration
-        int crossAxisCount;
-        double childAspectRatio;
-        double crossAxisSpacing;
-        double mainAxisSpacing;
-        
-        if (screenWidth < 360) {
-          // Small phones
-          crossAxisCount = 2;
-          childAspectRatio = 0.65;
-          crossAxisSpacing = 12;
-          mainAxisSpacing = 12;
-        } else if (screenWidth < 400) {
-          // Medium phones
-          crossAxisCount = 2;
-          childAspectRatio = 0.68;
-          crossAxisSpacing = 14;
-          mainAxisSpacing = 14;
-        } else if (screenWidth < 480) {
-          // Large phones
-          crossAxisCount = 2;
-          childAspectRatio = 0.70;
-          crossAxisSpacing = 16;
-          mainAxisSpacing = 16;
-        } else if (screenWidth < 600) {
-          // Very large phones
-          crossAxisCount = 2;
-          childAspectRatio = 0.72;
-          crossAxisSpacing = 18;
-          mainAxisSpacing = 18;
-        } else {
-          // Tablets and larger
-          crossAxisCount = 3;
-          childAspectRatio = 0.75;
-          crossAxisSpacing = 20;
-          mainAxisSpacing = 20;
-    }
-
-    return GridView.builder(
+        return ListView.builder(
           padding: EdgeInsets.fromLTRB(
             screenWidth * 0.05, // 5% of screen width
             0, 
             screenWidth * 0.05, // 5% of screen width
             screenHeight * 0.02, // 2% of screen height
-          ),
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: crossAxisCount,
-            childAspectRatio: childAspectRatio,
-            crossAxisSpacing: crossAxisSpacing,
-            mainAxisSpacing: mainAxisSpacing,
       ),
       itemCount: books.length,
-      itemBuilder: (context, index) {
+          itemBuilder: (context, index) {
         final book = books[index];
             return BlocBuilder<LibraryBloc, LibraryState>(
               builder: (context, libraryState) {
@@ -1223,13 +836,20 @@ class _BooksPageState extends State<BooksPage> {
                   );
                 }
                 
-        return BookCard(
+                // Alternate soft backgrounds for better distinction
+                final Color itemBg = index % 2 == 0
+                  ? const Color(0xFFF8FAFF)
+                  : const Color(0xFFFAFAFF);
+
+                return BookCard(
           book: book,
                   onTap: () => _navigateToBookDetail(book),
                   showLibraryActions: true,
                   isInLibrary: isInLibrary,
                   isFavorite: isFavorite,
                   userId: 'current_user', // TODO: Get from auth service
+                  compact: true,
+                  backgroundColor: itemBg,
                 );
               },
             );
@@ -1254,16 +874,14 @@ class _BooksPageState extends State<BooksPage> {
           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
         child: BookFilters(
-        selectedGenre: _selectedGenre,
-        selectedLanguage: _selectedLanguage,
-        selectedFormat: _selectedFormat,
+        selectedCategories: _selectedCategories,
+        selectedYear: _selectedYear,
         sortBy: _sortBy,
         sortOrder: _sortOrder,
-        onApply: (genre, language, format, sortBy, sortOrder) {
+        onApply: (categories, year, sortBy, sortOrder) {
           setState(() {
-            _selectedGenre = genre;
-            _selectedLanguage = language;
-            _selectedFormat = format;
+            _selectedCategories = categories;
+            _selectedYear = year;
             _sortBy = sortBy;
             _sortOrder = sortOrder;
           });

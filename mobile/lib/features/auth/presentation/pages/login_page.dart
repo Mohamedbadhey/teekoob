@@ -301,6 +301,43 @@ class _LoginPageState extends State<LoginPage> {
                     
                     const SizedBox(height: 24),
                     
+                    // Social Login - Google
+                    BlocBuilder<AuthBloc, AuthState>(
+                      builder: (context, state) {
+                        return OutlinedButton.icon(
+                          onPressed: state is AuthLoading
+                              ? null
+                              : () {
+                                  context.read<AuthBloc>().add(const GoogleLoginRequested());
+                                },
+                          icon: SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: Image.asset(
+                              'assets/icons/google.png',
+                              errorBuilder: (context, error, stackTrace) {
+                                return const Icon(Icons.g_translate, size: 20);
+                              },
+                            ),
+                          ),
+                          label: Text(
+                            LocalizationService.getLocalizedText(
+                              englishText: 'Sign in with Google',
+                              somaliText: 'Geli Google',
+                            ),
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+
+                    const SizedBox(height: 24),
+
                     // Divider
                     Row(
                       children: [

@@ -51,6 +51,7 @@ dependencies:
   
   # Authentication
   flutter_secure_storage: ^9.0.0
+  google_sign_in: ^6.2.1
   
   # Localization
   flutter_localizations:
@@ -93,6 +94,8 @@ flutter:
   assets:
     - assets/images/
     - assets/icons/
+      # Ensure google.png exists or add it
+      # Example path: assets/icons/google.png
     - assets/animations/
     - assets/audio/
     - assets/fonts/

@@ -16,13 +16,15 @@ class BooksService {
     int limit = 20,
     String? search,
     String? genre,
+    List<String>? categories,
     String? language,
     String? format,
+    String? year,
     String? sortBy,
     String? sortOrder,
   }) async {
     try {
-      print('BooksService: Getting books with params: page=$page, limit=$limit, search=$search, genre=$genre, language=$language, format=$format, sortBy=$sortBy, sortOrder=$sortOrder');
+      print('BooksService: Getting books with params: page=$page, limit=$limit, search=$search, genre=$genre, categories=$categories, language=$language, format=$format, year=$year, sortBy=$sortBy, sortOrder=$sortOrder');
       
       final queryParams = <String, dynamic>{
         'page': page,
@@ -31,8 +33,10 @@ class BooksService {
 
       if (search != null && search.isNotEmpty) queryParams['search'] = search;
       if (genre != null && genre.isNotEmpty) queryParams['genre'] = genre;
+      if (categories != null && categories.isNotEmpty) queryParams['categories'] = categories.join(',');
       if (language != null && language.isNotEmpty) queryParams['language'] = language;
       if (format != null && format.isNotEmpty) queryParams['format'] = format;
+      if (year != null && year.isNotEmpty) queryParams['year'] = year;
       if (sortBy != null && sortBy.isNotEmpty) queryParams['sortBy'] = sortBy;
       if (sortOrder != null && sortOrder.isNotEmpty) queryParams['sortOrder'] = sortOrder;
 

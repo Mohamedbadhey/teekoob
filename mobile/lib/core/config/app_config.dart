@@ -10,6 +10,10 @@ class AppConfig {
   static const String appName = 'Teekoob';
   static const String appVersion = '1.0.0';
   static const String appBuildNumber = '1';
+
+  // Google OAuth (Web)
+  // Set this to your Google OAuth 2.0 Web client ID from Google Cloud Console
+  static const String googleWebClientId = '';
   
   // Feature Flags
   static const bool enableOfflineMode = true;

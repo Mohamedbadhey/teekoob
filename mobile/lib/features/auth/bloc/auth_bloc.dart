@@ -28,6 +28,10 @@ class LoginRequested extends AuthEvent {
   List<Object?> get props => [email, password];
 }
 
+class GoogleLoginRequested extends AuthEvent {
+  const GoogleLoginRequested();
+}
+
 class RegisterRequested extends AuthEvent {
   final String email;
   final String password;
@@ -179,6 +183,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     
     on<CheckAuthStatus>(_onCheckAuthStatus);
     on<LoginRequested>(_onLoginRequested);
+    on<GoogleLoginRequested>(_onGoogleLoginRequested);
     on<RegisterRequested>(_onRegisterRequested);
     on<LogoutRequested>(_onLogoutRequested);
     on<ForgotPasswordRequested>(_onForgotPasswordRequested);
@@ -227,6 +232,22 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       emit(Authenticated(user));
     } catch (e) {
       emit(AuthError('Login failed: $e'));
+    }
+  }
+
+  Future<void> _onGoogleLoginRequested(
+    GoogleLoginRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    try {
+      emit(const AuthLoading());
+
+      final user = await _authService.loginWithGoogle();
+
+      emit(AuthSuccess('Login successful!', user: user));
+      emit(Authenticated(user));
+    } catch (e) {
+      emit(AuthError('Google login failed: $e'));
     }
   }
 

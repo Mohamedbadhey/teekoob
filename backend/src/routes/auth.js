@@ -408,3 +408,136 @@ router.post('/reset-password', asyncHandler(async (req, res) => {
 }));
 
 module.exports = router;
+ 
+// Google OAuth: verify ID token and issue JWT
+router.post('/google', asyncHandler(async (req, res) => {
+  const { idToken } = req.body;
+
+  if (!idToken) {
+    return res.status(400).json({
+      error: 'Google ID token is required',
+      code: 'GOOGLE_ID_TOKEN_REQUIRED'
+    });
+  }
+
+  try {
+    const { OAuth2Client } = require('google-auth-library');
+    const singleClientId = process.env.GOOGLE_OAUTH_CLIENT_ID;
+    const multipleClientIds = process.env.GOOGLE_OAUTH_CLIENT_IDS;
+    const allowedAudiences = (multipleClientIds
+      ? multipleClientIds.split(',')
+      : [singleClientId].filter(Boolean)).map((s) => s.trim()).filter(Boolean);
+
+    if (allowedAudiences.length === 0) {
+      return res.status(500).json({
+        error: 'Server misconfiguration: GOOGLE_OAUTH_CLIENT_ID(S) missing',
+        code: 'SERVER_MISCONFIGURED'
+      });
+    }
+
+    // Try verifying against any allowed audience
+    const oauthClient = new OAuth2Client();
+    let ticket;
+    let lastError;
+    for (const aud of allowedAudiences) {
+      try {
+        ticket = await oauthClient.verifyIdToken({ idToken, audience: aud });
+        break;
+      } catch (err) {
+        lastError = err;
+      }
+    }
+    if (!ticket) {
+      logger.warn('Google token verification failed for all audiences');
+      throw lastError || new Error('Unable to verify Google token');
+    }
+    const payload = ticket.getPayload();
+
+    const email = payload?.email;
+    const emailVerified = payload?.email_verified;
+    const firstName = payload?.given_name || 'User';
+    const lastName = payload?.family_name || 'Google';
+    const avatarUrl = payload?.picture || null;
+    const googleSub = payload?.sub; // Google user ID
+
+    if (!email) {
+      return res.status(400).json({
+        error: 'Google token did not include an email',
+        code: 'GOOGLE_EMAIL_MISSING'
+      });
+    }
+
+    // Find or create user
+    let user = await db('users')
+      .select('id', 'email', 'first_name', 'last_name', 'language_preference', 'subscription_plan', 'is_active', 'is_verified', 'is_admin', 'created_at')
+      .where('email', email)
+      .first();
+
+    if (!user) {
+      // Create a placeholder password hash for social login users
+      const bcrypt = require('bcryptjs');
+      const saltRounds = 12;
+      const randomSecret = require('crypto').randomBytes(32).toString('hex');
+      const passwordHash = await bcrypt.hash(`google:${googleSub}:${randomSecret}`, saltRounds);
+
+      const [userId] = await db('users').insert({
+        email,
+        password_hash: passwordHash,
+        first_name: firstName,
+        last_name: lastName,
+        avatar_url: avatarUrl,
+        language_preference: 'en',
+        subscription_plan: 'free',
+        is_active: true,
+        is_verified: !!emailVerified
+      }).returning('id');
+
+      user = await db('users')
+        .select('id', 'email', 'first_name', 'last_name', 'language_preference', 'subscription_plan', 'is_active', 'is_verified', 'is_admin', 'created_at')
+        .where('id', userId)
+        .first();
+      logger.info('New user created via Google OAuth:', { email, userId });
+    } else {
+      // Update login timestamp and avatar if missing
+      await db('users')
+        .where('id', user.id)
+        .update({
+          last_login_at: new Date(),
+          avatar_url: user.avatar_url || avatarUrl,
+          is_verified: user.is_verified || !!emailVerified
+        });
+    }
+
+    // Issue JWT
+    const token = jwt.sign(
+      { userId: user.id },
+      process.env.JWT_SECRET,
+      { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+    );
+
+    const transformedUser = {
+      id: user.id,
+      email: user.email,
+      firstName: user.first_name,
+      lastName: user.last_name,
+      languagePreference: user.language_preference,
+      subscriptionPlan: user.subscription_plan,
+      isActive: user.is_active,
+      isVerified: user.is_verified,
+      isAdmin: user.is_admin,
+      createdAt: user.created_at
+    };
+
+    return res.json({
+      message: 'Login successful',
+      user: transformedUser,
+      token
+    });
+  } catch (error) {
+    logger.error('Google OAuth login failed:', error);
+    return res.status(401).json({
+      error: 'Invalid Google ID token',
+      code: 'GOOGLE_TOKEN_INVALID'
+    });
+  }
+}));

@@ -1,20 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:teekoob/core/services/localization_service.dart';
+import 'package:teekoob/core/models/category_model.dart';
+import 'package:teekoob/features/books/bloc/books_bloc.dart';
 
 class BookFilters extends StatefulWidget {
-  final String selectedGenre;
-  final String selectedLanguage;
-  final String selectedFormat;
+  final List<String> selectedCategories;
+  final String selectedYear;
   final String sortBy;
   final String sortOrder;
-  final Function(String, String, String, String, String) onApply;
+  final Function(List<String>, String, String, String) onApply;
   final VoidCallback onClear;
 
   const BookFilters({
     super.key,
-    required this.selectedGenre,
-    required this.selectedLanguage,
-    required this.selectedFormat,
+    required this.selectedCategories,
+    required this.selectedYear,
     required this.sortBy,
     required this.sortOrder,
     required this.onApply,
@@ -26,191 +27,196 @@ class BookFilters extends StatefulWidget {
 }
 
 class _BookFiltersState extends State<BookFilters> {
-  late String _selectedGenre;
-  late String _selectedLanguage;
-  late String _selectedFormat;
+  late List<String> _selectedCategories;
+  late String _selectedYear;
   late String _sortBy;
   late String _sortOrder;
+  List<Category> _categories = [];
+  bool _isLoadingCategories = false;
 
   @override
   void initState() {
     super.initState();
-    _selectedGenre = widget.selectedGenre;
-    _selectedLanguage = widget.selectedLanguage;
-    _selectedFormat = widget.selectedFormat;
+    _selectedCategories = List.from(widget.selectedCategories);
+    _selectedYear = widget.selectedYear;
     _sortBy = widget.sortBy;
     _sortOrder = widget.sortOrder;
+    
+    // Load categories when the widget initializes
+    context.read<BooksBloc>().add(const LoadCategories());
   }
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      constraints: BoxConstraints(
-        maxHeight: MediaQuery.of(context).size.height * 0.8,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Header - Fixed at top
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Text(
-                    LocalizationService.getLocalizedText(
-                      englishText: 'Filters & Sort',
-                      somaliText: 'Shaandhaynta & Habka',
-                    ),
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF1E3A8A),
-                    ),
-                  ),
-                ),
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.grey[100],
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: IconButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(
-                      Icons.close,
-                      color: Color(0xFF1E3A8A),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          
-          // Scrollable content
-          Flexible(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Column(
+    return BlocListener<BooksBloc, BooksState>(
+      listener: (context, state) {
+        if (state is CategoriesLoaded) {
+          setState(() {
+            _categories = state.categories;
+            _isLoadingCategories = false;
+          });
+        } else if (state is BooksLoading) {
+          setState(() {
+            _isLoadingCategories = true;
+          });
+        }
+      },
+      child: Container(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.8,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Header - Fixed at top
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  // Genre Filter
-                  _buildFilterSection(
-                    title: LocalizationService.getLocalizedText(
-                      englishText: 'Genre',
-                      somaliText: 'Nooca',
+                  Expanded(
+                    child: Text(
+                      LocalizationService.getLocalizedText(
+                        englishText: 'Filters & Sort',
+                        somaliText: 'Shaandhaynta & Habka',
+                      ),
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF1E3A8A),
+                      ),
                     ),
-                    child: _buildGenreFilter(),
                   ),
-                  
-                  const SizedBox(height: 20),
-                  
-                  // Language Filter
-                  _buildFilterSection(
-                    title: LocalizationService.getLocalizedText(
-                      englishText: 'Language',
-                      somaliText: 'Luuqadda',
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.grey[100],
+                      borderRadius: BorderRadius.circular(20),
                     ),
-                    child: _buildLanguageFilter(),
-                  ),
-                  
-                  const SizedBox(height: 20),
-                  
-                  // Format Filter
-                  _buildFilterSection(
-                    title: LocalizationService.getLocalizedText(
-                      englishText: 'Format',
-                      somaliText: 'Qaabka',
+                    child: IconButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      icon: const Icon(
+                        Icons.close,
+                        color: Color(0xFF1E3A8A),
+                      ),
                     ),
-                    child: _buildFormatFilter(),
                   ),
-                  
-                  const SizedBox(height: 20),
-                  
-                  // Sort Options
-                  _buildFilterSection(
-                    title: LocalizationService.getLocalizedText(
-                      englishText: 'Sort By',
-                      somaliText: 'Habka',
-                    ),
-                    child: _buildSortOptions(),
-                  ),
-                  
-                  const SizedBox(height: 32),
                 ],
               ),
             ),
-          ),
-          
-          // Action Buttons - Fixed at bottom
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () {
-                      widget.onClear();
-                      Navigator.of(context).pop();
-                    },
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      side: const BorderSide(color: Color(0xFF1E3A8A)),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+            
+            // Scrollable content
+            Flexible(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Column(
+                  children: [
+                    // Category Filter
+                    _buildFilterSection(
+                      title: LocalizationService.getLocalizedText(
+                        englishText: 'Category',
+                        somaliText: 'Qaybta',
                       ),
+                      child: _buildCategoryFilter(),
                     ),
-                    child: Text(
-                      LocalizationService.getClearText,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        color: Color(0xFF1E3A8A),
-                        fontWeight: FontWeight.w600,
+                    
+                    const SizedBox(height: 20),
+                    
+                    // Year Filter
+                    _buildFilterSection(
+                      title: LocalizationService.getLocalizedText(
+                        englishText: 'Year Published',
+                        somaliText: 'Sanadka La Daabacay',
+                      ),
+                      child: _buildYearFilter(),
+                    ),
+                    
+                    const SizedBox(height: 20),
+                    
+                    // Sort Options
+                    _buildFilterSection(
+                      title: LocalizationService.getLocalizedText(
+                        englishText: 'Sort By',
+                        somaliText: 'Habka',
+                      ),
+                      child: _buildSortOptions(),
+                    ),
+                    
+                    const SizedBox(height: 32),
+                  ],
+                ),
+              ),
+            ),
+            
+            // Action Buttons - Fixed at bottom
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () {
+                        widget.onClear();
+                        Navigator.of(context).pop();
+                      },
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        side: const BorderSide(color: Color(0xFF1E3A8A)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: Text(
+                        LocalizationService.getClearText,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          color: Color(0xFF1E3A8A),
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () {
-                      widget.onApply(
-                        _selectedGenre,
-                        _selectedLanguage,
-                        _selectedFormat,
-                        _sortBy,
-                        _sortOrder,
-                      );
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF0466c8),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        widget.onApply(
+                          _selectedCategories,
+                          _selectedYear,
+                          _sortBy,
+                          _sortOrder,
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF0466c8),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 2,
                       ),
-                      elevation: 2,
-                    ),
-                    child: Text(
-                      LocalizationService.getApplyText,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
+                      child: Text(
+                        LocalizationService.getApplyText,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -236,202 +242,128 @@ class _BookFiltersState extends State<BookFilters> {
     );
   }
 
-  Widget _buildGenreFilter() {
-    final genres = [
-      LocalizationService.getLocalizedText(
-        englishText: 'All Genres',
-        somaliText: 'Dhammaan Noocyada',
-      ),
-      LocalizationService.getLocalizedText(
-        englishText: 'Fiction',
-        somaliText: 'Sheeko',
-      ),
-      LocalizationService.getLocalizedText(
-        englishText: 'Non-Fiction',
-        somaliText: 'Sheeko Aan Sheeko Aheyn',
-      ),
-      LocalizationService.getLocalizedText(
-        englishText: 'Science Fiction',
-        somaliText: 'Sheeko Saynis',
-      ),
-      LocalizationService.getLocalizedText(
-        englishText: 'Mystery',
-        somaliText: 'Sirta',
-      ),
-      LocalizationService.getLocalizedText(
-        englishText: 'Romance',
-        somaliText: 'Jacaylka',
-      ),
-      LocalizationService.getLocalizedText(
-        englishText: 'Biography',
-        somaliText: 'Taariikh Nololeed',
-      ),
-      LocalizationService.getLocalizedText(
-        englishText: 'History',
-        somaliText: 'Taariikh',
-      ),
-      LocalizationService.getLocalizedText(
-        englishText: 'Self-Help',
-        somaliText: 'Iska Caawinta',
-      ),
-      LocalizationService.getLocalizedText(
-        englishText: 'Children',
-        somaliText: 'Carruurta',
-      ),
-    ];
+  Widget _buildCategoryFilter() {
+    if (_isLoadingCategories) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(20),
+          child: CircularProgressIndicator(
+            valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF0466c8)),
+          ),
+        ),
+      );
+    }
+
+    if (_categories.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Text(
+            LocalizationService.getLocalizedText(
+              englishText: 'No categories available',
+              somaliText: 'Qaybaha lama helin',
+            ),
+            style: TextStyle(
+              color: Colors.grey[600],
+              fontSize: 14,
+            ),
+          ),
+        ),
+      );
+    }
 
     return LayoutBuilder(
       builder: (context, constraints) {
         return Wrap(
           spacing: 8,
           runSpacing: 8,
-          children: genres.map((genre) {
-            final isSelected = _selectedGenre == genre || 
-                (_selectedGenre.isEmpty && genre.contains('All'));
-            return GestureDetector(
-              onTap: () {
-                setState(() {
-                  _selectedGenre = isSelected ? '' : genre;
-                });
-              },
-              child: Container(
-                constraints: BoxConstraints(
-                  maxWidth: constraints.maxWidth * 0.45,
-                ),
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                decoration: BoxDecoration(
-                  color: isSelected ? const Color(0xFF0466c8) : Colors.grey[100],
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: isSelected ? const Color(0xFF0466c8) : Colors.grey[300]!,
-                    width: 1.5,
-                  ),
-                  boxShadow: isSelected ? [
-                    BoxShadow(
-                      color: const Color(0xFF0466c8).withOpacity(0.3),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ] : null,
-                ),
-                child: Text(
-                  genre,
-                  style: TextStyle(
-                    color: isSelected ? Colors.white : Colors.grey[700],
-                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                    fontSize: 13,
-                  ),
-                  textAlign: TextAlign.center,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
+          children: [
+            // "All Categories" chip
+            _buildCategoryChip(
+              LocalizationService.getLocalizedText(
+                englishText: 'All Categories',
+                somaliText: 'Dhammaan Qaybaha',
               ),
-            );
-          }).toList(),
+              'all_categories',
+              constraints.maxWidth * 0.45,
+            ),
+            // Dynamic category chips
+            ..._categories.map((category) {
+              return _buildCategoryChip(
+                category.name,
+                category.id,
+                constraints.maxWidth * 0.45,
+              );
+            }).toList(),
+          ],
         );
       },
     );
   }
 
-  Widget _buildLanguageFilter() {
-    final languages = [
-      LocalizationService.getLocalizedText(
-        englishText: 'All Languages',
-        somaliText: 'Dhammaan Luuqadaha',
-      ),
-      LocalizationService.getLocalizedText(
-        englishText: 'English',
-        somaliText: 'Ingiriisi',
-      ),
-      LocalizationService.getLocalizedText(
-        englishText: 'Somali',
-        somaliText: 'Soomaali',
-      ),
-      LocalizationService.getLocalizedText(
-        englishText: 'Arabic',
-        somaliText: 'Carabi',
-      ),
-      LocalizationService.getLocalizedText(
-        englishText: 'French',
-        somaliText: 'Faransiis',
-      ),
-    ];
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        return Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: languages.map((language) {
-            final isSelected = _selectedLanguage == language || 
-                (_selectedLanguage.isEmpty && language.contains('All'));
-            return GestureDetector(
-              onTap: () {
-                setState(() {
-                  _selectedLanguage = isSelected ? '' : language;
-                });
-              },
-              child: Container(
-                constraints: BoxConstraints(
-                  maxWidth: constraints.maxWidth * 0.45,
-                ),
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                decoration: BoxDecoration(
-                  color: isSelected ? const Color(0xFF0466c8) : Colors.grey[100],
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: isSelected ? const Color(0xFF0466c8) : Colors.grey[300]!,
-                    width: 1.5,
-                  ),
-                  boxShadow: isSelected ? [
-                    BoxShadow(
-                      color: const Color(0xFF0466c8).withOpacity(0.3),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ] : null,
-                ),
-                child: Text(
-                  language,
-                  style: TextStyle(
-                    color: isSelected ? Colors.white : Colors.grey[700],
-                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                    fontSize: 13,
-                  ),
-                  textAlign: TextAlign.center,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            );
-          }).toList(),
-        );
+  Widget _buildCategoryChip(String label, String categoryId, double maxWidth) {
+    final isSelected = categoryId == 'all_categories'
+        ? _selectedCategories.isEmpty  // "All Categories" is selected only when no categories are selected
+        : _selectedCategories.contains(categoryId);  // Regular categories are selected when they're in the list
+    
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          if (categoryId == 'all_categories') {
+            // Clear all selections
+            _selectedCategories.clear();
+          } else {
+            // Toggle category selection
+            if (_selectedCategories.contains(categoryId)) {
+              _selectedCategories.remove(categoryId);
+            } else {
+              _selectedCategories.add(categoryId);
+            }
+          }
+        });
       },
+      child: Container(
+        constraints: BoxConstraints(maxWidth: maxWidth),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFF0466c8) : Colors.grey[100],
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected ? const Color(0xFF0466c8) : Colors.grey[300]!,
+            width: 1.5,
+          ),
+          boxShadow: isSelected ? [
+            BoxShadow(
+              color: const Color(0xFF0466c8).withOpacity(0.3),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ] : null,
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isSelected ? Colors.white : Colors.grey[700],
+            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+            fontSize: 13,
+          ),
+          textAlign: TextAlign.center,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ),
     );
   }
 
-  Widget _buildFormatFilter() {
-    final formats = [
+
+  Widget _buildYearFilter() {
+    final currentYear = DateTime.now().year;
+    final years = [
       LocalizationService.getLocalizedText(
-        englishText: 'All Formats',
-        somaliText: 'Dhammaan Qaabka',
+        englishText: 'All Years',
+        somaliText: 'Dhammaan Sanadaha',
       ),
-      LocalizationService.getLocalizedText(
-        englishText: 'Ebook',
-        somaliText: 'Kitaabka',
-      ),
-      LocalizationService.getLocalizedText(
-        englishText: 'Audiobook',
-        somaliText: 'Kutubta Codka',
-      ),
-      LocalizationService.getLocalizedText(
-        englishText: 'PDF',
-        somaliText: 'PDF',
-      ),
-      LocalizationService.getLocalizedText(
-        englishText: 'EPUB',
-        somaliText: 'EPUB',
-      ),
+      ...List.generate(10, (index) => (currentYear - index).toString()),
     ];
 
     return LayoutBuilder(
@@ -439,18 +371,18 @@ class _BookFiltersState extends State<BookFilters> {
         return Wrap(
           spacing: 8,
           runSpacing: 8,
-          children: formats.map((format) {
-            final isSelected = _selectedFormat == format || 
-                (_selectedFormat.isEmpty && format.contains('All'));
+          children: years.map((year) {
+            final isSelected = _selectedYear == year || 
+                (_selectedYear.isEmpty && year.contains('All'));
             return GestureDetector(
               onTap: () {
                 setState(() {
-                  _selectedFormat = isSelected ? '' : format;
+                  _selectedYear = isSelected ? '' : year;
                 });
               },
               child: Container(
                 constraints: BoxConstraints(
-                  maxWidth: constraints.maxWidth * 0.45,
+                  maxWidth: constraints.maxWidth * 0.3,
                 ),
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
@@ -469,14 +401,14 @@ class _BookFiltersState extends State<BookFilters> {
                   ] : null,
                 ),
                 child: Text(
-                  format,
+                  year,
                   style: TextStyle(
                     color: isSelected ? Colors.white : Colors.grey[700],
                     fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
                     fontSize: 13,
                   ),
                   textAlign: TextAlign.center,
-                  maxLines: 2,
+                  maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
@@ -522,20 +454,6 @@ class _BookFiltersState extends State<BookFilters> {
                 )),
               ),
               DropdownMenuItem(
-                value: 'author',
-                child: Text(LocalizationService.getLocalizedText(
-                  englishText: 'Author',
-                  somaliText: 'Qoraaga',
-                )),
-              ),
-              DropdownMenuItem(
-                value: 'rating',
-                child: Text(LocalizationService.getLocalizedText(
-                  englishText: 'Rating',
-                  somaliText: 'Qiimaynta',
-                )),
-              ),
-              DropdownMenuItem(
                 value: 'date',
                 child: Text(LocalizationService.getLocalizedText(
                   englishText: 'Date',
@@ -543,10 +461,10 @@ class _BookFiltersState extends State<BookFilters> {
                 )),
               ),
               DropdownMenuItem(
-                value: 'popularity',
+                value: 'rating',
                 child: Text(LocalizationService.getLocalizedText(
-                  englishText: 'Popularity',
-                  somaliText: 'Caansheynta',
+                  englishText: 'Rating',
+                  somaliText: 'Qiimaynta',
                 )),
               ),
             ],

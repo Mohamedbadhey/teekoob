@@ -1,6 +1,10 @@
 
 import 'package:teekoob/core/models/user_model.dart';
 import 'package:teekoob/core/services/network_service.dart';
+import 'package:teekoob/core/config/app_config.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:flutter/foundation.dart';
 
 class AuthService {
   final NetworkService _networkService;
@@ -8,6 +12,20 @@ class AuthService {
   AuthService() : _networkService = NetworkService() {
     _networkService.initialize();
   }
+
+  // Google Sign-In
+  late final GoogleSignIn _googleSignIn = GoogleSignIn(
+    scopes: <String>['email', 'profile'],
+    // For Web, you MUST pass the Web client ID
+    clientId: kIsWeb && AppConfig.googleWebClientId.isNotEmpty
+        ? AppConfig.googleWebClientId
+        : null,
+  );
+
+  // Secure storage for JWT persistence
+  static const FlutterSecureStorage _secureStorage = FlutterSecureStorage();
+  static const String _tokenKey = 'auth_token';
+  static const String _userEmailKey = 'auth_user_email';
 
   // Login user
   Future<User> login({
@@ -23,18 +41,57 @@ class AuthService {
       if (response.statusCode == 200) {
         final userData = response.data['user'] as Map<String, dynamic>;
         final token = response.data['token'] as String;
-        
-        // Create user object
+
         final user = User.fromJson(userData);
-        
-        // Note: No local storage - user data not persisted
-        
+
+        await _secureStorage.write(key: _tokenKey, value: token);
+        await _secureStorage.write(key: _userEmailKey, value: user.email);
+        _networkService.setAuthToken(token);
+
         return user;
       } else {
         throw Exception('Login failed: ${response.statusMessage}');
       }
     } catch (e) {
       throw Exception('Login failed: $e');
+    }
+  }
+
+  // Login with Google
+  Future<User> loginWithGoogle() async {
+    try {
+      // Begin interactive sign-in
+      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+      if (googleUser == null) {
+        throw Exception('Google sign-in was cancelled');
+      }
+
+      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      final String? idToken = googleAuth.idToken;
+
+      if (idToken == null) {
+        throw Exception('Failed to obtain Google ID token');
+      }
+
+      // Send the ID token to backend to verify and exchange for app JWT
+      final response = await _networkService.post('/auth/google', data: {
+        'idToken': idToken,
+      });
+
+      if (response.statusCode == 200) {
+        final userData = response.data['user'] as Map<String, dynamic>;
+        final token = response.data['token'] as String;
+
+        _networkService.setAuthToken(token);
+        await _secureStorage.write(key: _tokenKey, value: token);
+        await _secureStorage.write(key: _userEmailKey, value: userData['email'] as String?);
+
+        return User.fromJson(userData);
+      } else {
+        throw Exception('Google login failed: ${response.statusMessage}');
+      }
+    } catch (e) {
+      throw Exception('Google login failed: $e');
     }
   }
 
@@ -64,12 +121,11 @@ class AuthService {
       if (response.statusCode == 201) {
         final userData = response.data['user'] as Map<String, dynamic>;
         final token = response.data['token'] as String;
-        
-        // Create user object
+
         final user = User.fromJson(userData);
-        
-        // Note: No local storage - user data not persisted
-        
+        await _secureStorage.write(key: _tokenKey, value: token);
+        await _secureStorage.write(key: _userEmailKey, value: user.email);
+        _networkService.setAuthToken(token);
         return user;
       } else {
         throw Exception('Registration failed: ${response.statusMessage}');
@@ -88,26 +144,30 @@ class AuthService {
       // Continue with local logout even if server call fails
       print('Server logout failed: $e');
     } finally {
-      // Note: No local storage to clear
+      await _secureStorage.delete(key: _tokenKey);
+      await _secureStorage.delete(key: _userEmailKey);
+      _networkService.clearAuthToken();
     }
   }
 
   // Check if user is authenticated
   Future<bool> isAuthenticated() async {
-    // Note: No local storage - always return false
-    return false;
+    final token = await _secureStorage.read(key: _tokenKey);
+    if (token == null) return false;
+    _networkService.setAuthToken(token);
+    return true;
   }
 
   // Get current user
   User? getCurrentUser() {
-    // Note: No local storage - always return null
     return null;
   }
 
   // Refresh token
   Future<String> refreshToken() async {
-    // Note: No local storage - throw error
-    throw Exception('No auth token available - no local storage');
+    final token = await _secureStorage.read(key: _tokenKey);
+    if (token == null) throw Exception('No auth token available');
+    return token;
   }
 
   // Forgot password
@@ -262,7 +322,6 @@ class AuthService {
 
   // Get auth token
   String? getAuthToken() {
-    // Note: No local storage - always return null
     return null;
   }
 

@@ -25,7 +25,7 @@ class _HomePageState extends State<HomePage> {
   bool _isLoadingRecentBooks = false;
   bool _isLoadingRandomBooks = false;
   bool _isLoadingCategories = false;
-  String? _selectedCategoryId;
+  List<String> _selectedCategoryIds = [];
   
   // Store original unfiltered lists
   List<Book> _originalFeaturedBooks = [];
@@ -65,13 +65,24 @@ class _HomePageState extends State<HomePage> {
 
   void _filterBooksByCategory(String? categoryId) {
     print('🏠 HomePage: Filtering by category: $categoryId');
+    
     setState(() {
-      _selectedCategoryId = categoryId;
+      if (categoryId == null) {
+        // Clear all selections
+        _selectedCategoryIds.clear();
+      } else {
+        // Toggle category selection
+        if (_selectedCategoryIds.contains(categoryId)) {
+          _selectedCategoryIds.remove(categoryId);
+        } else {
+          _selectedCategoryIds.add(categoryId);
+        }
+      }
     });
     
-    if (categoryId == null) {
+    if (_selectedCategoryIds.isEmpty) {
       // Show all books - restore original lists
-      print('🏠 HomePage: Clearing category filter - restoring original lists');
+      print('🏠 HomePage: No categories selected - restoring original lists');
       setState(() {
         _featuredBooks = List.from(_originalFeaturedBooks);
         _newReleases = List.from(_originalNewReleases);
@@ -79,31 +90,31 @@ class _HomePageState extends State<HomePage> {
         _randomBooks = List.from(_originalRandomBooks);
       });
     } else {
-      // Filter all book sections by category
-      print('🏠 HomePage: Filtering all sections by category: $categoryId');
-      _filterAllSectionsByCategory(categoryId);
+      // Filter all book sections by selected categories
+      print('🏠 HomePage: Filtering all sections by categories: $_selectedCategoryIds');
+      _filterAllSectionsByCategories(_selectedCategoryIds);
     }
   }
 
-  void _filterAllSectionsByCategory(String categoryId) {
-    // Filter featured books from original list
+  void _filterAllSectionsByCategories(List<String> categoryIds) {
+    // Filter featured books from original list - books that match ANY of the selected categories
     final filteredFeatured = _originalFeaturedBooks.where((book) => 
-      book.categories != null && book.categories!.contains(categoryId)
+      book.categories != null && categoryIds.any((categoryId) => book.categories!.contains(categoryId))
     ).toList();
     
     // Filter new releases from original list
     final filteredNewReleases = _originalNewReleases.where((book) => 
-      book.categories != null && book.categories!.contains(categoryId)
+      book.categories != null && categoryIds.any((categoryId) => book.categories!.contains(categoryId))
     ).toList();
     
     // Filter recent books from original list
     final filteredRecent = _originalRecentBooks.where((book) => 
-      book.categories != null && book.categories!.contains(categoryId)
+      book.categories != null && categoryIds.any((categoryId) => book.categories!.contains(categoryId))
     ).toList();
     
     // Filter random books (recommendations) from original list
     final filteredRandom = _originalRandomBooks.where((book) => 
-      book.categories != null && book.categories!.contains(categoryId)
+      book.categories != null && categoryIds.any((categoryId) => book.categories!.contains(categoryId))
     ).toList();
     
     setState(() {
@@ -265,12 +276,12 @@ class _HomePageState extends State<HomePage> {
                       'All Categories',
                       null,
                       0,
-                      _selectedCategoryId == null,
+                      _selectedCategoryIds.isEmpty,
                     ),
                   ),
                   // Category chips
                   ..._categories.map((category) {
-                    final isSelected = _selectedCategoryId == category.id;
+                    final isSelected = _selectedCategoryIds.contains(category.id);
                     return Padding(
                       padding: const EdgeInsets.only(right: 12),
                       child: _buildCategoryChip(

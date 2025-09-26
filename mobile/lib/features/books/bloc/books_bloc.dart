@@ -17,8 +17,10 @@ class LoadBooks extends BooksEvent {
   final int limit;
   final String? search;
   final String? genre;
+  final List<String>? categories;
   final String? language;
   final String? format;
+  final String? year;
   final bool? isFeatured;
   final bool? isNewRelease;
   final String? sortBy;
@@ -29,8 +31,10 @@ class LoadBooks extends BooksEvent {
     this.limit = 20,
     this.search,
     this.genre,
+    this.categories,
     this.language,
     this.format,
+    this.year,
     this.isFeatured,
     this.isNewRelease,
     this.sortBy,
@@ -39,7 +43,7 @@ class LoadBooks extends BooksEvent {
 
   @override
   List<Object?> get props => [
-    page, limit, search, genre, language, format, 
+    page, limit, search, genre, categories, language, format, year,
     isFeatured, isNewRelease, sortBy, sortOrder
   ];
 }
@@ -496,8 +500,10 @@ class BooksBloc extends Bloc<BooksEvent, BooksState> {
         limit: event.limit,
         search: event.search,
         genre: event.genre,
+        categories: event.categories,
         language: event.language,
         format: event.format,
+        year: event.year,
         sortBy: event.sortBy,
         sortOrder: event.sortOrder,
       );

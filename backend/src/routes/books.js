@@ -207,9 +207,9 @@ router.get('/language/:language', asyncHandler(async (req, res) => {
 router.get('/', asyncHandler(async (req, res) => {
   try {
     console.log('🔍 Books endpoint called with query:', req.query);
-    const { page = 1, limit = 20, search, category, author, language, format, sortBy = 'created_at', sortOrder = 'desc' } = req.query;
+    const { page = 1, limit = 20, search, category, categories, author, language, format, year, sortBy = 'created_at', sortOrder = 'desc' } = req.query;
     const offset = (page - 1) * limit;
-    console.log('📊 Books endpoint params:', { page, limit, offset, search, category, author, language, format, sortBy, sortOrder });
+    console.log('📊 Books endpoint params:', { page, limit, offset, search, category, categories, author, language, format, year, sortBy, sortOrder });
 
     let query = db('books')
       .select(
@@ -232,13 +232,27 @@ router.get('/', asyncHandler(async (req, res) => {
       });
     }
 
-    // Apply category filter
+    // Apply category filter (support both single category and multiple categories)
+    const categoryIds = [];
     if (category) {
+      categoryIds.push(category);
+    }
+    if (categories) {
+      // Handle comma-separated categories or array
+      const categoriesArray = Array.isArray(categories) ? categories : categories.split(',');
+      categoryIds.push(...categoriesArray);
+    }
+    
+    if (categoryIds.length > 0) {
+      // Remove duplicates
+      const uniqueCategoryIds = [...new Set(categoryIds)];
+      console.log('📊 Filtering by categories:', uniqueCategoryIds);
+      
       query = query.whereExists(function() {
         this.select('*')
           .from('book_categories')
           .whereRaw('book_categories.book_id = books.id')
-          .where('book_categories.category_id', category);
+          .whereIn('book_categories.category_id', uniqueCategoryIds);
       });
     }
 
@@ -257,6 +271,14 @@ router.get('/', asyncHandler(async (req, res) => {
       query = query.where('format', format);
     }
 
+    // Apply year filter
+    if (year) {
+      const yearInt = parseInt(year);
+      if (!isNaN(yearInt)) {
+        query = query.whereRaw('YEAR(created_at) = ?', [yearInt]);
+      }
+    }
+
     // Get total count - create a separate count query to avoid SQL mode issues
     console.log('📊 Getting total count...');
     let countQuery = db('books');
@@ -272,12 +294,13 @@ router.get('/', asyncHandler(async (req, res) => {
           .orWhere('authors_somali', 'like', `%${search}%`);
       });
     }
-    if (category) {
+    // Apply category filter to count query
+    if (categoryIds.length > 0) {
       countQuery = countQuery.whereExists(function() {
         this.select('*')
           .from('book_categories')
           .whereRaw('book_categories.book_id = books.id')
-          .where('book_categories.category_id', category);
+          .whereIn('book_categories.category_id', uniqueCategoryIds);
       });
     }
     if (author) {
@@ -288,6 +311,12 @@ router.get('/', asyncHandler(async (req, res) => {
     }
     if (format) {
       countQuery = countQuery.where('format', format);
+    }
+    if (year) {
+      const yearInt = parseInt(year);
+      if (!isNaN(yearInt)) {
+        countQuery = countQuery.whereRaw('YEAR(created_at) = ?', [yearInt]);
+      }
     }
     
     const totalCount = await countQuery.count('* as count').first();

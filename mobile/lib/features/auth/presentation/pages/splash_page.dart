@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:teekoob/features/auth/bloc/auth_bloc.dart';
 import 'package:teekoob/core/services/localization_service.dart';
 
 class SplashPage extends StatefulWidget {
@@ -88,13 +90,16 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
     // Start fade animation
     await _fadeController.forward();
     
-    // Wait a bit then go directly to home (skip authentication for now)
+    // Small delay for splash feel
     await Future.delayed(const Duration(milliseconds: 500));
-    
-    if (mounted) {
-      // Skip authentication check and go directly to home
-      context.go('/home');
-    }
+
+    if (!mounted) return;
+
+    // Check auth status and route
+    final authBloc = context.read<AuthBloc>();
+    await Future.microtask(() async {
+      authBloc.add(const CheckAuthStatus());
+    });
   }
 
   @override
@@ -109,32 +114,31 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.background,
-      body: SafeArea(
+      body: BlocListener<AuthBloc, AuthState>(
+        listener: (context, state) {
+          if (state is Authenticated) {
+            context.go('/home');
+          } else if (state is Unauthenticated || state is AuthInitial) {
+            context.go('/login');
+          }
+        },
+        child: SafeArea(
           child: Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Logo Section
                 _buildLogoSection(),
-                
                 const SizedBox(height: 40),
-                
-                // App Name Section
                 _buildAppNameSection(),
-                
                 const SizedBox(height: 20),
-                
-                // App Description Section
                 _buildAppDescriptionSection(),
-                
                 const SizedBox(height: 60),
-                
-                // Loading Indicator
                 _buildLoadingIndicator(),
               ],
             ),
           ),
         ),
+      ),
     );
   }
 
