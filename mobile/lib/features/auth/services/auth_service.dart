@@ -5,6 +5,7 @@ import 'package:teekoob/core/config/app_config.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter/foundation.dart';
+import 'package:dio/dio.dart';
 
 class AuthService {
   final NetworkService _networkService;
@@ -22,8 +23,6 @@ class AuthService {
         : null,
     // Enable account picker for better UX
     forceCodeForRefreshToken: true,
-    // Disable server auth code to avoid popup issues
-    serverClientId: kIsWeb ? null : null,
   );
 
   // Secure storage for JWT persistence
@@ -64,15 +63,34 @@ class AuthService {
   // Login with Google
   Future<User> loginWithGoogle() async {
     try {
+      // Debug information
+      if (kIsWeb) {
+        print('🌐 Web platform detected');
+        print('🔑 Using client ID: ${AppConfig.googleWebClientId}');
+        print('🌍 Current origin: ${Uri.base.origin}');
+      }
+      
       GoogleSignInAccount? googleUser;
       
       if (kIsWeb) {
-        // For web, try silent sign-in first to avoid popup issues
+        // For web, skip silent sign-in and go directly to interactive
+        print('🔄 Attempting interactive sign-in (web)...');
         try {
-          googleUser = await _googleSignIn.signInSilently();
+          googleUser = await _googleSignIn.signIn().timeout(
+            const Duration(seconds: 30),
+            onTimeout: () {
+              throw Exception('Google sign-in timed out. Please check if popup is blocked.');
+            },
+          );
+          print('✅ Interactive sign-in result: ${googleUser?.email ?? 'null'}');
         } catch (e) {
-          // If silent sign-in fails, try interactive sign-in
-          googleUser = await _googleSignIn.signIn();
+          print('❌ Interactive sign-in failed: $e');
+          print('❌ Error type: ${e.runtimeType}');
+          print('❌ Error details: ${e.toString()}');
+          if (e is Exception) {
+            print('❌ Exception message: ${e.toString()}');
+          }
+          rethrow;
         }
       } else {
         // For mobile, use regular sign-in
@@ -87,14 +105,55 @@ class AuthService {
       final String? idToken = googleAuth.idToken;
       final String? accessToken = googleAuth.accessToken;
 
-      if (idToken == null && accessToken == null) {
-        throw Exception('Failed to obtain Google ID token or access token');
+      print('🔑 ID Token: ${idToken != null ? "Present" : "Missing"}');
+      print('🔑 Access Token: ${accessToken != null ? "Present" : "Missing"}');
+
+      // For web, if ID token is missing, use access token to get user info
+      if (idToken == null && accessToken != null && kIsWeb) {
+        print('🔄 ID token missing, using access token to get user info...');
+        
+        // Get user info using access token
+        final userInfoResponse = await _networkService.get(
+          'https://www.googleapis.com/oauth2/v2/userinfo',
+          options: Options(
+            headers: {'Authorization': 'Bearer $accessToken'},
+          ),
+        );
+        
+        if (userInfoResponse.statusCode == 200) {
+          final userInfo = userInfoResponse.data;
+          print('✅ User info obtained: ${userInfo['email']}');
+          
+          // Send user info to backend for authentication
+          final response = await _networkService.post('/auth/google-web', data: {
+            'accessToken': accessToken,
+            'userInfo': userInfo,
+          });
+          
+          if (response.statusCode == 200) {
+            final userData = response.data['user'] as Map<String, dynamic>;
+            final token = response.data['token'] as String;
+
+            _networkService.setAuthToken(token);
+            await _secureStorage.write(key: _tokenKey, value: token);
+            await _secureStorage.write(key: _userEmailKey, value: userData['email'] as String?);
+
+            return User.fromJson(userData);
+          } else {
+            throw Exception('Google login failed: ${response.statusMessage}');
+          }
+        } else {
+          throw Exception('Failed to get user info from Google');
+        }
+      }
+
+      if (idToken == null) {
+        throw Exception('Failed to obtain Google ID token. This may be due to origin configuration issues.');
       }
 
       // Send the ID token to backend to verify and exchange for app JWT
       final response = await _networkService.post('/auth/google', data: {
         'idToken': idToken,
-        'accessToken': accessToken,
       });
 
       if (response.statusCode == 200) {
@@ -110,6 +169,27 @@ class AuthService {
         throw Exception('Google login failed: ${response.statusMessage}');
       }
     } catch (e) {
+      print('🚨 Google login error caught: $e');
+      print('🚨 Error type: ${e.runtimeType}');
+      print('🚨 Full error details: ${e.toString()}');
+      
+      if (e.toString().contains('unregistered_origin') || 
+          e.toString().contains('origin is not allowed')) {
+        print('🚨 Origin configuration error detected');
+        throw Exception('Google OAuth configuration error: Please add your domain to Google Cloud Console authorized origins');
+      }
+      
+      if (e.toString().contains('popup') || e.toString().contains('blocked')) {
+        print('🚨 Popup blocking error detected');
+        throw Exception('Popup blocked: Please allow popups for localhost:3000 in your browser');
+      }
+      
+      if (e.toString().contains('timeout')) {
+        print('🚨 Timeout error detected');
+        throw Exception('Google sign-in timed out: Please check your internet connection and try again');
+      }
+      
+      print('🚨 Unknown error, rethrowing...');
       throw Exception('Google login failed: $e');
     }
   }

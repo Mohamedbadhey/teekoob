@@ -249,19 +249,26 @@ class _LoginPageState extends State<LoginPage> {
                     // Remember Me & Forgot Password
                     Row(
                       children: [
-                        Checkbox(
-                          value: _rememberMe,
-                          onChanged: (value) {
-                            setState(() {
-                              _rememberMe = value ?? false;
-                            });
-                          },
+                        Expanded(
+                          child: Row(
+                            children: [
+                              Checkbox(
+                                value: _rememberMe,
+                                onChanged: (value) {
+                                  setState(() {
+                                    _rememberMe = value ?? false;
+                                  });
+                                },
+                              ),
+                              Flexible(
+                                child: Text(LocalizationService.getLocalizedText(
+                                  englishText: 'Remember me',
+                                  somaliText: 'I xasuus',
+                                )),
+                              ),
+                            ],
+                          ),
                         ),
-                        Text(LocalizationService.getLocalizedText(
-                          englishText: 'Remember me',
-                          somaliText: 'I xasuus',
-                        )),
-                        const Spacer(),
                         TextButton(
                           onPressed: _handleForgotPassword,
                           child: Text(LocalizationService.getLocalizedText(
@@ -343,7 +350,7 @@ class _LoginPageState extends State<LoginPage> {
                       children: [
                         const Expanded(child: Divider()),
                         Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
                           child: Text(
                             LocalizationService.getLocalizedText(
                               englishText: 'OR',
