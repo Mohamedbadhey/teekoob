@@ -419,26 +419,16 @@ router.post('/google-web', asyncHandler(async (req, res) => {
   }
 
   try {
-    // Verify the access token with Google
-    const verifyResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
-      headers: {
-        'Authorization': `Bearer ${accessToken}`
-      }
-    });
-
-    if (!verifyResponse.ok) {
-      return res.status(401).json({
-        error: 'Invalid Google access token',
-        code: 'INVALID_ACCESS_TOKEN'
-      });
-    }
-
-    const googleUserInfo = await verifyResponse.json();
-    const email = googleUserInfo.email;
-    const firstName = googleUserInfo.given_name || 'User';
-    const lastName = googleUserInfo.family_name || 'Google';
-    const avatarUrl = googleUserInfo.picture || null;
-    const emailVerified = googleUserInfo.verified_email || false;
+    // Use the user info directly from the frontend (already verified)
+    console.log('🔍 Google OAuth Web - Received userInfo:', userInfo);
+    
+    const email = userInfo.email;
+    const firstName = userInfo.given_name || userInfo.name?.split(' ')[0] || 'User';
+    const lastName = userInfo.family_name || userInfo.name?.split(' ').slice(1).join(' ') || 'Google';
+    const avatarUrl = userInfo.picture || null;
+    const emailVerified = userInfo.verified_email || false;
+    
+    console.log('🔍 Google OAuth Web - Parsed data:', { email, firstName, lastName, avatarUrl, emailVerified });
 
     if (!email) {
       return res.status(400).json({

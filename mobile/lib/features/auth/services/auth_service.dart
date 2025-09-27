@@ -82,10 +82,11 @@ class AuthService {
         
         try {
           googleUser = await _googleSignIn.signIn().timeout(
-            const Duration(seconds: 30),
+            const Duration(seconds: 60),
             onTimeout: () {
-              print('⏰ Google sign-in timed out after 30 seconds');
-              throw Exception('Google sign-in timed out. Please check if popup is blocked.');
+              print('⏰ Google sign-in timed out after 60 seconds');
+              print('⏰ This might be due to popup communication issues');
+              throw Exception('Google sign-in timed out. Please check if popup is blocked or try again.');
             },
           );
           
@@ -101,7 +102,26 @@ class AuthService {
           if (e is Exception) {
             print('❌ Exception message: ${e.toString()}');
           }
-          rethrow;
+          
+          // Check if this is a timeout but we might have received tokens
+          if (e.toString().contains('timeout') || e.toString().contains('timed out')) {
+            print('🔄 Timeout detected - checking if we can recover...');
+            // Try to get the current user if sign-in partially completed
+            try {
+              final currentUser = await _googleSignIn.signInSilently();
+              if (currentUser != null) {
+                print('✅ Found signed-in user after timeout: ${currentUser.email}');
+                googleUser = currentUser;
+              } else {
+                rethrow;
+              }
+            } catch (silentError) {
+              print('❌ Silent sign-in also failed: $silentError');
+              rethrow;
+            }
+          } else {
+            rethrow;
+          }
         }
       } else {
         // For mobile, use regular sign-in
