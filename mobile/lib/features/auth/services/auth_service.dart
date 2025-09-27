@@ -60,10 +60,23 @@ class AuthService {
   // Login with Google
   Future<User> loginWithGoogle() async {
     try {
-      // Begin interactive sign-in
-      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+      GoogleSignInAccount? googleUser;
+      
+      if (kIsWeb) {
+        // For web, try silent sign-in first (recommended approach)
+        googleUser = await _googleSignIn.signInSilently();
+        
+        // If silent sign-in fails, use interactive sign-in
+        if (googleUser == null) {
+          googleUser = await _googleSignIn.signIn();
+        }
+      } else {
+        // For mobile, use regular sign-in
+        googleUser = await _googleSignIn.signIn();
+      }
+      
       if (googleUser == null) {
-        throw Exception('Google sign-in was cancelled');
+        throw Exception('Google sign-in was cancelled by user');
       }
 
       final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
