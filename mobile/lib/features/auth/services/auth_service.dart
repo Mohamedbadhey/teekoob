@@ -20,6 +20,10 @@ class AuthService {
     clientId: kIsWeb && AppConfig.googleWebClientId.isNotEmpty
         ? AppConfig.googleWebClientId
         : null,
+    // Enable account picker for better UX
+    forceCodeForRefreshToken: true,
+    // Disable server auth code to avoid popup issues
+    serverClientId: kIsWeb ? null : null,
   );
 
   // Secure storage for JWT persistence
@@ -63,11 +67,11 @@ class AuthService {
       GoogleSignInAccount? googleUser;
       
       if (kIsWeb) {
-        // For web, try silent sign-in first (recommended approach)
-        googleUser = await _googleSignIn.signInSilently();
-        
-        // If silent sign-in fails, use interactive sign-in
-        if (googleUser == null) {
+        // For web, try silent sign-in first to avoid popup issues
+        try {
+          googleUser = await _googleSignIn.signInSilently();
+        } catch (e) {
+          // If silent sign-in fails, try interactive sign-in
           googleUser = await _googleSignIn.signIn();
         }
       } else {
@@ -81,14 +85,16 @@ class AuthService {
 
       final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
       final String? idToken = googleAuth.idToken;
+      final String? accessToken = googleAuth.accessToken;
 
-      if (idToken == null) {
-        throw Exception('Failed to obtain Google ID token');
+      if (idToken == null && accessToken == null) {
+        throw Exception('Failed to obtain Google ID token or access token');
       }
 
       // Send the ID token to backend to verify and exchange for app JWT
       final response = await _networkService.post('/auth/google', data: {
         'idToken': idToken,
+        'accessToken': accessToken,
       });
 
       if (response.statusCode == 200) {

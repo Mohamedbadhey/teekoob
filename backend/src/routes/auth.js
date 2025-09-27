@@ -411,12 +411,12 @@ module.exports = router;
  
 // Google OAuth: verify ID token and issue JWT
 router.post('/google', asyncHandler(async (req, res) => {
-  const { idToken } = req.body;
+  const { idToken, accessToken } = req.body;
 
-  if (!idToken) {
+  if (!idToken && !accessToken) {
     return res.status(400).json({
-      error: 'Google ID token is required',
-      code: 'GOOGLE_ID_TOKEN_REQUIRED'
+      error: 'Google ID token or access token is required',
+      code: 'GOOGLE_TOKEN_REQUIRED'
     });
   }
 
@@ -435,23 +435,52 @@ router.post('/google', asyncHandler(async (req, res) => {
       });
     }
 
-    // Try verifying against any allowed audience
+    // Try verifying ID token first, then access token as fallback
     const oauthClient = new OAuth2Client();
-    let ticket;
-    let lastError;
-    for (const aud of allowedAudiences) {
-      try {
-        ticket = await oauthClient.verifyIdToken({ idToken, audience: aud });
-        break;
-      } catch (err) {
-        lastError = err;
+    let payload;
+    
+    if (idToken) {
+      // Try verifying ID token against any allowed audience
+      let ticket;
+      let lastError;
+      for (const aud of allowedAudiences) {
+        try {
+          ticket = await oauthClient.verifyIdToken({ idToken, audience: aud });
+          break;
+        } catch (err) {
+          lastError = err;
+        }
+      }
+      if (ticket) {
+        payload = ticket.getPayload();
+      } else {
+        logger.warn('Google ID token verification failed for all audiences');
       }
     }
-    if (!ticket) {
-      logger.warn('Google token verification failed for all audiences');
-      throw lastError || new Error('Unable to verify Google token');
+    
+    // If ID token failed or not provided, try access token
+    if (!payload && accessToken) {
+      try {
+        const response = await fetch(`https://www.googleapis.com/oauth2/v2/userinfo?access_token=${accessToken}`);
+        if (response.ok) {
+          const userInfo = await response.json();
+          payload = {
+            email: userInfo.email,
+            email_verified: userInfo.verified_email,
+            given_name: userInfo.given_name,
+            family_name: userInfo.family_name,
+            picture: userInfo.picture,
+            sub: userInfo.id
+          };
+        }
+      } catch (err) {
+        logger.warn('Google access token verification failed:', err);
+      }
     }
-    const payload = ticket.getPayload();
+    
+    if (!payload) {
+      throw new Error('Unable to verify Google token');
+    }
 
     const email = payload?.email;
     const emailVerified = payload?.email_verified;
