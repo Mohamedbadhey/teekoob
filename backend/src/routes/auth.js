@@ -450,17 +450,29 @@ router.post('/google-web', asyncHandler(async (req, res) => {
       const randomSecret = require('crypto').randomBytes(32).toString('hex');
       const passwordHash = await bcrypt.hash(`google-web:${email}:${randomSecret}`, saltRounds);
 
-      const [userId] = await db('users').insert({
+      // Generate a UUID for the new user
+      const userId = require('crypto').randomUUID();
+      
+      await db('users').insert({
+        id: userId,
         email,
         password_hash: passwordHash,
         first_name: firstName,
         last_name: lastName,
+        display_name: `${firstName} ${lastName}`,
         avatar_url: avatarUrl,
         language_preference: 'en',
+        theme_preference: 'light',
         subscription_plan: 'free',
+        subscription_status: 'active',
+        subscription_expires_at: null,
         is_active: true,
-        is_verified: !!emailVerified
-      }).returning('id');
+        is_verified: !!emailVerified,
+        is_admin: false,
+        last_login_at: new Date(),
+        created_at: new Date(),
+        updated_at: new Date()
+      });
 
       user = await db('users')
         .select('id', 'email', 'first_name', 'last_name', 'language_preference', 'subscription_plan', 'is_active', 'is_verified', 'is_admin', 'created_at')
@@ -506,10 +518,15 @@ router.post('/google-web', asyncHandler(async (req, res) => {
       token
     });
   } catch (error) {
+    console.error('🚨 Google OAuth Web error details:', error);
+    console.error('🚨 Error message:', error.message);
+    console.error('🚨 Error stack:', error.stack);
+    
     logger.error('Google OAuth Web error:', error);
     res.status(500).json({
       error: 'Google authentication failed',
-      code: 'GOOGLE_AUTH_ERROR'
+      code: 'GOOGLE_AUTH_ERROR',
+      details: error.message
     });
   }
 }));
