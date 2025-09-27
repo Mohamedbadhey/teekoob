@@ -13,7 +13,7 @@ class AppConfig {
 
   // Google OAuth (Web)
   // Set this to your Google OAuth 2.0 Web client ID from Google Cloud Console
-  static const String googleWebClientId = '';
+  static const String googleWebClientId = '4861039733-db4ode2aiqps85n3t116i4eabvjrnur7.apps.googleusercontent.com';
   
   // Feature Flags
   static const bool enableOfflineMode = true;
