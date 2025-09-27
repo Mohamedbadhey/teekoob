@@ -174,9 +174,9 @@ router.post('/login', validateLogin, asyncHandler(async (req, res) => {
     lastName: user.last_name,
     languagePreference: user.language_preference,
     subscriptionPlan: user.subscription_plan,
-    isActive: user.is_active,
-    isVerified: user.is_verified,
-    isAdmin: adminField,
+    isActive: !!user.is_active,
+    isVerified: !!user.is_verified,
+    isAdmin: !!adminField,
     createdAt: user.created_at
   };
 
@@ -242,9 +242,9 @@ router.get('/me', asyncHandler(async (req, res) => {
       subscriptionPlan: user.subscription_plan,
       subscriptionExpiresAt: user.subscription_expires_at,
       avatarUrl: user.avatar_url,
-      isAdmin: user.is_admin,
-      isActive: user.is_active,
-      isVerified: user.is_verified,
+      isAdmin: !!user.is_admin,
+      isActive: !!user.is_active,
+      isVerified: !!user.is_verified,
       createdAt: user.created_at
     };
 
@@ -504,9 +504,9 @@ router.post('/google-web', asyncHandler(async (req, res) => {
       lastName: user.last_name,
       languagePreference: user.language_preference,
       subscriptionPlan: user.subscription_plan,
-      isActive: user.is_active,
-      isVerified: user.is_verified,
-      isAdmin: user.is_admin || false,
+      isActive: !!user.is_active,  // Convert to boolean
+      isVerified: !!user.is_verified,  // Convert to boolean
+      isAdmin: !!user.is_admin,  // Convert to boolean
       createdAt: user.created_at
     };
 
@@ -646,9 +646,9 @@ router.post('/google', asyncHandler(async (req, res) => {
       lastName: user.last_name,
       languagePreference: user.language_preference,
       subscriptionPlan: user.subscription_plan,
-      isActive: user.is_active,
-      isVerified: user.is_verified,
-      isAdmin: user.is_admin,
+      isActive: !!user.is_active,
+      isVerified: !!user.is_verified,
+      isAdmin: !!user.is_admin,
       createdAt: user.created_at
     };
 
