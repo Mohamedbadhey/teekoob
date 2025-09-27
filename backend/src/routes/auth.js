@@ -439,7 +439,7 @@ router.post('/google-web', asyncHandler(async (req, res) => {
 
     // Find or create user
     let user = await db('users')
-      .select('id', 'email', 'first_name', 'last_name', 'language_preference', 'subscription_plan', 'is_active', 'is_verified', 'is_admin', 'created_at')
+      .select('id', 'email', 'first_name', 'last_name', 'avatar_url', 'language_preference', 'subscription_plan', 'is_active', 'is_verified', 'is_admin', 'created_at')
       .where('email', email)
       .first();
 
@@ -475,7 +475,7 @@ router.post('/google-web', asyncHandler(async (req, res) => {
       });
 
       user = await db('users')
-        .select('id', 'email', 'first_name', 'last_name', 'language_preference', 'subscription_plan', 'is_active', 'is_verified', 'is_admin', 'created_at')
+        .select('id', 'email', 'first_name', 'last_name', 'avatar_url', 'language_preference', 'subscription_plan', 'is_active', 'is_verified', 'is_admin', 'created_at')
         .where('id', userId)
         .first();
       logger.info('New user created via Google OAuth Web:', { email, userId });
@@ -502,6 +502,7 @@ router.post('/google-web', asyncHandler(async (req, res) => {
       email: user.email,
       firstName: user.first_name,
       lastName: user.last_name,
+      avatarUrl: user.avatar_url,  // Include avatar URL
       languagePreference: user.language_preference,
       subscriptionPlan: user.subscription_plan,
       isActive: !!user.is_active,  // Convert to boolean
@@ -593,7 +594,7 @@ router.post('/google', asyncHandler(async (req, res) => {
 
     // Find or create user
     let user = await db('users')
-      .select('id', 'email', 'first_name', 'last_name', 'language_preference', 'subscription_plan', 'is_active', 'is_verified', 'is_admin', 'created_at')
+      .select('id', 'email', 'first_name', 'last_name', 'avatar_url', 'language_preference', 'subscription_plan', 'is_active', 'is_verified', 'is_admin', 'created_at')
       .where('email', email)
       .first();
 
@@ -617,7 +618,7 @@ router.post('/google', asyncHandler(async (req, res) => {
       }).returning('id');
 
       user = await db('users')
-        .select('id', 'email', 'first_name', 'last_name', 'language_preference', 'subscription_plan', 'is_active', 'is_verified', 'is_admin', 'created_at')
+        .select('id', 'email', 'first_name', 'last_name', 'avatar_url', 'language_preference', 'subscription_plan', 'is_active', 'is_verified', 'is_admin', 'created_at')
         .where('id', userId)
         .first();
       logger.info('New user created via Google OAuth:', { email, userId });
