@@ -17,10 +17,8 @@ class AuthService {
   // Google Sign-In
   late final GoogleSignIn _googleSignIn = GoogleSignIn(
     scopes: <String>['email', 'profile'],
-    // Platform-specific client ID configuration
-    clientId: kIsWeb 
-        ? AppConfig.googleWebClientId
-        : AppConfig.googleAndroidClientId, // Use Android client ID for mobile
+    // Use web client ID for all platforms to avoid configuration issues
+    clientId: AppConfig.googleWebClientId,
     // Enable account picker for better UX
     forceCodeForRefreshToken: true,
   );

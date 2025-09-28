@@ -694,6 +694,7 @@ router.post('/google', asyncHandler(async (req, res) => {
       email: user.email,
       firstName: user.first_name,
       lastName: user.last_name,
+      avatarUrl: user.avatar_url,  // Include avatar URL
       languagePreference: user.language_preference,
       subscriptionPlan: user.subscription_plan,
       isActive: !!user.is_active,
