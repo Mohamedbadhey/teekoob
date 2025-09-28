@@ -97,6 +97,15 @@ class _SettingsPageState extends State<SettingsPage> {
           if (userName.isEmpty) userName = authState.user.email ?? 'User';
           userEmail = authState.user.email ?? 'user@example.com';
           avatarUrl = authState.user.profilePicture;
+          
+          print('🔍 Profile Section Debug:');
+          print('   - User authenticated: true');
+          print('   - User name: $userName');
+          print('   - User email: $userEmail');
+          print('   - Avatar URL: $avatarUrl');
+          print('   - Profile picture field: ${authState.user.profilePicture}');
+        } else {
+          print('🔍 Profile Section Debug: User not authenticated');
         }
 
     return _buildSection(
@@ -117,18 +126,7 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
               child: ListTile(
                 contentPadding: const EdgeInsets.all(16),
-          leading: CircleAvatar(
-                  radius: 30,
-                  backgroundColor: const Color(0xFF0466c8),
-                  backgroundImage: avatarUrl != null ? NetworkImage(avatarUrl) : null,
-                  child: avatarUrl == null
-                      ? const Icon(
-              Icons.person,
-              color: Colors.white,
-                          size: 35,
-                        )
-                      : null,
-          ),
+          leading: _buildProfileAvatar(avatarUrl),
           title: Text(
                   userName,
                   style: const TextStyle(
@@ -2693,6 +2691,98 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildProfileAvatar(String? avatarUrl) {
+    print('🖼️ _buildProfileAvatar called with URL: $avatarUrl');
+    print('🖼️ URL type: ${avatarUrl.runtimeType}');
+    print('🖼️ URL is null: ${avatarUrl == null}');
+    return CircleAvatar(
+      radius: 30,
+      backgroundColor: const Color(0xFF0466c8),
+      child: avatarUrl != null
+          ? ClipOval(
+              child: Image.network(
+                avatarUrl,
+                width: 60,
+                height: 60,
+                fit: BoxFit.cover,
+                headers: {
+                  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                  'Accept': 'image/webp,image/apng,image/*,*/*;q=0.8',
+                  'Cache-Control': 'no-cache',
+                  'Referer': 'https://teekoob-production.up.railway.app/',
+                },
+                // Add frameBuilder to handle loading states better
+                frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
+                  if (wasSynchronouslyLoaded) return child;
+                  return AnimatedOpacity(
+                    opacity: frame == null ? 0 : 1,
+                    duration: const Duration(milliseconds: 300),
+                    child: child,
+                  );
+                },
+                errorBuilder: (context, error, stackTrace) {
+                  print('🖼️ Profile avatar error: $error');
+                  print('🖼️ Avatar URL: $avatarUrl');
+                  
+                  // Check if it's a 429 (rate limit) error
+                  if (error.toString().contains('429') || error.toString().contains('Too Many Requests')) {
+                    print('🖼️ Google CDN rate limit detected - showing fallback');
+                  }
+                  
+                  // Check if it's a CORS/network error (statusCode: 0)
+                  if (error.toString().contains('statusCode: 0')) {
+                    print('🖼️ CORS/Network error detected - trying alternative approach');
+                    // Try to modify the URL to bypass some restrictions
+                    if (avatarUrl != null && avatarUrl.contains('googleusercontent.com')) {
+                      final modifiedUrl = avatarUrl.replaceAll('=s96-c', '=s200-c');
+                      print('🖼️ Trying modified URL: $modifiedUrl');
+                      return Image.network(
+                        modifiedUrl,
+                        width: 60,
+                        height: 60,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error2, stackTrace2) {
+                          print('🖼️ Modified URL also failed: $error2');
+                          return const Icon(
+                            Icons.person,
+                            color: Colors.white,
+                            size: 35,
+                          );
+                        },
+                      );
+                    }
+                  }
+                  
+                  // Fallback to icon if image fails to load
+                  return const Icon(
+                    Icons.person,
+                    color: Colors.white,
+                    size: 35,
+                  );
+                },
+                loadingBuilder: (context, child, loadingProgress) {
+                  if (loadingProgress == null) return child;
+                  return const SizedBox(
+                    width: 60,
+                    height: 60,
+                    child: Center(
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
+                      ),
+                    ),
+                  );
+                },
+              ),
+            )
+          : const Icon(
+              Icons.person,
+              color: Colors.white,
+              size: 35,
+            ),
     );
   }
 }

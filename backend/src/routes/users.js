@@ -77,7 +77,7 @@ router.put('/profile', asyncHandler(async (req, res) => {
     });
   }
   
-  if (preferredLanguage && !['somali', 'english', 'both'].includes(preferredLanguage)) {
+  if (preferredLanguage && !['so', 'en', 'ar'].includes(preferredLanguage)) {
     return res.status(400).json({ 
       error: 'Invalid preferred language',
       code: 'INVALID_LANGUAGE'

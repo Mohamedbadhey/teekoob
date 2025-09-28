@@ -260,12 +260,12 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       
       final user = await _authService.register(
         email: event.email,
-        username: event.displayName, // Use displayName as username
+        displayName: event.displayName,
         password: event.password,
         confirmPassword: event.password, // For now, use same password
-        firstName: null,
-        lastName: null,
+        phoneNumber: event.phoneNumber,
         preferredLanguage: event.language,
+        themePreference: event.themePreference,
       );
       
       emit(AuthSuccess('Registration successful!', user: user));

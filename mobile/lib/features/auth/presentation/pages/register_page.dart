@@ -223,10 +223,10 @@ class _RegisterPageState extends State<RegisterPage> {
                           somaliText: 'Furaha waa loo baahan yahay',
                         );
                       }
-                      if (!context.read<AuthBloc>().validatePasswordStrength(value)) {
+                      if (value.length < 6) {
                         return LocalizationService.getLocalizedText(
-                          englishText: 'Password must be at least 8 characters with uppercase, number, and special character',
-                          somaliText: 'Furaha waa inuu ahaadaa ugu yaraan 8 xaraf oo ku jira xaraf weyn, tiro, iyo xaraf gaar ah',
+                          englishText: 'Password must be at least 6 characters',
+                          somaliText: 'Furaha waa inuu ahaadaa ugu yaraan 6 xaraf',
                         );
                       }
                       return null;

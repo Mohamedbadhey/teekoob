@@ -14,7 +14,7 @@ const validateRegistration = [
   body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
   body('firstName').trim().isLength({ min: 2 }).withMessage('First name is required'),
   body('lastName').trim().isLength({ min: 2 }).withMessage('Last name is required'),
-  body('preferredLanguage').isIn(['somali', 'english', 'both']).optional()
+  body('preferredLanguage').isIn(['so', 'en', 'ar']).optional()
 ];
 
 const validateLogin = [
@@ -32,7 +32,7 @@ router.post('/register', validateRegistration, asyncHandler(async (req, res) => 
     });
   }
 
-  const { email, password, firstName, lastName, preferredLanguage = 'english' } = req.body;
+  const { email, password, firstName, lastName, preferredLanguage = 'en' } = req.body;
 
   // Check if user already exists
   const existingUser = await db('users').where('email', email).first();

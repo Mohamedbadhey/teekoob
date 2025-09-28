@@ -76,6 +76,10 @@ class AuthService {
       GoogleSignInAccount? googleUser;
       
       if (kIsWeb) {
+        // For web, ensure fresh authentication by signing out first
+        print('🔄 Signing out any existing session to ensure fresh authentication...');
+        await _googleSignIn.signOut();
+        
         // For web, skip silent sign-in and go directly to interactive
         print('🔄 Attempting interactive sign-in (web)...');
         print('⏰ Starting Google Sign-In process...');
@@ -103,29 +107,14 @@ class AuthService {
             print('❌ Exception message: ${e.toString()}');
           }
           
-          // Check if this is a timeout but we might have received tokens
-          if (e.toString().contains('timeout') || e.toString().contains('timed out')) {
-            print('🔄 Timeout detected - checking if we can recover...');
-            // Try to get the current user if sign-in partially completed
-            try {
-              final currentUser = await _googleSignIn.signInSilently();
-              if (currentUser != null) {
-                print('✅ Found signed-in user after timeout: ${currentUser.email}');
-                googleUser = currentUser;
-              } else {
-                rethrow;
-              }
-            } catch (silentError) {
-              print('❌ Silent sign-in also failed: $silentError');
-              rethrow;
-            }
-          } else {
-            rethrow;
-          }
+          // Always rethrow errors to ensure user confirmation is required
+          print('🔄 Interactive sign-in failed - user must confirm manually');
+          rethrow;
         }
       } else {
-        // For mobile, use regular sign-in
-        print('📱 Mobile platform - using regular sign-in');
+        // For mobile, ensure fresh authentication by signing out first
+        print('📱 Mobile platform - signing out and using regular sign-in');
+        await _googleSignIn.signOut();
         googleUser = await _googleSignIn.signIn();
         print('✅ Mobile sign-in result: ${googleUser?.email ?? 'null'}');
       }
@@ -293,16 +282,31 @@ class AuthService {
   // Register user
   Future<User> register({
     required String email,
-    required String username,
+    required String displayName,
     required String password,
     required String confirmPassword,
-    String? firstName,
-    String? lastName,
+    String? phoneNumber,
     String preferredLanguage = 'en',
+    String themePreference = 'light',
   }) async {
     try {
       if (password != confirmPassword) {
         throw Exception('Passwords do not match');
+      }
+
+      // Parse display name into firstName and lastName
+      String firstName = displayName.trim();
+      String lastName = '';
+      
+      if (displayName.contains(' ')) {
+        final nameParts = displayName.trim().split(' ');
+        firstName = nameParts.first;
+        lastName = nameParts.skip(1).join(' ');
+      }
+      
+      // Ensure lastName is not empty (backend requires both first and last name)
+      if (lastName.isEmpty) {
+        lastName = firstName; // Use firstName as lastName if only one name provided
       }
 
       final response = await _networkService.post('/auth/register', data: {
@@ -310,7 +314,8 @@ class AuthService {
         'password': password,
         'firstName': firstName,
         'lastName': lastName,
-        'preferredLanguage': preferredLanguage == 'en' ? 'english' : 'somali',
+        'preferredLanguage': preferredLanguage,
+        'themePreference': themePreference,
       });
 
       if (response.statusCode == 201) {
