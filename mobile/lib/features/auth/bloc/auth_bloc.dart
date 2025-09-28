@@ -202,7 +202,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       
       final isAuthenticated = await _authService.isAuthenticated();
       if (isAuthenticated) {
-        final user = _authService.getCurrentUser();
+        final user = await _authService.getCurrentUser();
         if (user != null) {
           emit(Authenticated(user));
         } else {

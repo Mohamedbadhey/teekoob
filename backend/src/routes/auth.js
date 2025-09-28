@@ -127,13 +127,8 @@ router.post('/login', validateLogin, asyncHandler(async (req, res) => {
     });
   }
 
-  // Check if user is admin (only admin users can access admin panel)
-  if (!user.is_admin) {
-    return res.status(403).json({ 
-      error: 'Access denied. Only admin users can access the admin panel.',
-      code: 'ADMIN_ACCESS_REQUIRED'
-    });
-  }
+  // Note: Admin check removed - all users can login via email/password
+  // Admin-only access should be checked at the route level, not during login
 
   // Check password
   const isValidPassword = await bcrypt.compare(password, user.password_hash);
@@ -178,6 +173,7 @@ router.post('/login', validateLogin, asyncHandler(async (req, res) => {
     firstName: user.first_name,
     lastName: user.last_name,
     displayName: user.display_name,
+    avatarUrl: user.avatar_url,  // Include avatar URL
     languagePreference: user.language_preference,
     subscriptionPlan: user.subscription_plan,
     isActive: !!user.is_active,

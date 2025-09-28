@@ -378,8 +378,25 @@ class AuthService {
   }
 
   // Get current user
-  User? getCurrentUser() {
-    return null;
+  Future<User?> getCurrentUser() async {
+    try {
+      final token = await _secureStorage.read(key: _tokenKey);
+      if (token == null) return null;
+      
+      // Set the token for API calls
+      _networkService.setAuthToken(token);
+      
+      // Fetch user data from backend
+      final response = await _networkService.get('/auth/me');
+      if (response.statusCode == 200) {
+        final userData = response.data['user'] as Map<String, dynamic>;
+        return User.fromJson(userData);
+      }
+      return null;
+    } catch (e) {
+      print('❌ Error getting current user: $e');
+      return null;
+    }
   }
 
   // Refresh token
