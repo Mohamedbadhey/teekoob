@@ -48,7 +48,29 @@ class _PasswordFieldState extends State<PasswordField> {
           ),
           onPressed: _togglePasswordVisibility,
         ),
-        border: const OutlineInputBorder(),
+        filled: true,
+        fillColor: Colors.white.withOpacity(0.95),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(
+            color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
+            width: 1.5,
+          ),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(
+            color: Theme.of(context).colorScheme.outline.withOpacity(0.5),
+            width: 1.5,
+          ),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(
+            color: Theme.of(context).colorScheme.primary,
+            width: 2,
+          ),
+        ),
       ),
       textInputAction: widget.textInputAction,
       onFieldSubmitted: widget.onFieldSubmitted != null 

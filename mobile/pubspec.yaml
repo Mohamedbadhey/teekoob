@@ -94,8 +94,8 @@ flutter:
   assets:
     - assets/images/
     - assets/icons/
-      # Ensure google.png exists or add it
-      # Example path: assets/icons/google.png
     - assets/animations/
     - assets/audio/
     - assets/fonts/
+    - assets/logo.png
+    - assets/people.png
