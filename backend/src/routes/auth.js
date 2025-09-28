@@ -47,8 +47,12 @@ router.post('/register', validateRegistration, asyncHandler(async (req, res) => 
   const saltRounds = 12;
   const passwordHash = await bcrypt.hash(password, saltRounds);
 
+  // Generate UUID for user
+  const userId = require('crypto').randomUUID();
+
   // Create user
-  const [userId] = await db('users').insert({
+  await db('users').insert({
+    id: userId,
     email,
     password_hash: passwordHash,
     first_name: firstName,
@@ -57,7 +61,7 @@ router.post('/register', validateRegistration, asyncHandler(async (req, res) => 
     subscription_plan: 'free',
     is_active: true,
     is_verified: false
-  }).returning('id');
+  });
 
   // Generate JWT token
   const token = jwt.sign(
@@ -605,7 +609,11 @@ router.post('/google', asyncHandler(async (req, res) => {
       const randomSecret = require('crypto').randomBytes(32).toString('hex');
       const passwordHash = await bcrypt.hash(`google:${googleSub}:${randomSecret}`, saltRounds);
 
-      const [userId] = await db('users').insert({
+      // Generate UUID for user
+      const userId = require('crypto').randomUUID();
+      
+      await db('users').insert({
+        id: userId,
         email,
         password_hash: passwordHash,
         first_name: firstName,
@@ -615,7 +623,7 @@ router.post('/google', asyncHandler(async (req, res) => {
         subscription_plan: 'free',
         is_active: true,
         is_verified: !!emailVerified
-      }).returning('id');
+      });
 
       user = await db('users')
         .select('id', 'email', 'first_name', 'last_name', 'avatar_url', 'language_preference', 'subscription_plan', 'is_active', 'is_verified', 'is_admin', 'created_at')
