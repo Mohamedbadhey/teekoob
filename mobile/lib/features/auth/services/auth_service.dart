@@ -17,10 +17,10 @@ class AuthService {
   // Google Sign-In
   late final GoogleSignIn _googleSignIn = GoogleSignIn(
     scopes: <String>['email', 'profile'],
-    // For Web, you MUST pass the Web client ID
-    clientId: kIsWeb && AppConfig.googleWebClientId.isNotEmpty
+    // Platform-specific client ID configuration
+    clientId: kIsWeb 
         ? AppConfig.googleWebClientId
-        : null,
+        : AppConfig.googleAndroidClientId, // Use Android client ID for mobile
     // Enable account picker for better UX
     forceCodeForRefreshToken: true,
   );
@@ -112,11 +112,32 @@ class AuthService {
           rethrow;
         }
       } else {
-        // For mobile, ensure fresh authentication by signing out first
-        print('📱 Mobile platform - signing out and using regular sign-in');
+        // For mobile platforms (Android/iOS)
+        print('📱 Mobile platform detected');
+        print('🔄 Signing out any existing session...');
         await _googleSignIn.signOut();
-        googleUser = await _googleSignIn.signIn();
-        print('✅ Mobile sign-in result: ${googleUser?.email ?? 'null'}');
+        
+        print('🔄 Attempting mobile Google Sign-In...');
+        try {
+          googleUser = await _googleSignIn.signIn().timeout(
+            const Duration(seconds: 60),
+            onTimeout: () {
+              print('⏰ Mobile Google sign-in timed out');
+              throw Exception('Google sign-in timed out. Please try again.');
+            },
+          );
+          
+          print('✅ Mobile sign-in completed');
+          print('👤 Google user account: ${googleUser?.email ?? 'null'}');
+          print('🆔 Google user ID: ${googleUser?.id ?? 'null'}');
+          print('📝 Google user display name: ${googleUser?.displayName ?? 'null'}');
+          
+        } catch (e) {
+          print('❌ Mobile Google sign-in failed');
+          print('❌ Error type: ${e.runtimeType}');
+          print('❌ Error details: ${e.toString()}');
+          rethrow;
+        }
       }
       
       if (googleUser == null) {

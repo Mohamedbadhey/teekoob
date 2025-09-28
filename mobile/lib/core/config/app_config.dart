@@ -11,9 +11,15 @@ class AppConfig {
   static const String appVersion = '1.0.0';
   static const String appBuildNumber = '1';
 
-  // Google OAuth (Web)
-  // Set this to your Google OAuth 2.0 Web client ID from Google Cloud Console
+  // Google OAuth Configuration
+  // Web client ID - for web platform
   static const String googleWebClientId = '4861039733-db4ode2aiqps85n3t116i4eabvjrnur7.apps.googleusercontent.com';
+  
+  // Android client ID - for Android platform
+  static const String googleAndroidClientId = '4861039733-11kdgmdpdi7anir3bpl14orven45hlhq.apps.googleusercontent.com';
+  
+  // iOS client ID - for iOS platform  
+  static const String googleIOSClientId = '4861039733-hmccm6ifr07kcbk2al0a22f85f57svf8.apps.googleusercontent.com';
   
   // Feature Flags
   static const bool enableOfflineMode = true;

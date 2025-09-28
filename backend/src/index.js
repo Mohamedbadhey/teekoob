@@ -13,6 +13,18 @@ console.log('  - NODE_ENV:', process.env.NODE_ENV);
 console.log('  - PORT:', process.env.PORT);
 console.log('  - DB_HOST:', process.env.DB_HOST);
 console.log('  - DB_NAME:', process.env.DB_NAME);
+console.log('🔍 Google OAuth Configuration:');
+console.log('  - GOOGLE_OAUTH_CLIENT_ID:', process.env.GOOGLE_OAUTH_CLIENT_ID ? 'SET' : 'NOT SET');
+console.log('  - GOOGLE_OAUTH_CLIENT_IDS:', process.env.GOOGLE_OAUTH_CLIENT_IDS ? 'SET' : 'NOT SET');
+console.log('  - GOOGLE_ANDROID_CLIENT_ID:', process.env.GOOGLE_ANDROID_CLIENT_ID ? 'SET' : 'NOT SET');
+console.log('  - GOOGLE_IOS_CLIENT_ID:', process.env.GOOGLE_IOS_CLIENT_ID ? 'SET' : 'NOT SET');
+if (process.env.GOOGLE_OAUTH_CLIENT_IDS) {
+  const clientIds = process.env.GOOGLE_OAUTH_CLIENT_IDS.split(',');
+  console.log('  - Total client IDs configured:', clientIds.length);
+  clientIds.forEach((id, index) => {
+    console.log(`    ${index + 1}. ${id.trim()}`);
+  });
+}
 
 try {
   console.log('📦 Loading routes...');

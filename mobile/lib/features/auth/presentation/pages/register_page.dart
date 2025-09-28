@@ -129,29 +129,72 @@ class _RegisterPageState extends State<RegisterPage> {
                       const SizedBox(height: 20), // Space for background image
                       
                       // Header
-                      Text(
-                        LocalizationService.getLocalizedText(
-                          englishText: 'Create Account',
-                          somaliText: 'Samee Akoon',
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.95),
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.1),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
                         ),
-                        style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: Theme.of(context).colorScheme.primary,
+                        child: Text(
+                          LocalizationService.getLocalizedText(
+                            englishText: 'Create Account',
+                            somaliText: 'Samee Akoon',
+                          ),
+                          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: Theme.of(context).colorScheme.primary,
+                            shadows: [
+                              Shadow(
+                                color: Colors.black.withOpacity(0.3),
+                                blurRadius: 2,
+                                offset: const Offset(0, 1),
+                              ),
+                            ],
+                          ),
+                          textAlign: TextAlign.center,
                         ),
-                        textAlign: TextAlign.center,
                       ),
                       
                       const SizedBox(height: 8),
                       
-                      Text(
-                        LocalizationService.getLocalizedText(
-                          englishText: 'Join Teekoob and start your reading journey',
-                          somaliText: 'Ku biir Teekoob oo bilaabo safarkaaga akhrinta',
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.9),
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.08),
+                              blurRadius: 8,
+                              offset: const Offset(0, 3),
+                            ),
+                          ],
                         ),
-                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                        child: Text(
+                          LocalizationService.getLocalizedText(
+                            englishText: 'Join Teekoob and start your reading journey',
+                            somaliText: 'Ku biir Teekoob oo bilaabo safarkaaga akhrinta',
+                          ),
+                          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
+                            fontWeight: FontWeight.w500,
+                            shadows: [
+                              Shadow(
+                                color: Colors.black.withOpacity(0.2),
+                                blurRadius: 1,
+                                offset: const Offset(0, 1),
+                              ),
+                            ],
+                          ),
+                          textAlign: TextAlign.center,
                         ),
-                        textAlign: TextAlign.center,
                       ),
                       
                       const SizedBox(height: 32),

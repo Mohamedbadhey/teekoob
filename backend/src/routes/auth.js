@@ -525,17 +525,48 @@ router.post('/google-web', asyncHandler(async (req, res) => {
       token
     });
   } catch (error) {
-    console.error('🚨 Google OAuth Web error details:', error);
+    // Enhanced error logging for debugging
+    console.error('🚨 Google OAuth Web Error Details:');
     console.error('🚨 Error message:', error.message);
+    console.error('🚨 Error code:', error.code);
     console.error('🚨 Error stack:', error.stack);
+    console.error('🚨 Request body:', req.body);
+    console.error('🚨 User info received:', req.body.userInfo);
     
-    logger.error('Google OAuth Web error:', error);
+    logger.error('Google OAuth Web error:', {
+      error: error.message,
+      code: error.code,
+      stack: error.stack,
+      requestBody: req.body,
+      userInfo: req.body.userInfo
+    });
+    
     res.status(500).json({
       error: 'Google authentication failed',
       code: 'GOOGLE_AUTH_ERROR',
       details: error.message
     });
   }
+}));
+
+// Test endpoint to verify Google OAuth configuration
+router.get('/google-config', asyncHandler(async (req, res) => {
+  const config = {
+    hasGoogleClientId: !!process.env.GOOGLE_OAUTH_CLIENT_ID,
+    hasGoogleClientIds: !!process.env.GOOGLE_OAUTH_CLIENT_IDS,
+    hasAndroidClientId: !!process.env.GOOGLE_ANDROID_CLIENT_ID,
+    hasIosClientId: !!process.env.GOOGLE_IOS_CLIENT_ID,
+    clientIdsCount: process.env.GOOGLE_OAUTH_CLIENT_IDS ? process.env.GOOGLE_OAUTH_CLIENT_IDS.split(',').length : 0,
+    environment: process.env.NODE_ENV
+  };
+  
+  console.log('🔍 Google OAuth Config Check:', config);
+  
+  res.json({
+    message: 'Google OAuth configuration status',
+    config,
+    status: config.clientIdsCount > 0 ? 'CONFIGURED' : 'MISSING_CONFIG'
+  });
 }));
 
 module.exports = router;
@@ -555,13 +586,20 @@ router.post('/google', asyncHandler(async (req, res) => {
     const { OAuth2Client } = require('google-auth-library');
     const singleClientId = process.env.GOOGLE_OAUTH_CLIENT_ID;
     const multipleClientIds = process.env.GOOGLE_OAUTH_CLIENT_IDS;
-    const allowedAudiences = (multipleClientIds
-      ? multipleClientIds.split(',')
-      : [singleClientId].filter(Boolean)).map((s) => s.trim()).filter(Boolean);
+    const androidClientId = process.env.GOOGLE_ANDROID_CLIENT_ID;
+    const iosClientId = process.env.GOOGLE_IOS_CLIENT_ID;
+    
+    // Build allowed audiences from all configured client IDs
+    const allowedAudiences = [
+      singleClientId,
+      ...(multipleClientIds ? multipleClientIds.split(',') : []),
+      androidClientId,
+      iosClientId
+    ].filter(Boolean).map((s) => s.trim()).filter(Boolean);
 
     if (allowedAudiences.length === 0) {
       return res.status(500).json({
-        error: 'Server misconfiguration: GOOGLE_OAUTH_CLIENT_ID(S) missing',
+        error: 'Server misconfiguration: No Google OAuth client IDs configured. Please set GOOGLE_OAUTH_CLIENT_ID, GOOGLE_ANDROID_CLIENT_ID, or GOOGLE_IOS_CLIENT_ID',
         code: 'SERVER_MISCONFIGURED'
       });
     }
@@ -670,10 +708,35 @@ router.post('/google', asyncHandler(async (req, res) => {
       token
     });
   } catch (error) {
-    logger.error('Google OAuth login failed:', error);
+    // Enhanced error logging for debugging
+    console.error('🚨 Google OAuth Mobile Error Details:');
+    console.error('🚨 Error message:', error.message);
+    console.error('🚨 Error code:', error.code);
+    console.error('🚨 Error stack:', error.stack);
+    console.error('🚨 Request body:', req.body);
+    console.error('🚨 Environment check:');
+    console.error('  - GOOGLE_OAUTH_CLIENT_ID:', process.env.GOOGLE_OAUTH_CLIENT_ID ? 'SET' : 'NOT SET');
+    console.error('  - GOOGLE_OAUTH_CLIENT_IDS:', process.env.GOOGLE_OAUTH_CLIENT_IDS ? 'SET' : 'NOT SET');
+    console.error('  - GOOGLE_ANDROID_CLIENT_ID:', process.env.GOOGLE_ANDROID_CLIENT_ID ? 'SET' : 'NOT SET');
+    console.error('  - GOOGLE_IOS_CLIENT_ID:', process.env.GOOGLE_IOS_CLIENT_ID ? 'SET' : 'NOT SET');
+    
+    logger.error('Google OAuth Mobile login failed:', {
+      error: error.message,
+      code: error.code,
+      stack: error.stack,
+      requestBody: req.body,
+      environment: {
+        hasGoogleClientId: !!process.env.GOOGLE_OAUTH_CLIENT_ID,
+        hasGoogleClientIds: !!process.env.GOOGLE_OAUTH_CLIENT_IDS,
+        hasAndroidClientId: !!process.env.GOOGLE_ANDROID_CLIENT_ID,
+        hasIosClientId: !!process.env.GOOGLE_IOS_CLIENT_ID
+      }
+    });
+    
     return res.status(401).json({
       error: 'Invalid Google ID token',
-      code: 'GOOGLE_TOKEN_INVALID'
+      code: 'GOOGLE_TOKEN_INVALID',
+      details: error.message
     });
   }
 }));
