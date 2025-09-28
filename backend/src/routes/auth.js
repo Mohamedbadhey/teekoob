@@ -57,6 +57,7 @@ router.post('/register', validateRegistration, asyncHandler(async (req, res) => 
     password_hash: passwordHash,
     first_name: firstName,
     last_name: lastName,
+    display_name: `${firstName} ${lastName}`,
     language_preference: preferredLanguage,
     subscription_plan: 'free',
     is_active: true,
@@ -72,7 +73,7 @@ router.post('/register', validateRegistration, asyncHandler(async (req, res) => 
 
   // Get created user (without password)
   const user = await db('users')
-    .select('id', 'email', 'first_name', 'last_name', 'language_preference', 'subscription_plan', 'created_at')
+    .select('id', 'email', 'first_name', 'last_name', 'display_name', 'language_preference', 'subscription_plan', 'created_at')
     .where('id', userId)
     .first();
 
@@ -104,7 +105,7 @@ router.post('/login', validateLogin, asyncHandler(async (req, res) => {
   console.log('🔍 Backend login - All available fields in users table:', Object.keys(allFields || {}));
   
   const user = await db('users')
-    .select('id', 'email', 'password_hash', 'first_name', 'last_name', 'language_preference', 'subscription_plan', 'is_active', 'is_verified', 'is_admin')
+    .select('id', 'email', 'password_hash', 'first_name', 'last_name', 'display_name', 'language_preference', 'subscription_plan', 'is_active', 'is_verified', 'is_admin')
     .where('email', email)
     .first();
   console.log('🔍 Backend login - Raw query result:', user);
@@ -176,6 +177,7 @@ router.post('/login', validateLogin, asyncHandler(async (req, res) => {
     email: user.email,
     firstName: user.first_name,
     lastName: user.last_name,
+    displayName: user.display_name,
     languagePreference: user.language_preference,
     subscriptionPlan: user.subscription_plan,
     isActive: !!user.is_active,
@@ -618,6 +620,7 @@ router.post('/google', asyncHandler(async (req, res) => {
         password_hash: passwordHash,
         first_name: firstName,
         last_name: lastName,
+        display_name: `${firstName} ${lastName}`,
         avatar_url: avatarUrl,
         language_preference: 'en',
         subscription_plan: 'free',
