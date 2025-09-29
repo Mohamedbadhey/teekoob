@@ -301,6 +301,42 @@ class BooksService {
     }
   }
 
+  // Get free books
+  Future<List<Book>> getFreeBooks({int limit = 10}) async {
+    try {
+      print('🔍 getFreeBooks: Fetching $limit free books from API...');
+      final response = await _networkService.get('/books/free/list', queryParameters: {'limit': limit});
+
+      if (response.statusCode == 200) {
+        print('✅ getFreeBooks: API response status: ${response.statusCode}');
+        print('📊 getFreeBooks: Response data keys: ${response.data.keys.toList()}');
+        
+        final booksData = response.data['freeBooks'] as List;
+        print('📚 getFreeBooks: Found ${booksData.length} books in response');
+        print('📖 getFreeBooks: Book titles: ${booksData.map((b) => b['title']).toList()}');
+        
+        final books = booksData.map((json) {
+          print('🔧 getFreeBooks: Processing book: ${json['title']}');
+          return Book.fromJson(json);
+        }).toList();
+        
+        print('✅ getFreeBooks: Successfully parsed ${books.length} books');
+        print('📚 getFreeBooks: Final book titles: ${books.map((b) => b.title).toList()}');
+        
+        // DO NOT cache free books - always fetch fresh
+        print('🚫 getFreeBooks: Not caching books - always fetch fresh');
+        
+        return books;
+      } else {
+        print('❌ getFreeBooks: API returned status ${response.statusCode}');
+        return [];
+      }
+    } catch (e) {
+      print('💥 getFreeBooks: Error occurred: $e');
+      return [];
+    }
+  }
+
   // Get random books for recommendations
   Future<List<Book>> getRandomBooks({int limit = 10}) async {
     try {

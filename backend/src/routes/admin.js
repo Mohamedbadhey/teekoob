@@ -356,6 +356,7 @@ router.post('/books', upload.fields([
       is_featured,
       is_new_release,
       is_premium,
+      is_free,
       ebook_content  // New field for text content
     } = req.body;
 
@@ -425,6 +426,7 @@ router.post('/books', upload.fields([
       is_featured: is_featured === 'true' || is_featured === true,
       is_new_release: is_new_release === 'true' || is_new_release === true,
       is_premium: is_premium === 'true' || is_premium === true,
+      is_free: is_free === 'true' || is_free === true,
       rating: 0,
       review_count: 0,
       created_at: new Date(),
@@ -588,6 +590,10 @@ router.put('/books/:id', upload.fields([
     
     if (updateData.is_premium !== undefined) {
       updateData.is_premium = updateData.is_premium === 'true' || updateData.is_premium === true;
+    }
+    
+    if (updateData.is_free !== undefined) {
+      updateData.is_free = updateData.is_free === 'true' || updateData.is_free === true;
     }
     
     // Process numeric fields

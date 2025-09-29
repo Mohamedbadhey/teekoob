@@ -372,7 +372,7 @@ router.get('/', asyncHandler(async (req, res) => {
         reviewCount: book.review_count,
         isFeatured: Boolean(book.is_featured),
         isNewRelease: Boolean(book.is_new_release),
-        isPremium: Boolean(book.is_premium),
+        isFree: Boolean(book.is_free),
         metadata: book.metadata,
         createdAt: book.created_at,
         updatedAt: book.updated_at,
@@ -837,7 +837,7 @@ router.get('/featured/list', asyncHandler(async (req, res) => {
         reviewCount: book.review_count,
         isFeatured: Boolean(book.is_featured),
         isNewRelease: Boolean(book.is_new_release),
-        isPremium: Boolean(book.is_premium),
+        isFree: Boolean(book.is_free),
         metadata: book.metadata,
         createdAt: book.created_at,
         updatedAt: book.updated_at,
@@ -919,7 +919,7 @@ router.get('/new-releases/list', asyncHandler(async (req, res) => {
         reviewCount: book.review_count,
         isFeatured: Boolean(book.is_featured),
         isNewRelease: Boolean(book.is_new_release),
-        isPremium: Boolean(book.is_premium),
+        isFree: Boolean(book.is_free),
         metadata: book.metadata,
         createdAt: book.created_at,
         updatedAt: book.updated_at,
@@ -1004,7 +1004,7 @@ router.get('/recent/list', asyncHandler(async (req, res) => {
         reviewCount: book.review_count,
         isFeatured: Boolean(book.is_featured),
         isNewRelease: Boolean(book.is_new_release),
-        isPremium: Boolean(book.is_premium),
+        isFree: Boolean(book.is_free),
         metadata: book.metadata,
         createdAt: book.created_at,
         updatedAt: book.updated_at,
@@ -1090,7 +1090,7 @@ router.get('/random/list', asyncHandler(async (req, res) => {
         reviewCount: book.review_count,
         isFeatured: Boolean(book.is_featured),
         isNewRelease: Boolean(book.is_new_release),
-        isPremium: Boolean(book.is_premium),
+        isFree: Boolean(book.is_free),
         metadata: book.metadata,
         createdAt: book.created_at,
         updatedAt: book.updated_at,
@@ -1113,6 +1113,86 @@ router.get('/random/list', asyncHandler(async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Failed to fetch random books'
+    });
+  }
+}));
+
+// Get free books
+router.get('/free/list', asyncHandler(async (req, res) => {
+  try {
+    const { limit = 10 } = req.query;
+    console.log('🔍 Free books endpoint called with limit:', limit);
+    
+    // Get free books
+    const freeBooks = await db('books')
+      .select(
+        'id', 'title', 'title_somali', 'description', 'description_somali',
+        'authors', 'authors_somali', 'language', 'format', 
+        'cover_image_url', 'audio_url', 'ebook_url', 'sample_url', 'duration', 
+        'page_count', 'rating', 'review_count', 'is_featured', 'is_new_release', 
+        'is_premium', 'is_free', 'metadata', 'created_at', 'updated_at'
+      )
+      .where('is_free', true)
+      .orderBy('created_at', 'desc')
+      .limit(parseInt(limit));
+
+    console.log('📚 Retrieved', freeBooks.length, 'free books');
+
+    // Process books to handle JSON fields and fetch categories
+    const processedBooks = await Promise.all(freeBooks.map(async (book) => {
+      // Fetch categories for this book
+      const categories = await db('book_categories')
+        .join('categories', 'book_categories.category_id', 'categories.id')
+        .where('book_categories.book_id', book.id)
+        .where('categories.is_active', true)
+        .select('categories.id', 'categories.name', 'categories.name_somali')
+        .orderBy('categories.sort_order', 'asc');
+
+      return {
+        id: book.id,
+        title: book.title,
+        titleSomali: book.title_somali,
+        description: book.description,
+        descriptionSomali: book.description_somali,
+        authors: book.authors || '',
+        authorsSomali: book.authors_somali || '',
+        language: book.language,
+        format: book.format,
+        coverImageUrl: book.cover_image_url,
+        audioUrl: book.audio_url,
+        ebookUrl: book.ebook_url,
+        sampleUrl: book.sample_url,
+        duration: book.duration,
+        pageCount: book.page_count,
+        rating: book.rating,
+        reviewCount: book.review_count,
+        isFeatured: Boolean(book.is_featured),
+        isNewRelease: Boolean(book.is_new_release),
+        isPremium: Boolean(book.is_premium),
+        isFree: Boolean(book.is_free),
+        metadata: book.metadata,
+        createdAt: book.created_at,
+        updatedAt: book.updated_at,
+        categories: categories.map(cat => cat.id),
+        categoryNames: categories.map(cat => cat.name),
+        categoryNamesSomali: categories.map(cat => cat.name_somali),
+      };
+    }));
+
+    console.log('✅ Processed', processedBooks.length, 'free books for response');
+    console.log('📱 Sending response with', processedBooks.length, 'free books');
+
+    res.json({
+      success: true,
+      freeBooks: processedBooks,
+      total: processedBooks.length
+    });
+  } catch (error) {
+    console.error('💥 Error in free books endpoint:', error);
+    logger.error('Error fetching free books:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch free books'
     });
   }
 }));

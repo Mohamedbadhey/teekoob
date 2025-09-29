@@ -38,6 +38,8 @@ class Book {
 
   final bool isPremium;
 
+  final bool isFree;
+
   final Map<String, dynamic>? metadata;
   final DateTime createdAt;
 
@@ -67,6 +69,7 @@ class Book {
     required this.isFeatured,
     required this.isNewRelease,
     required this.isPremium,
+    required this.isFree,
     this.metadata,
     required this.createdAt,
     required this.updatedAt,
@@ -142,6 +145,7 @@ class Book {
         isFeatured: json['isFeatured'] == true || json['isFeatured'] == 1,
         isNewRelease: json['isNewRelease'] == true || json['isNewRelease'] == 1,
         isPremium: json['isPremium'] == true || json['isPremium'] == 1,
+        isFree: json['isFree'] == true || json['isFree'] == 1,
         metadata: json['metadata'] != null 
             ? (json['metadata'] is String 
                 ? jsonDecode(json['metadata'])
@@ -190,6 +194,7 @@ class Book {
       'isFeatured': isFeatured,
       'isNewRelease': isNewRelease,
       'isPremium': isPremium,
+      'isFree': isFree,
       'metadata': metadata,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
@@ -221,6 +226,7 @@ class Book {
     bool? isFeatured,
     bool? isNewRelease,
     bool? isPremium,
+    bool? isFree,
     Map<String, dynamic>? metadata,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -249,6 +255,7 @@ class Book {
       isFeatured: isFeatured ?? this.isFeatured,
       isNewRelease: isNewRelease ?? this.isNewRelease,
       isPremium: isPremium ?? this.isPremium,
+      isFree: isFree ?? this.isFree,
       metadata: metadata ?? this.metadata,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,

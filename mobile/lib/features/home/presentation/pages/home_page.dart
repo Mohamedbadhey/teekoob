@@ -19,11 +19,13 @@ class _HomePageState extends State<HomePage> {
   List<Book> _featuredBooks = [];
   List<Book> _newReleases = [];
   List<Book> _recentBooks = [];
+  List<Book> _freeBooks = [];
   List<Book> _randomBooks = [];
   List<Category> _categories = [];
   bool _isLoadingFeatured = false;
   bool _isLoadingNewReleases = false;
   bool _isLoadingRecentBooks = false;
+  bool _isLoadingFreeBooks = false;
   bool _isLoadingRandomBooks = false;
   bool _isLoadingCategories = false;
   List<String> _selectedCategoryIds = [];
@@ -32,6 +34,7 @@ class _HomePageState extends State<HomePage> {
   List<Book> _originalFeaturedBooks = [];
   List<Book> _originalNewReleases = [];
   List<Book> _originalRecentBooks = [];
+  List<Book> _originalFreeBooks = [];
   List<Book> _originalRandomBooks = [];
 
   @override
@@ -50,6 +53,9 @@ class _HomePageState extends State<HomePage> {
     
     // Load recent books (sorted by date - most recent first)
     context.read<BooksBloc>().add(const LoadRecentBooks(limit: 6));
+    
+    // Load free books
+    context.read<BooksBloc>().add(const LoadFreeBooks(limit: 6));
     
     // Load random books for recommendations
     context.read<BooksBloc>().add(const LoadRandomBooks(limit: 5));
@@ -156,6 +162,14 @@ class _HomePageState extends State<HomePage> {
           });
           print('🏠 HomePage: Recent books loaded: ${state.books.length}');
           print('📚 HomePage: Recent book titles: ${state.books.map((b) => b.title).toList()}');
+        } else if (state is FreeBooksLoaded) {
+          setState(() {
+            _freeBooks = state.books;
+            _originalFreeBooks = List.from(state.books); // Store original
+            _isLoadingFreeBooks = false;
+          });
+          print('🏠 HomePage: Free books loaded: ${state.books.length}');
+          print('📚 HomePage: Free book titles: ${state.books.map((b) => b.title).toList()}');
         } else if (state is RandomBooksLoaded) {
           print('🏠 HomePage: RandomBooksLoaded state received with ${state.books.length} books');
           print('📚 HomePage: Book titles: ${state.books.map((b) => b.title).toList()}');
@@ -189,12 +203,12 @@ class _HomePageState extends State<HomePage> {
                     children: [
                       _buildFeaturedBookSection(),
                       const SizedBox(height: 32),
+                      _buildFreeBooksSection(),
+                      const SizedBox(height: 32),
                       _buildRecentBooksSection(),
                       const SizedBox(height: 32),
                       _buildNewReleasesSection(),
                       const SizedBox(height: 32),
-                      
-                      
                       _buildRecommendedBooksSection(),
                       const SizedBox(height: 32),
                     ],
@@ -437,6 +451,17 @@ class _HomePageState extends State<HomePage> {
         ],
       ),
     );
+  }
+
+  Widget _buildFreeBooksSection() {
+    print('Building Free Books Section - _freeBooks: ${_freeBooks.length}, _isLoadingFreeBooks: $_isLoadingFreeBooks');
+    
+    if (_isLoadingFreeBooks)
+      return _buildLoadingHorizontalScroll();
+    else if (_freeBooks.isNotEmpty)
+      return _buildBooksHorizontalScroll(_freeBooks, 'Free Books');
+    else
+      return _buildEmptyState('No free books available');
   }
 
   Widget _buildRecentBooksSection() {

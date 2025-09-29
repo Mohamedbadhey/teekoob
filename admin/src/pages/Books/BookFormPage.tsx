@@ -544,7 +544,7 @@ const BookFormPage: React.FC = () => {
                 value={formData.price}
                 onChange={handleInputChange}
                 type="number"
-                disabled={formData.isFree}
+                disabled={formData.is_free}
                 inputProps={{ min: 0, step: 0.01 }}
               />
             </Grid>

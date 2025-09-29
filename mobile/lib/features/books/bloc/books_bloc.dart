@@ -93,6 +93,15 @@ class LoadRecentBooks extends BooksEvent {
   List<Object?> get props => [limit];
 }
 
+class LoadFreeBooks extends BooksEvent {
+  final int limit;
+
+  const LoadFreeBooks({this.limit = 10});
+
+  @override
+  List<Object?> get props => [limit];
+}
+
 class SearchBooks extends BooksEvent {
   final String query;
   final int limit;
@@ -347,6 +356,19 @@ class RecentBooksLoaded extends BooksState {
   List<Object?> get props => [books, total];
 }
 
+class FreeBooksLoaded extends BooksState {
+  final List<Book> books;
+  final int total;
+
+  const FreeBooksLoaded({
+    required this.books,
+    required this.total,
+  });
+
+  @override
+  List<Object?> get props => [books, total];
+}
+
 class SearchResultsLoaded extends BooksState {
   final List<Book> books;
   final String query;
@@ -465,6 +487,7 @@ class BooksBloc extends Bloc<BooksEvent, BooksState> {
     on<LoadFeaturedBooks>(_onLoadFeaturedBooks);
     on<LoadNewReleases>(_onLoadNewReleases);
     on<LoadRecentBooks>(_onLoadRecentBooks);
+    on<LoadFreeBooks>(_onLoadFreeBooks);
     on<LoadRandomBooks>(_onLoadRandomBooks);
     on<SearchBooks>(_onSearchBooks);
     on<LoadBooksByGenre>(_onLoadBooksByGenre);
@@ -602,6 +625,26 @@ class BooksBloc extends Bloc<BooksEvent, BooksState> {
     } catch (e) {
       print('💥 _onLoadRecentBooks: Error occurred: $e');
       emit(BooksError('Failed to load recent books: $e'));
+    }
+  }
+
+  Future<void> _onLoadFreeBooks(
+    LoadFreeBooks event,
+    Emitter<BooksState> emit,
+  ) async {
+    try {
+      print('🎯 _onLoadFreeBooks: Starting to load ${event.limit} free books...');
+      emit(const BooksLoading());
+      
+      final books = await _booksService.getFreeBooks(limit: event.limit);
+      print('📚 _onLoadFreeBooks: Service returned ${books.length} books');
+      print('📖 _onLoadFreeBooks: Book titles: ${books.map((b) => b.title).toList()}');
+
+      emit(FreeBooksLoaded(books: books, total: books.length));
+      print('✅ _onLoadFreeBooks: Emitted FreeBooksLoaded state with ${books.length} books');
+    } catch (e) {
+      print('💥 _onLoadFreeBooks: Error occurred: $e');
+      emit(BooksError('Failed to load free books: $e'));
     }
   }
 
