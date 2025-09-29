@@ -799,7 +799,7 @@ router.get('/featured/list', asyncHandler(async (req, res) => {
         'authors', 'authors_somali', 'language', 'format', 
         'cover_image_url', 'audio_url', 'ebook_url', 'sample_url', 'duration', 
         'page_count', 'rating', 'review_count', 'is_featured', 'is_new_release', 
-        'is_premium', 'is_free', 'metadata', 'created_at', 'updated_at'
+        'is_premium', 'is_free', 'is_free', 'metadata', 'created_at', 'updated_at'
       )
       .orderBy('created_at', 'desc')
       .limit(parseInt(limit));
@@ -881,7 +881,7 @@ router.get('/new-releases/list', asyncHandler(async (req, res) => {
         'authors', 'authors_somali', 'language', 'format', 
         'cover_image_url', 'audio_url', 'ebook_url', 'sample_url', 'duration', 
         'page_count', 'rating', 'review_count', 'is_featured', 'is_new_release', 
-        'is_premium', 'is_free', 'metadata', 'created_at', 'updated_at'
+        'is_premium', 'is_free', 'is_free', 'metadata', 'created_at', 'updated_at'
       )
       .orderBy('created_at', 'desc')
       .limit(parseInt(limit));
@@ -962,7 +962,7 @@ router.get('/recent/list', asyncHandler(async (req, res) => {
         'authors', 'authors_somali', 'language', 'format', 
         'cover_image_url', 'audio_url', 'ebook_content', 'sample_url', 'duration', 
         'page_count', 'rating', 'review_count', 'is_featured', 'is_new_release', 
-        'is_premium', 'is_free', 'metadata', 'created_at', 'updated_at'
+        'is_premium', 'is_free', 'is_free', 'metadata', 'created_at', 'updated_at'
       )
       .orderBy('created_at', 'desc') // Most recent first
       .limit(parseInt(limit));
@@ -1048,7 +1048,7 @@ router.get('/random/list', asyncHandler(async (req, res) => {
         'authors', 'authors_somali', 'language', 'format', 
         'cover_image_url', 'audio_url', 'ebook_url', 'sample_url', 'duration', 
         'page_count', 'rating', 'review_count', 'is_featured', 'is_new_release', 
-        'is_premium', 'is_free', 'metadata', 'created_at', 'updated_at'
+        'is_premium', 'is_free', 'is_free', 'metadata', 'created_at', 'updated_at'
       )
       .orderByRaw('RAND()') // MySQL random ordering
       .limit(parseInt(limit));
@@ -1130,7 +1130,7 @@ router.get('/free/list', asyncHandler(async (req, res) => {
         'authors', 'authors_somali', 'language', 'format', 
         'cover_image_url', 'audio_url', 'ebook_url', 'sample_url', 'duration', 
         'page_count', 'rating', 'review_count', 'is_featured', 'is_new_release', 
-        'is_premium', 'is_free', 'metadata', 'created_at', 'updated_at'
+        'is_premium', 'is_free', 'is_free', 'metadata', 'created_at', 'updated_at'
       )
       .where('is_free', true)
       .orderBy('created_at', 'desc')
