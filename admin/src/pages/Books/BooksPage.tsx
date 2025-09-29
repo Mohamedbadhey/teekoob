@@ -100,6 +100,7 @@ interface Book {
   is_featured: boolean;
   is_new_release: boolean;
   is_premium: boolean;
+  is_free: boolean;
   metadata?: any;
   created_at: string;
   updated_at: string;
@@ -134,6 +135,7 @@ interface BookFormData {
   is_featured: boolean;
   is_new_release: boolean;
   is_premium: boolean;
+  is_free: boolean;
   ebook_content: string;  // New field for text content
 }
 
@@ -185,6 +187,7 @@ const BooksPage: React.FC = () => {
     is_featured: false,
     is_new_release: false,
     is_premium: false,
+    is_free: false,
     ebook_content: ''  // Initialize ebook content field
   });
 
@@ -422,7 +425,10 @@ const BooksPage: React.FC = () => {
             <Chip label="New" color="warning" size="small" sx={{ mb: 0.5 }} />
           )}
           {params.row.is_premium && (
-            <Chip label="Premium" color="info" size="small" />
+            <Chip label="Premium" color="info" size="small" sx={{ mb: 0.5 }} />
+          )}
+          {params.row.is_free && (
+            <Chip label="Free" color="secondary" size="small" />
           )}
         </Box>
       ),
@@ -1007,6 +1013,17 @@ const BooksPage: React.FC = () => {
                 label="Premium Content"
               />
             </Grid>
+            <Grid item xs={12} sm={4}>
+              <FormControlLabel
+                control={
+                  <Switch 
+                    checked={formData.is_free}
+                    onChange={(e) => setFormData(prev => ({ ...prev, is_free: e.target.checked }))}
+                  />
+                }
+                label="Free Book"
+              />
+            </Grid>
           </Grid>
         )}
 
@@ -1157,6 +1174,7 @@ const BooksPage: React.FC = () => {
         is_featured: Boolean(completeBookData?.is_featured ?? book.is_featured),
         is_new_release: Boolean(completeBookData?.is_new_release ?? book.is_new_release),
         is_premium: Boolean(completeBookData?.is_premium ?? book.is_premium),
+        is_free: Boolean(completeBookData?.is_free ?? book.is_free),
         ebook_content: completeBookData?.ebook_content || book.ebook_content || ''
       });
       
@@ -1179,6 +1197,7 @@ const BooksPage: React.FC = () => {
         is_featured: Boolean(book.is_featured),
         is_new_release: Boolean(book.is_new_release),
         is_premium: Boolean(book.is_premium),
+        is_free: Boolean(book.is_free),
         ebook_content: book.ebook_content || ''
       });
     }
@@ -1240,6 +1259,7 @@ const BooksPage: React.FC = () => {
         is_featured: 'is_featured',
         is_new_release: 'is_new_release',
         is_premium: 'is_premium',
+        is_free: 'is_free',
         ebook_content: 'ebook_content'
       };
 

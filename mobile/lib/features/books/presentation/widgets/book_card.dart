@@ -416,7 +416,28 @@ class _BookCardState extends State<BookCard> with TickerProviderStateMixin {
                 
                 SizedBox(height: cardWidth * (widget.compact ? 0.006 : 0.01)),
                 
-                // Info row with ratings and time - Dynamic layout
+                // Free book badge
+                if (widget.book.isFree)
+                  Container(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: cardWidth * 0.02,
+                      vertical: cardWidth * 0.005,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.green,
+                      borderRadius: BorderRadius.circular(cardWidth * 0.08),
+                    ),
+                    child: Text(
+                      'FREE',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: _getResponsiveFontSize(cardWidth, widget.compact ? 0.04 : 0.045),
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                
+                SizedBox(height: cardWidth * (widget.compact ? 0.006 : 0.01)),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
