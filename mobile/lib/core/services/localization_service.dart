@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:teekoob/core/services/custom_localizations_delegate.dart';
+import 'package:teekoob/core/services/custom_widgets_localizations_delegate.dart';
 // import 'package:shared_preferences/shared_preferences.dart'; // Removed - no local storage
 
 class LocalizationService {
@@ -35,8 +37,8 @@ class LocalizationService {
   
   // Localization delegates
   static const List<LocalizationsDelegate<dynamic>> localizationsDelegates = [
-    GlobalMaterialLocalizations.delegate,
-    GlobalWidgetsLocalizations.delegate,
+    CustomLocalizationsDelegate(),
+    CustomWidgetsLocalizationsDelegate(),
     GlobalCupertinoLocalizations.delegate,
   ];
   
@@ -418,6 +420,198 @@ class LocalizationService {
     return getLocalizedText(
       englishText: 'Clear',
       somaliText: 'Tir',
+    );
+  }
+  
+  // Get localized filter by category text
+  static String get getFilterByCategoryText {
+    return getLocalizedText(
+      englishText: 'Filter by Category',
+      somaliText: 'Shaandhay Noocyada',
+    );
+  }
+  
+  // Get localized all categories text
+  static String get getAllCategoriesText {
+    return getLocalizedText(
+      englishText: 'All Categories',
+      somaliText: 'Dhammaan Noocyada',
+    );
+  }
+  
+  // Get localized featured book text
+  static String get getFeaturedBookText {
+    return getLocalizedText(
+      englishText: 'Featured Book',
+      somaliText: 'Kitaabka La Dooran',
+    );
+  }
+  
+  // Get localized recent books text
+  static String get getRecentBooksText {
+    return getLocalizedText(
+      englishText: 'Recent Books',
+      somaliText: 'Kutubta Dhowaan',
+    );
+  }
+  
+  // Get localized new releases text
+  static String get getNewReleasesText {
+    return getLocalizedText(
+      englishText: 'New Releases',
+      somaliText: 'Soo Saarida Cusub',
+    );
+  }
+  
+  // Get localized recommended books text
+  static String get getRecommendedBooksText {
+    return getLocalizedText(
+      englishText: 'Recommended Books',
+      somaliText: 'Kutubta La Soo Jeediyay',
+    );
+  }
+  
+  // Get localized view all text
+  static String get getViewAllText {
+    return getLocalizedText(
+      englishText: 'View All',
+      somaliText: 'Dhammaan Ark',
+    );
+  }
+  
+  // Get localized no categories available text
+  static String get getNoCategoriesAvailableText {
+    return getLocalizedText(
+      englishText: 'No categories available',
+      somaliText: 'Ma jiraan noocyada',
+    );
+  }
+  
+  // Get localized no featured book available text
+  static String get getNoFeaturedBookAvailableText {
+    return getLocalizedText(
+      englishText: 'No featured book available',
+      somaliText: 'Ma jiraan kitaab la dooran',
+    );
+  }
+  
+  // Get localized no recent books available text
+  static String get getNoRecentBooksAvailableText {
+    return getLocalizedText(
+      englishText: 'No recent books available',
+      somaliText: 'Ma jiraan kutub dhowaan',
+    );
+  }
+  
+  // Get localized no new releases available text
+  static String get getNoNewReleasesAvailableText {
+    return getLocalizedText(
+      englishText: 'No new releases available',
+      somaliText: 'Ma jiraan soo saarid cusub',
+    );
+  }
+  
+  // Get localized no recommended books available text
+  static String get getNoRecommendedBooksAvailableText {
+    return getLocalizedText(
+      englishText: 'No recommended books available',
+      somaliText: 'Ma jiraan kutub la soo jeediyay',
+    );
+  }
+  
+  // Get localized explore books text
+  static String get getExploreBooksText {
+    return getLocalizedText(
+      englishText: 'Explore Books',
+      somaliText: 'Kutubta Raadi',
+    );
+  }
+  
+  // Get localized discovering books text
+  static String get getDiscoveringBooksText {
+    return getLocalizedText(
+      englishText: 'Discovering amazing books...',
+      somaliText: 'Kutubta cajiibka ah la raadiya...',
+    );
+  }
+  
+  // Get localized something went wrong text
+  static String get getSomethingWentWrongText {
+    return getLocalizedText(
+      englishText: 'Oops! Something went wrong',
+      somaliText: 'Ay! Wax khalad ah ayaa dhacay',
+    );
+  }
+  
+  // Get localized try again text
+  static String get getTryAgainText {
+    return getLocalizedText(
+      englishText: 'Try Again',
+      somaliText: 'Isku Day Mar Kale',
+    );
+  }
+  
+  // Get localized start your journey text
+  static String get getStartYourJourneyText {
+    return getLocalizedText(
+      englishText: 'Start Your Journey',
+      somaliText: 'Bilow Safarkaaga',
+    );
+  }
+  
+  // Get localized discover books description text
+  static String get getDiscoverBooksDescriptionText {
+    return getLocalizedText(
+      englishText: 'Discover thousands of amazing books waiting for you. Use the search bar or filters to find your next favorite read.',
+      somaliText: 'Raadi kunno kutub cajiib ah oo ku sugaya. Isticmaal baarka raadinta ama shaandhaynta si aad u heshid akhriska aad jeclaanaysid.',
+    );
+  }
+  
+  // Get localized refresh text
+  static String get getRefreshText {
+    return getLocalizedText(
+      englishText: 'Refresh',
+      somaliText: 'Cusboonaysii',
+    );
+  }
+  
+  // Get localized filter text
+  static String get getFilterText {
+    return getLocalizedText(
+      englishText: 'Filter',
+      somaliText: 'Shaandhay',
+    );
+  }
+  
+  // Get localized no books found text
+  static String get getNoBooksFoundText {
+    return getLocalizedText(
+      englishText: 'No Books Found',
+      somaliText: 'Kutubta Lama Helin',
+    );
+  }
+  
+  // Get localized try adjusting search text
+  static String get getTryAdjustingSearchText {
+    return getLocalizedText(
+      englishText: 'Try adjusting your search terms or filters to find what you\'re looking for.',
+      somaliText: 'Isku day inaad beddesho raadinta ama shaandhaynta si aad u heshid waxa aad raadineysid.',
+    );
+  }
+  
+  // Get localized clear search text
+  static String get getClearSearchText {
+    return getLocalizedText(
+      englishText: 'Clear Search',
+      somaliText: 'Tir Raadinta',
+    );
+  }
+  
+  // Get localized adjust filters text
+  static String get getAdjustFiltersText {
+    return getLocalizedText(
+      englishText: 'Adjust Filters',
+      somaliText: 'Beddel Shaandhaynta',
     );
   }
 }

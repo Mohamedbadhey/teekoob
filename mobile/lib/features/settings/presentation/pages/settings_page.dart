@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:teekoob/core/services/localization_service.dart';
+import 'package:teekoob/core/services/language_service.dart';
+import 'package:teekoob/core/services/theme_service.dart';
 import 'package:teekoob/features/auth/bloc/auth_bloc.dart';
 import 'package:teekoob/features/settings/bloc/settings_bloc.dart';
-import 'package:teekoob/core/bloc/theme_bloc.dart';
 import 'package:teekoob/core/config/app_theme.dart';
 
 class SettingsPage extends StatefulWidget {
@@ -38,18 +40,18 @@ class _SettingsPageState extends State<SettingsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: Theme.of(context).colorScheme.background,
       appBar: AppBar(
         title: Text(
           LocalizationService.getSettingsText,
-          style: const TextStyle(
-            color: Colors.white,
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onPrimary,
             fontWeight: FontWeight.w600,
           ),
         ),
-        backgroundColor: const Color(0xFF0466c8),
+        backgroundColor: Theme.of(context).colorScheme.primary,
         elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
+        iconTheme: IconThemeData(color: Theme.of(context).colorScheme.onPrimary),
       ),
       body: SingleChildScrollView(
         child: Column(
@@ -114,7 +116,7 @@ class _SettingsPageState extends State<SettingsPage> {
             Container(
               margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: Theme.of(context).colorScheme.surface,
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
@@ -129,16 +131,16 @@ class _SettingsPageState extends State<SettingsPage> {
           leading: _buildProfileAvatar(avatarUrl),
           title: Text(
                   userName,
-                  style: const TextStyle(
+                  style: TextStyle(
               fontWeight: FontWeight.w600,
                     fontSize: 18,
-                    color: AppTheme.textPrimaryColor,
+            color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
           subtitle: Text(
                   userEmail,
                   style: TextStyle(
-                    color: AppTheme.textSecondaryColor,
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                     fontSize: 14,
                   ),
                 ),
@@ -170,20 +172,36 @@ class _SettingsPageState extends State<SettingsPage> {
       builder: (context, authState) {
         return BlocBuilder<SettingsBloc, SettingsState>(
           builder: (context, settingsState) {
+            return Consumer<ThemeService>(
+              builder: (context, themeService, child) {
+                print('🎨 Settings: Consumer rebuild - current theme: ${themeService.currentTheme}');
             // Get current settings
             String currentLanguage = 'en';
             String currentTheme = 'system';
             bool notificationsEnabled = true;
             bool autoDownloadEnabled = false;
 
+                // Get current theme from ThemeService
+                switch (themeService.currentTheme) {
+                  case ThemeMode.light:
+                    currentTheme = 'light';
+                    break;
+                  case ThemeMode.dark:
+                    currentTheme = 'dark';
+                    break;
+                  case ThemeMode.system:
+                  default:
+                    currentTheme = 'system';
+                    break;
+                }
+                print('🎨 Settings: Converted theme to string: $currentTheme');
+
             if (authState is Authenticated) {
               currentLanguage = authState.user.preferredLanguage;
-              currentTheme = authState.user.preferences['theme'] ?? 'system';
             }
 
             if (settingsState is SettingsLoaded) {
               currentLanguage = settingsState.settings['language'] ?? currentLanguage;
-              currentTheme = settingsState.settings['theme'] ?? currentTheme;
               notificationsEnabled = settingsState.settings['notifications']?['newReleases'] ?? true;
               autoDownloadEnabled = settingsState.settings['autoDownload'] ?? false;
             }
@@ -207,7 +225,10 @@ class _SettingsPageState extends State<SettingsPage> {
                   icon: Icons.palette_rounded,
                   title: LocalizationService.getThemeText,
                   subtitle: _getThemeDisplayName(currentTheme),
-                  trailing: _buildThemeDropdown(currentTheme, authState),
+                  trailing: IconButton(
+                    icon: const Icon(Icons.arrow_forward_ios_rounded, size: 16),
+                    onPressed: () => _showThemeSelectionDialog(authState),
+                  ),
         ),
         
         // Notifications Setting
@@ -243,6 +264,8 @@ class _SettingsPageState extends State<SettingsPage> {
                   ),
                 ),
               ],
+            );
+              },
             );
           },
         );
@@ -323,7 +346,6 @@ class _SettingsPageState extends State<SettingsPage> {
                 englishText: 'Sign out of your account',
                 somaliText: 'Ka bax akoonkaaga',
               ),
-              isDestructive: true,
               onTap: () => _showLogoutDialog(),
             ),
           ],
@@ -499,7 +521,7 @@ class _SettingsPageState extends State<SettingsPage> {
             title,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.bold,
-              color: AppTheme.primaryColor,
+              color: Theme.of(context).colorScheme.primary,
             ),
           ),
         ),
@@ -517,7 +539,7 @@ class _SettingsPageState extends State<SettingsPage> {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
@@ -543,16 +565,16 @@ class _SettingsPageState extends State<SettingsPage> {
         ),
         title: Text(
           title,
-          style: const TextStyle(
+            style: TextStyle(
             fontWeight: FontWeight.w600,
             fontSize: 16,
-            color: AppTheme.textPrimaryColor,
+              color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
         subtitle: Text(
           subtitle,
           style: TextStyle(
-            color: AppTheme.textSecondaryColor,
+            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
             fontSize: 14,
           ),
         ),
@@ -575,14 +597,14 @@ class _SettingsPageState extends State<SettingsPage> {
         value: currentLanguage,
         underline: Container(),
         icon: const Icon(Icons.keyboard_arrow_down, color: Color(0xFF0466c8)),
-        dropdownColor: AppTheme.cardColor,
+        dropdownColor: Theme.of(context).colorScheme.surface,
         items: [
           DropdownMenuItem(
             value: 'en',
             child: Text(
               'English',
               style: TextStyle(
-                color: AppTheme.textPrimaryColor,
+                color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
           ),
@@ -591,7 +613,7 @@ class _SettingsPageState extends State<SettingsPage> {
             child: Text(
               'Soomaali',
               style: TextStyle(
-                color: AppTheme.textPrimaryColor,
+                color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
           ),
@@ -601,63 +623,6 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  Widget _buildThemeDropdown(String currentTheme, AuthState authState) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      decoration: BoxDecoration(
-        color: const Color(0xFF0466c8).withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: const Color(0xFF0466c8).withOpacity(0.3),
-        ),
-      ),
-      child: DropdownButton<String>(
-        value: currentTheme,
-        underline: Container(),
-        icon: const Icon(Icons.keyboard_arrow_down, color: Color(0xFF0466c8)),
-        dropdownColor: AppTheme.cardColor,
-        items: [
-          DropdownMenuItem(
-            value: 'system',
-            child: Text(
-              LocalizationService.getLocalizedText(
-                englishText: 'System',
-                somaliText: 'Nidaamka',
-              ),
-              style: TextStyle(
-                color: AppTheme.textPrimaryColor,
-              ),
-            ),
-          ),
-          DropdownMenuItem(
-            value: 'light',
-            child: Text(
-              LocalizationService.getLocalizedText(
-                englishText: 'Light',
-                somaliText: 'Iftiin',
-              ),
-              style: TextStyle(
-                color: AppTheme.textPrimaryColor,
-              ),
-            ),
-          ),
-          DropdownMenuItem(
-            value: 'dark',
-            child: Text(
-              LocalizationService.getLocalizedText(
-                englishText: 'Dark',
-                somaliText: 'Madow',
-              ),
-              style: TextStyle(
-                color: AppTheme.textPrimaryColor,
-              ),
-            ),
-          ),
-        ],
-        onChanged: (value) => _updateTheme(value!, authState),
-      ),
-    );
-  }
 
   String _getThemeDisplayName(String theme) {
     switch (theme) {
@@ -681,7 +646,11 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
-  void _updateLanguage(String language, AuthState authState) {
+  void _updateLanguage(String language, AuthState authState) async {
+    // Update the language service immediately for UI responsiveness
+    final languageService = context.read<LanguageService>();
+    await languageService.changeLanguage(language);
+    
     if (authState is Authenticated) {
       context.read<SettingsBloc>().add(UpdateLanguage(authState.user.id, language));
       context.read<AuthBloc>().add(UpdateProfileRequested(
@@ -694,20 +663,605 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
-  void _updateTheme(String theme, AuthState authState) {
-    if (authState is Authenticated) {
-      // Update the theme immediately using ThemeBloc
-      context.read<ThemeBloc>().add(ChangeTheme(theme));
-      
-      // Also save to settings for persistence
-      context.read<SettingsBloc>().add(UpdateTheme(authState.user.id, theme));
-      context.read<AuthBloc>().add(UpdateProfileRequested(
-        themePreference: theme,
-      ));
-      _showSuccessMessage(LocalizationService.getLocalizedText(
+  void _showThemeSelectionDialog(AuthState authState) {
+    showDialog(
+      context: context,
+      builder: (context) => Consumer<ThemeService>(
+        builder: (context, themeService, child) => _ThemeSelectionDialog(
+          authState: authState,
+          themeService: themeService,
+        ),
+      ),
+    );
+  }
+
+  void _showSuccessMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Theme.of(context).colorScheme.primary,
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
+  Widget _buildProfileAvatar(String? avatarUrl) {
+    return CircleAvatar(
+      radius: 25,
+      backgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+      backgroundImage: avatarUrl != null ? NetworkImage(avatarUrl) : null,
+      child: avatarUrl == null
+          ? Icon(
+              Icons.person,
+              size: 30,
+              color: Theme.of(context).colorScheme.primary,
+            )
+          : null,
+    );
+  }
+
+  void _showEditProfileDialog(BuildContext context, AuthState authState) {
+    // TODO: Implement edit profile dialog
+  }
+
+  void _updateNotifications(bool value, AuthState authState) {
+    // TODO: Implement notifications update
+  }
+
+  void _updateAutoDownload(bool value, AuthState authState) {
+    // TODO: Implement auto download update
+  }
+
+  Widget _buildAccountCard({
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      child: ListTile(
+        leading: Icon(
+          icon,
+          color: Theme.of(context).colorScheme.primary,
+        ),
+        title: Text(
+          title,
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurface,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        subtitle: Text(
+          subtitle,
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+          ),
+        ),
+        trailing: Icon(
+          Icons.arrow_forward_ios,
+          size: 16,
+          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
+        ),
+        onTap: onTap,
+      ),
+    );
+  }
+
+  void _showChangePasswordDialog(AuthState authState) {
+    // TODO: Implement change password dialog
+  }
+
+  void _showPrivacySettingsDialog(AuthState authState) {
+    // TODO: Implement privacy settings dialog
+  }
+
+  void _showDataStorageDialog(AuthState authState) {
+    // TODO: Implement data storage dialog
+  }
+
+  void _showLogoutDialog() {
+    // TODO: Implement logout dialog
+  }
+
+  Widget _buildSupportCard({
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      child: ListTile(
+        leading: Icon(
+          icon,
+          color: Theme.of(context).colorScheme.primary,
+        ),
+        title: Text(
+          title,
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurface,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        subtitle: Text(
+          subtitle,
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+          ),
+        ),
+        trailing: Icon(
+          Icons.arrow_forward_ios,
+          size: 16,
+          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
+        ),
+        onTap: onTap,
+      ),
+    );
+  }
+
+  void _showHelpDialog() {
+    // TODO: Implement help dialog
+  }
+
+  void _showFeedbackDialog() {
+    // TODO: Implement feedback dialog
+  }
+
+  void _showBugReportDialog() {
+    // TODO: Implement bug report dialog
+  }
+
+  void _showContactSupportDialog() {
+    // TODO: Implement contact support dialog
+  }
+
+  void _showRateAppDialog() {
+    // TODO: Implement rate app dialog
+  }
+
+  Widget _buildAboutCard({
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      child: ListTile(
+        leading: Icon(
+          icon,
+          color: Theme.of(context).colorScheme.primary,
+        ),
+        title: Text(
+          title,
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurface,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        subtitle: Text(
+          subtitle,
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+          ),
+        ),
+        trailing: Icon(
+          Icons.arrow_forward_ios,
+          size: 16,
+          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
+        ),
+        onTap: onTap,
+      ),
+    );
+  }
+
+  void _showVersionInfoDialog() {
+    // TODO: Implement version info dialog
+  }
+
+  void _showTermsOfServiceDialog() {
+    // TODO: Implement terms of service dialog
+  }
+
+  void _showPrivacyPolicyDialog() {
+    // TODO: Implement privacy policy dialog
+  }
+
+  void _showOpenSourceLicensesDialog() {
+    // TODO: Implement open source licenses dialog
+  }
+
+  void _showAppInfoDialog() {
+    // TODO: Implement app info dialog
+  }
+}
+
+class _ThemeSelectionDialog extends StatefulWidget {
+  final AuthState authState;
+  final ThemeService themeService;
+
+  const _ThemeSelectionDialog({
+    required this.authState,
+    required this.themeService,
+  });
+
+  @override
+  State<_ThemeSelectionDialog> createState() => _ThemeSelectionDialogState();
+}
+
+class _ThemeSelectionDialogState extends State<_ThemeSelectionDialog> {
+  String selectedTheme = 'system';
+  late ThemeService _themeService;
+  bool _isApplying = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _themeService = widget.themeService;
+    _themeService.addListener(_onThemeChanged);
+    selectedTheme = _getCurrentThemeString(_themeService);
+    print('🎨 Theme Dialog: initState - selectedTheme: $selectedTheme, currentTheme: ${_themeService.currentTheme}');
+  }
+
+  @override
+  void dispose() {
+    _themeService.removeListener(_onThemeChanged);
+    super.dispose();
+  }
+
+  void _onThemeChanged() {
+    if (mounted) {
+      setState(() {
+        selectedTheme = _getCurrentThemeString(_themeService);
+      });
+    }
+  }
+
+  String _getCurrentThemeString(ThemeService themeService) {
+    switch (themeService.currentTheme) {
+      case ThemeMode.light:
+        return 'light';
+      case ThemeMode.dark:
+        return 'dark';
+      case ThemeMode.system:
+      default:
+        return 'system';
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    print('🎨 Theme Dialog: Building with _themeService.currentTheme: ${_themeService.currentTheme}');
+    print('🎨 Theme Dialog: Building with selectedTheme: $selectedTheme');
+    print('🎨 Theme Dialog: Building with _isApplying: $_isApplying');
+    
+    return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF0466c8).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.palette_rounded,
+                  color: Color(0xFF0466c8),
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                LocalizationService.getThemeText,
+                style: TextStyle(
+          color: Theme.of(context).colorScheme.onSurface,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Description text
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.primary.withOpacity(0.05),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.info_outline,
+                      color: Theme.of(context).colorScheme.primary,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        LocalizationService.getLocalizedText(
+                          englishText: 'Choose your preferred theme. Changes will be applied immediately.',
+                          somaliText: 'Dooro mawduuca aad jeclaan karto. Isbeddelada ayaa si dhaqso leh loo codsiin doonaa.',
+                        ),
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+              
+                      // System Theme Option
+                      _buildThemeRadioOption(
+                        value: 'system',
+                        groupValue: selectedTheme,
+                        title: LocalizationService.getLocalizedText(
+                          englishText: 'System',
+                          somaliText: 'Nidaamka',
+                        ),
+                        subtitle: LocalizationService.getLocalizedText(
+                          englishText: 'Follow device theme',
+                          somaliText: 'Raac mawduuca qalabka',
+                        ),
+                        icon: Icons.settings_brightness_rounded,
+                        onChanged: (value) {
+                          print('🎨 Theme Dialog: System theme selected: $value');
+                          setState(() {
+                            selectedTheme = value!;
+                          });
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      
+                      // Light Theme Option
+                      _buildThemeRadioOption(
+                        value: 'light',
+                        groupValue: selectedTheme,
+                        title: LocalizationService.getLocalizedText(
+                          englishText: 'Light',
+                          somaliText: 'Iftiin',
+                        ),
+                        subtitle: LocalizationService.getLocalizedText(
+                          englishText: 'Always use light theme',
+                          somaliText: 'Had iyo jeer isticmaal mawduuc iftiin',
+                        ),
+                        icon: Icons.light_mode_rounded,
+                        onChanged: (value) {
+                          print('🎨 Theme Dialog: Light theme selected: $value');
+                          setState(() {
+                            selectedTheme = value!;
+                          });
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      
+                      // Dark Theme Option
+                      _buildThemeRadioOption(
+                        value: 'dark',
+                        groupValue: selectedTheme,
+                        title: LocalizationService.getLocalizedText(
+                          englishText: 'Dark',
+                          somaliText: 'Madow',
+                        ),
+                        subtitle: LocalizationService.getLocalizedText(
+                          englishText: 'Always use dark theme',
+                          somaliText: 'Had iyo jeer isticmaal mawduuc madow',
+                        ),
+                        icon: Icons.dark_mode_rounded,
+                        onChanged: (value) {
+                          print('🎨 Theme Dialog: Dark theme selected: $value');
+                          setState(() {
+                            selectedTheme = value!;
+                          });
+                        },
+                      ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text(
+                LocalizationService.getCancelText,
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
+              ),
+            ),
+              ElevatedButton(
+                onPressed: _isApplying ? null : () {
+                  print('🎨 Theme Dialog: Apply button pressed with selectedTheme: $selectedTheme');
+                  print('🎨 Theme Dialog: _isApplying: $_isApplying');
+                  
+                  if (_isApplying) {
+                    print('🎨 Theme Dialog: Already applying, ignoring press');
+                    return;
+                  }
+                  
+                  if (widget.authState is Authenticated) {
+                    setState(() {
+                      _isApplying = true;
+                    });
+                    
+                    print('🎨 Settings: _updateTheme called with: $selectedTheme');
+                    print('🎨 Settings: Current ThemeService theme before change: ${_themeService.currentTheme}');
+                    
+                    // Update theme using ThemeService
+                    _themeService.setThemeFromString(selectedTheme);
+                    print('🎨 Settings: After setThemeFromString, ThemeService theme: ${_themeService.currentTheme}');
+                    
+                    // Close dialog first
+                    Navigator.of(context).pop();
+                    
+                    // Wait a moment for the theme to propagate, then save settings
+                    Future.delayed(const Duration(milliseconds: 200), () {
+                      print('🎨 Settings: ThemeService theme after delay: ${_themeService.currentTheme}');
+                      
+                      // Save to settings for persistence
+                      context.read<SettingsBloc>().add(UpdateTheme((widget.authState as Authenticated).user.id, selectedTheme));
+                      context.read<AuthBloc>().add(UpdateProfileRequested(
+                        themePreference: selectedTheme,
+                      ));
+                    });
+                    
+                    // Show success message
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(LocalizationService.getLocalizedText(
         englishText: 'Theme updated successfully!',
         somaliText: 'Mawduuca si guul leh ayaa loo cusboonaysiiyay!',
-      ));
+                        )),
+                        backgroundColor: Theme.of(context).colorScheme.primary,
+                        duration: const Duration(seconds: 2),
+                      ),
+                    );
+                  }
+                },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Theme.of(context).colorScheme.primary,
+                foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: Text(LocalizationService.getLocalizedText(
+                englishText: _isApplying ? 'Applying...' : 'Apply',
+                somaliText: _isApplying ? 'Waa la codsiinayaa...' : 'Codsi',
+              )),
+            ),
+          ],
+        );
+  }
+
+  Widget _buildThemeRadioOption({
+    required String value,
+    required String groupValue,
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required ValueChanged<String?> onChanged,
+  }) {
+    final bool isSelected = value == groupValue;
+    
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      curve: Curves.easeInOut,
+      decoration: BoxDecoration(
+        color: isSelected 
+            ? Theme.of(context).colorScheme.primary.withOpacity(0.1)
+            : Colors.transparent,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isSelected 
+              ? Theme.of(context).colorScheme.primary
+              : Theme.of(context).colorScheme.outline.withOpacity(0.3),
+          width: isSelected ? 2 : 1,
+        ),
+        boxShadow: isSelected ? [
+          BoxShadow(
+            color: Theme.of(context).colorScheme.primary.withOpacity(0.2),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ] : null,
+      ),
+      child: InkWell(
+        onTap: () => onChanged(value),
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              // Theme preview circle
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: _getThemePreviewColor(value),
+                  border: Border.all(
+                    color: isSelected 
+                        ? Theme.of(context).colorScheme.primary
+                        : Theme.of(context).colorScheme.outline.withOpacity(0.3),
+                    width: 2,
+                  ),
+                ),
+                child: Icon(
+                  icon,
+                  color: _getThemePreviewIconColor(value),
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 16),
+              
+              // Theme info
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 16,
+                        color: isSelected 
+                            ? Theme.of(context).colorScheme.primary
+                            : Theme.of(context).colorScheme.onSurface,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              
+              // Radio button
+              Radio<String>(
+                value: value,
+                groupValue: groupValue,
+                onChanged: onChanged,
+                activeColor: const Color(0xFF0466c8),
+                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Color _getThemePreviewColor(String theme) {
+    switch (theme) {
+      case 'light':
+        return Colors.white;
+      case 'dark':
+        return const Color(0xFF121212);
+      case 'system':
+      default:
+        return Theme.of(context).colorScheme.primary.withOpacity(0.1);
+    }
+  }
+
+  Color _getThemePreviewIconColor(String theme) {
+    switch (theme) {
+      case 'light':
+        return Colors.black87;
+      case 'dark':
+        return Colors.white;
+      case 'system':
+      default:
+        return Theme.of(context).colorScheme.primary;
     }
   }
 
@@ -748,7 +1302,7 @@ class _SettingsPageState extends State<SettingsPage> {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
@@ -764,13 +1318,13 @@ class _SettingsPageState extends State<SettingsPage> {
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             color: isDestructive 
-                ? Colors.red.withOpacity(0.1)
+                ? Theme.of(context).colorScheme.error.withOpacity(0.1)
                 : const Color(0xFF0466c8).withOpacity(0.1),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Icon(
             icon,
-            color: isDestructive ? Colors.red : const Color(0xFF0466c8),
+            color: isDestructive ? Theme.of(context).colorScheme.error : Theme.of(context).colorScheme.primary,
             size: 24,
           ),
         ),
@@ -779,20 +1333,20 @@ class _SettingsPageState extends State<SettingsPage> {
           style: TextStyle(
             fontWeight: FontWeight.w600,
             fontSize: 16,
-            color: isDestructive ? Colors.red : AppTheme.textPrimaryColor,
+            color: isDestructive ? Theme.of(context).colorScheme.error : Theme.of(context).colorScheme.onSurface,
           ),
         ),
         subtitle: Text(
           subtitle,
           style: TextStyle(
-            color: AppTheme.textSecondaryColor,
+            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
             fontSize: 14,
           ),
         ),
         trailing: Icon(
           Icons.arrow_forward_ios_rounded,
           size: 16,
-          color: isDestructive ? Colors.red : AppTheme.textPrimaryColor,
+          color: isDestructive ? Theme.of(context).colorScheme.error : Theme.of(context).colorScheme.onSurface,
         ),
         onTap: onTap,
       ),
@@ -834,8 +1388,8 @@ class _SettingsPageState extends State<SettingsPage> {
                   englishText: 'Change Password',
                   somaliText: 'Beddel Furaha',
                 ),
-                style: const TextStyle(
-                  color: AppTheme.textPrimaryColor,
+                style: TextStyle(
+          color: Theme.of(context).colorScheme.onSurface,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -936,7 +1490,7 @@ class _SettingsPageState extends State<SettingsPage> {
               onPressed: () => Navigator.of(context).pop(),
               child: Text(
                 LocalizationService.getCancelText,
-                style: const TextStyle(color: Colors.grey),
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
               ),
             ),
             ElevatedButton(
@@ -968,8 +1522,8 @@ class _SettingsPageState extends State<SettingsPage> {
                 }
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF0466c8),
-                foregroundColor: Colors.white,
+                backgroundColor: Theme.of(context).colorScheme.primary,
+                foregroundColor: Theme.of(context).colorScheme.onPrimary,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -1017,8 +1571,8 @@ class _SettingsPageState extends State<SettingsPage> {
                   englishText: 'Privacy Settings',
                   somaliText: 'Dejinta Sirta',
                 ),
-                style: const TextStyle(
-                  color: AppTheme.textPrimaryColor,
+                style: TextStyle(
+          color: Theme.of(context).colorScheme.onSurface,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -1087,7 +1641,7 @@ class _SettingsPageState extends State<SettingsPage> {
               onPressed: () => Navigator.of(context).pop(),
               child: Text(
                 LocalizationService.getCancelText,
-                style: const TextStyle(color: Colors.grey),
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
               ),
             ),
             ElevatedButton(
@@ -1099,8 +1653,8 @@ class _SettingsPageState extends State<SettingsPage> {
                 ));
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF0466c8),
-                foregroundColor: Colors.white,
+                backgroundColor: Theme.of(context).colorScheme.primary,
+                foregroundColor: Theme.of(context).colorScheme.onPrimary,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -1143,8 +1697,8 @@ class _SettingsPageState extends State<SettingsPage> {
                 englishText: 'Data & Storage',
                 somaliText: 'Xogta & Kaydinta',
               ),
-              style: const TextStyle(
-                color: AppTheme.textPrimaryColor,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurface,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -1158,7 +1712,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 englishText: 'Clear all cached data to free up storage space. This will not affect your account or downloaded books.',
                 somaliText: 'Nadiif dhammaan xogta cache si aad u furto meel kaydinta. Tani ma saamayn doonto akoonkaaga ama kutubta la soo dejiyay.',
               ),
-              style: TextStyle(color: AppTheme.textPrimaryColor),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
             ),
             const SizedBox(height: 16),
             Container(
@@ -1181,8 +1735,8 @@ class _SettingsPageState extends State<SettingsPage> {
                         englishText: 'This action cannot be undone',
                         somaliText: 'Ficilkan lama soo celin karo',
                       ),
-                      style: const TextStyle(
-                        color: AppTheme.textPrimaryColor,
+                      style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurface,
                         fontSize: 12,
                       ),
                     ),
@@ -1197,7 +1751,7 @@ class _SettingsPageState extends State<SettingsPage> {
             onPressed: () => Navigator.of(context).pop(),
             child: Text(
               LocalizationService.getCancelText,
-              style: const TextStyle(color: Colors.grey),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
             ),
           ),
           ElevatedButton(
@@ -1213,7 +1767,7 @@ class _SettingsPageState extends State<SettingsPage> {
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF0466c8),
-              foregroundColor: Colors.white,
+              foregroundColor: Theme.of(context).colorScheme.onPrimary,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
@@ -1232,7 +1786,7 @@ class _SettingsPageState extends State<SettingsPage> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: Colors.red,
+        backgroundColor: Theme.of(context).colorScheme.error,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
@@ -1250,7 +1804,7 @@ class _SettingsPageState extends State<SettingsPage> {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
@@ -1276,23 +1830,23 @@ class _SettingsPageState extends State<SettingsPage> {
         ),
         title: Text(
           title,
-          style: const TextStyle(
+            style: TextStyle(
             fontWeight: FontWeight.w600,
             fontSize: 16,
-            color: AppTheme.textPrimaryColor,
+              color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
         subtitle: Text(
           subtitle,
           style: TextStyle(
-            color: AppTheme.textSecondaryColor,
+            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
             fontSize: 14,
           ),
         ),
-        trailing: const Icon(
+        trailing: Icon(
           Icons.arrow_forward_ios_rounded,
           size: 16,
-                  color: AppTheme.textPrimaryColor,
+          color: Theme.of(context).colorScheme.onSurface,
         ),
         onTap: onTap,
       ),
@@ -1323,8 +1877,8 @@ class _SettingsPageState extends State<SettingsPage> {
             const SizedBox(width: 12),
             Text(
               LocalizationService.getHelpText,
-              style: const TextStyle(
-                color: AppTheme.textPrimaryColor,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurface,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -1363,7 +1917,7 @@ class _SettingsPageState extends State<SettingsPage> {
             onPressed: () => Navigator.of(context).pop(),
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF0466c8),
-              foregroundColor: Colors.white,
+              foregroundColor: Theme.of(context).colorScheme.onPrimary,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
@@ -1394,9 +1948,9 @@ class _SettingsPageState extends State<SettingsPage> {
         children: [
           Text(
             title,
-            style: const TextStyle(
+            style: TextStyle(
               fontWeight: FontWeight.w600,
-              color: AppTheme.textPrimaryColor,
+              color: Theme.of(context).colorScheme.onSurface,
               fontSize: 14,
             ),
           ),
@@ -1404,7 +1958,7 @@ class _SettingsPageState extends State<SettingsPage> {
           Text(
             description,
             style: TextStyle(
-              color: AppTheme.textSecondaryColor,
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
               fontSize: 12,
             ),
           ),
@@ -1444,8 +1998,8 @@ class _SettingsPageState extends State<SettingsPage> {
                   englishText: 'Send Feedback',
                   somaliText: 'Dir Feedback',
                 ),
-                style: const TextStyle(
-                  color: AppTheme.textPrimaryColor,
+                style: TextStyle(
+          color: Theme.of(context).colorScheme.onSurface,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -1460,7 +2014,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     englishText: 'How would you rate your experience?',
                     somaliText: 'Sidee u qiimeysaa khibradaada?',
                   ),
-                  style: TextStyle(color: AppTheme.textPrimaryColor),
+                  style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
                 ),
                 const SizedBox(height: 12),
                 Row(
@@ -1510,7 +2064,7 @@ class _SettingsPageState extends State<SettingsPage> {
               onPressed: () => Navigator.of(context).pop(),
               child: Text(
                 LocalizationService.getCancelText,
-                style: const TextStyle(color: Colors.grey),
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
               ),
             ),
             ElevatedButton(
@@ -1522,8 +2076,8 @@ class _SettingsPageState extends State<SettingsPage> {
                 ));
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF0466c8),
-                foregroundColor: Colors.white,
+                backgroundColor: Theme.of(context).colorScheme.primary,
+                foregroundColor: Theme.of(context).colorScheme.onPrimary,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -1555,12 +2109,12 @@ class _SettingsPageState extends State<SettingsPage> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Colors.red.withOpacity(0.1),
+                  color: Theme.of(context).colorScheme.error.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.bug_report_rounded,
-                  color: Colors.red,
+                  color: Theme.of(context).colorScheme.error,
                   size: 24,
                 ),
               ),
@@ -1570,8 +2124,8 @@ class _SettingsPageState extends State<SettingsPage> {
                   englishText: 'Report Bug',
                   somaliText: 'Sheeg Khalad',
                 ),
-                style: const TextStyle(
-                  color: AppTheme.textPrimaryColor,
+                style: TextStyle(
+          color: Theme.of(context).colorScheme.onSurface,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -1662,7 +2216,7 @@ class _SettingsPageState extends State<SettingsPage> {
               onPressed: () => Navigator.of(context).pop(),
               child: Text(
                 LocalizationService.getCancelText,
-                style: const TextStyle(color: Colors.grey),
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
               ),
             ),
             ElevatedButton(
@@ -1674,8 +2228,8 @@ class _SettingsPageState extends State<SettingsPage> {
                 ));
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
-                foregroundColor: Colors.white,
+                backgroundColor: Theme.of(context).colorScheme.error,
+                foregroundColor: Theme.of(context).colorScheme.onPrimary,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -1718,8 +2272,8 @@ class _SettingsPageState extends State<SettingsPage> {
                 englishText: 'Contact Support',
                 somaliText: 'La Xidhiidh Taageero',
               ),
-              style: const TextStyle(
-                color: AppTheme.textPrimaryColor,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurface,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -1753,7 +2307,7 @@ class _SettingsPageState extends State<SettingsPage> {
             onPressed: () => Navigator.of(context).pop(),
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF0466c8),
-              foregroundColor: Colors.white,
+              foregroundColor: Theme.of(context).colorScheme.onPrimary,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
@@ -1786,21 +2340,21 @@ class _SettingsPageState extends State<SettingsPage> {
         ),
         title: Text(
           title,
-          style: const TextStyle(
+          style: TextStyle(
             fontWeight: FontWeight.w600,
-            color: AppTheme.textPrimaryColor,
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
         subtitle: Text(
           subtitle,
           style: TextStyle(
-            color: AppTheme.textSecondaryColor,
+            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
           ),
         ),
-        trailing: const Icon(
+        trailing: Icon(
           Icons.arrow_forward_ios_rounded,
           size: 16,
-                  color: AppTheme.textPrimaryColor,
+          color: Theme.of(context).colorScheme.onSurface,
         ),
         onTap: onTap,
       ),
@@ -1837,8 +2391,8 @@ class _SettingsPageState extends State<SettingsPage> {
                   englishText: 'Rate App',
                   somaliText: 'Qiimee Appka',
                 ),
-                style: const TextStyle(
-                  color: AppTheme.textPrimaryColor,
+                style: TextStyle(
+          color: Theme.of(context).colorScheme.onSurface,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -1852,7 +2406,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   englishText: 'How would you rate Teekoob?',
                   somaliText: 'Sidee u qiimeysaa Teekoob?',
                 ),
-                style: TextStyle(color: AppTheme.textPrimaryColor),
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 16),
@@ -1880,7 +2434,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     englishText: 'Thank you! Would you like to rate us on the app store?',
                     somaliText: 'Mahadsanid! Ma doonaysaa inaad noo qiimeyso app store-ka?',
                   ),
-                  style: TextStyle(color: AppTheme.textPrimaryColor),
+                  style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
                   textAlign: TextAlign.center,
                 ),
             ],
@@ -1890,7 +2444,7 @@ class _SettingsPageState extends State<SettingsPage> {
               onPressed: () => Navigator.of(context).pop(),
               child: Text(
                 LocalizationService.getCancelText,
-                style: const TextStyle(color: Colors.grey),
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
               ),
             ),
             if (selectedRating >= 4)
@@ -1903,8 +2457,8 @@ class _SettingsPageState extends State<SettingsPage> {
                   ));
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF0466c8),
-                  foregroundColor: Colors.white,
+                  backgroundColor: Theme.of(context).colorScheme.primary,
+                  foregroundColor: Theme.of(context).colorScheme.onPrimary,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -1929,7 +2483,7 @@ class _SettingsPageState extends State<SettingsPage> {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
@@ -1955,23 +2509,23 @@ class _SettingsPageState extends State<SettingsPage> {
         ),
         title: Text(
           title,
-          style: const TextStyle(
+            style: TextStyle(
             fontWeight: FontWeight.w600,
             fontSize: 16,
-            color: AppTheme.textPrimaryColor,
+              color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
         subtitle: Text(
           subtitle,
           style: TextStyle(
-            color: AppTheme.textSecondaryColor,
+            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
             fontSize: 14,
           ),
         ),
-        trailing: const Icon(
+        trailing: Icon(
           Icons.arrow_forward_ios_rounded,
           size: 16,
-                  color: AppTheme.textPrimaryColor,
+          color: Theme.of(context).colorScheme.onSurface,
         ),
         onTap: onTap,
       ),
@@ -2005,8 +2559,8 @@ class _SettingsPageState extends State<SettingsPage> {
                 englishText: 'App Version',
                 somaliText: 'Nooca Appka',
               ),
-              style: const TextStyle(
-                color: AppTheme.textPrimaryColor,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurface,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -2023,38 +2577,38 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
               child: Column(
                 children: [
-                  const Text(
+                  Text(
                     'Teekoob',
                     style: TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
-                      color: AppTheme.textPrimaryColor,
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
                   const SizedBox(height: 8),
-                  const Text(
+                  Text(
                     'Version 1.0.0',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w600,
-                      color: Color(0xFF0466c8),
+                      color: Theme.of(context).colorScheme.primary,
                     ),
                   ),
-                  const Text(
+                  Text(
                     'Build 100',
                     style: TextStyle(
                       fontSize: 14,
-                      color: AppTheme.textPrimaryColor,
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
                 ],
               ),
             ),
             const SizedBox(height: 16),
-            const Text(
+            Text(
               'Your digital library companion',
               style: TextStyle(
-                color: AppTheme.textPrimaryColor,
+                color: Theme.of(context).colorScheme.onSurface,
                 fontSize: 16,
               ),
               textAlign: TextAlign.center,
@@ -2066,7 +2620,7 @@ class _SettingsPageState extends State<SettingsPage> {
             onPressed: () => Navigator.of(context).pop(),
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF0466c8),
-              foregroundColor: Colors.white,
+              foregroundColor: Theme.of(context).colorScheme.onPrimary,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
@@ -2108,8 +2662,8 @@ class _SettingsPageState extends State<SettingsPage> {
                 englishText: 'Terms of Service',
                 somaliText: 'Shuruudaha Adeegga',
               ),
-              style: const TextStyle(
-                color: AppTheme.textPrimaryColor,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurface,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -2148,7 +2702,7 @@ class _SettingsPageState extends State<SettingsPage> {
             onPressed: () => Navigator.of(context).pop(),
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF0466c8),
-              foregroundColor: Colors.white,
+              foregroundColor: Theme.of(context).colorScheme.onPrimary,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
@@ -2190,8 +2744,8 @@ class _SettingsPageState extends State<SettingsPage> {
                 englishText: 'Privacy Policy',
                 somaliText: 'Siyaasadda Sirta',
               ),
-              style: const TextStyle(
-                color: AppTheme.textPrimaryColor,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurface,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -2230,7 +2784,7 @@ class _SettingsPageState extends State<SettingsPage> {
             onPressed: () => Navigator.of(context).pop(),
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF0466c8),
-              foregroundColor: Colors.white,
+              foregroundColor: Theme.of(context).colorScheme.onPrimary,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
@@ -2272,8 +2826,8 @@ class _SettingsPageState extends State<SettingsPage> {
                 englishText: 'Open Source Licenses',
                 somaliText: 'Layisinka Open Source',
               ),
-              style: const TextStyle(
-                color: AppTheme.textPrimaryColor,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurface,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -2300,7 +2854,7 @@ class _SettingsPageState extends State<SettingsPage> {
             onPressed: () => Navigator.of(context).pop(),
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF0466c8),
-              foregroundColor: Colors.white,
+              foregroundColor: Theme.of(context).colorScheme.onPrimary,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
@@ -2342,8 +2896,8 @@ class _SettingsPageState extends State<SettingsPage> {
                 englishText: 'App Information',
                 somaliText: 'Macluumaadka Appka',
               ),
-              style: const TextStyle(
-                color: AppTheme.textPrimaryColor,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurface,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -2367,7 +2921,7 @@ class _SettingsPageState extends State<SettingsPage> {
             onPressed: () => Navigator.of(context).pop(),
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF0466c8),
-              foregroundColor: Colors.white,
+              foregroundColor: Theme.of(context).colorScheme.onPrimary,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
@@ -2390,9 +2944,9 @@ class _SettingsPageState extends State<SettingsPage> {
         children: [
           Text(
             title,
-            style: const TextStyle(
+            style: TextStyle(
               fontWeight: FontWeight.w600,
-              color: AppTheme.textPrimaryColor,
+              color: Theme.of(context).colorScheme.onSurface,
               fontSize: 14,
             ),
           ),
@@ -2400,7 +2954,7 @@ class _SettingsPageState extends State<SettingsPage> {
           Text(
             content,
             style: TextStyle(
-              color: AppTheme.textSecondaryColor,
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
               fontSize: 12,
             ),
           ),
@@ -2425,15 +2979,15 @@ class _SettingsPageState extends State<SettingsPage> {
         children: [
           Text(
             library,
-            style: const TextStyle(
+            style: TextStyle(
               fontWeight: FontWeight.w600,
-              color: AppTheme.textPrimaryColor,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
           Text(
             license,
             style: TextStyle(
-              color: AppTheme.textSecondaryColor,
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
               fontSize: 12,
             ),
           ),
@@ -2450,15 +3004,15 @@ class _SettingsPageState extends State<SettingsPage> {
         children: [
           Text(
             label,
-            style: const TextStyle(
+            style: TextStyle(
               fontWeight: FontWeight.w600,
-              color: AppTheme.textPrimaryColor,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
           Text(
             value,
             style: TextStyle(
-              color: AppTheme.textSecondaryColor,
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
             ),
           ),
         ],
@@ -2516,8 +3070,8 @@ class _SettingsPageState extends State<SettingsPage> {
                 englishText: 'Edit Profile',
                 somaliText: 'Wax Ka Badal Profile',
               ),
-              style: const TextStyle(
-                color: AppTheme.textPrimaryColor,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurface,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -2585,7 +3139,7 @@ class _SettingsPageState extends State<SettingsPage> {
             onPressed: () => Navigator.of(context).pop(),
             child: Text(
               LocalizationService.getCancelText,
-              style: const TextStyle(color: Colors.grey),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
             ),
           ),
           ElevatedButton(
@@ -2603,14 +3157,14 @@ class _SettingsPageState extends State<SettingsPage> {
                       englishText: 'Profile updated successfully!',
                       somaliText: 'Profile si guul leh ayaa loo cusboonaysiiyay!',
                     )),
-                    backgroundColor: const Color(0xFF0466c8),
+                    backgroundColor: Theme.of(context).colorScheme.primary,
                   ),
                 );
               }
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF0466c8),
-              foregroundColor: Colors.white,
+              foregroundColor: Theme.of(context).colorScheme.onPrimary,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
@@ -2637,12 +3191,12 @@ class _SettingsPageState extends State<SettingsPage> {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: Colors.red.withOpacity(0.1),
+                color: Theme.of(context).colorScheme.error.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.logout_rounded,
-                color: Colors.red,
+                color: Theme.of(context).colorScheme.error,
                 size: 24,
               ),
             ),
@@ -2652,8 +3206,8 @@ class _SettingsPageState extends State<SettingsPage> {
           englishText: 'Logout',
           somaliText: 'Ka Bax',
               ),
-              style: const TextStyle(
-                color: AppTheme.textPrimaryColor,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurface,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -2664,14 +3218,14 @@ class _SettingsPageState extends State<SettingsPage> {
           englishText: 'Are you sure you want to logout?',
           somaliText: 'Ma hubtaa inaad ka baxdo?',
           ),
-                  style: TextStyle(color: AppTheme.textPrimaryColor),
+                  style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
             child: Text(
               LocalizationService.getCancelText,
-              style: const TextStyle(color: Colors.grey),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
             ),
           ),
           ElevatedButton(
@@ -2681,8 +3235,8 @@ class _SettingsPageState extends State<SettingsPage> {
               context.go('/login');
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
+              backgroundColor: Theme.of(context).colorScheme.error,
+              foregroundColor: Theme.of(context).colorScheme.onPrimary,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
@@ -2746,9 +3300,9 @@ class _SettingsPageState extends State<SettingsPage> {
                         fit: BoxFit.cover,
                         errorBuilder: (context, error2, stackTrace2) {
                           print('🖼️ Modified URL also failed: $error2');
-                          return const Icon(
+                          return Icon(
                             Icons.person,
-                            color: Colors.white,
+                            color: Theme.of(context).colorScheme.surface,
                             size: 35,
                           );
                         },
@@ -2757,20 +3311,20 @@ class _SettingsPageState extends State<SettingsPage> {
                   }
                   
                   // Fallback to icon if image fails to load
-                  return const Icon(
+                  return Icon(
                     Icons.person,
-                    color: Colors.white,
+                    color: Theme.of(context).colorScheme.surface,
                     size: 35,
                   );
                 },
                 loadingBuilder: (context, child, loadingProgress) {
                   if (loadingProgress == null) return child;
-                  return const SizedBox(
+                  return SizedBox(
                     width: 60,
                     height: 60,
                     child: Center(
                       child: CircularProgressIndicator(
-                        color: Colors.white,
+                        color: Theme.of(context).colorScheme.surface,
                         strokeWidth: 2,
                       ),
                     ),
@@ -2778,9 +3332,9 @@ class _SettingsPageState extends State<SettingsPage> {
                 },
               ),
             )
-          : const Icon(
+          : Icon(
               Icons.person,
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.surface,
               size: 35,
             ),
     );

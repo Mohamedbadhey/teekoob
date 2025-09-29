@@ -57,7 +57,7 @@ class _LibraryPageState extends State<LibraryPage> with TickerProviderStateMixin
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).colorScheme.background,
       body: SafeArea(
         child: Column(
           children: [
@@ -120,14 +120,14 @@ class _LibraryPageState extends State<LibraryPage> with TickerProviderStateMixin
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [
-                const Color(0xFF0466c8), // Blue
-                const Color(0xFF3A7BD5), // Light blue
-                const Color(0xFF5A8BD8), // Lighter blue
+                Theme.of(context).colorScheme.primary,
+                Theme.of(context).colorScheme.secondary,
+                Theme.of(context).colorScheme.primary.withOpacity(0.8),
               ],
             ),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFF0466c8).withOpacity(0.3),
+                color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
                 blurRadius: 12,
                 offset: const Offset(0, 4),
               ),
@@ -147,12 +147,12 @@ class _LibraryPageState extends State<LibraryPage> with TickerProviderStateMixin
                     Container(
                       padding: EdgeInsets.all(screenWidth * 0.02),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
+                        color: Theme.of(context).colorScheme.surface.withOpacity(0.2),
                         borderRadius: BorderRadius.circular(screenWidth * 0.03),
                       ),
                       child: Icon(
                         Icons.library_books_rounded,
-                        color: Colors.white,
+                        color: Theme.of(context).colorScheme.onPrimary,
                         size: screenWidth * 0.06,
                       ),
                     ),
@@ -162,7 +162,7 @@ class _LibraryPageState extends State<LibraryPage> with TickerProviderStateMixin
                       style: TextStyle(
                         fontSize: screenWidth * 0.055,
                         fontWeight: FontWeight.bold,
-                        color: Colors.white,
+                        color: Theme.of(context).colorScheme.onPrimary,
                         letterSpacing: 0.5,
                       ),
                     ),
@@ -173,11 +173,11 @@ class _LibraryPageState extends State<LibraryPage> with TickerProviderStateMixin
               // Sync button
               Container(
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: Theme.of(context).colorScheme.surface,
                   borderRadius: BorderRadius.circular(screenWidth * 0.04),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
+                      color: Theme.of(context).shadowColor.withOpacity(0.1),
                       blurRadius: 8,
                       offset: const Offset(0, 2),
                     ),
@@ -187,7 +187,7 @@ class _LibraryPageState extends State<LibraryPage> with TickerProviderStateMixin
                   icon: Icon(
                     Icons.sync_rounded,
                     size: screenWidth * 0.06,
-                    color: const Color(0xFF0466c8),
+                    color: Theme.of(context).colorScheme.primary,
                   ),
             onPressed: () {
                     context.read<LibraryBloc>().add(SyncLibrary(_userId));
@@ -214,11 +214,11 @@ class _LibraryPageState extends State<LibraryPage> with TickerProviderStateMixin
           ),
           child: Container(
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.surface,
               borderRadius: BorderRadius.circular(20),
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFF0466c8).withOpacity(0.1),
+                  color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
                   blurRadius: 10,
                   offset: const Offset(0, 4),
                 ),
@@ -243,7 +243,7 @@ class _LibraryPageState extends State<LibraryPage> with TickerProviderStateMixin
                   ),
                   child: Icon(
                     Icons.search_rounded,
-                    color: const Color(0xFF0466c8),
+                    color: Theme.of(context).colorScheme.primary,
                     size: screenWidth * 0.05,
                   ),
                 ),
@@ -290,7 +290,7 @@ class _LibraryPageState extends State<LibraryPage> with TickerProviderStateMixin
               ),
               style: TextStyle(
                 fontSize: screenWidth * 0.04,
-                color: const Color(0xFF0466c8),
+                color: Theme.of(context).colorScheme.primary,
               ),
               onChanged: (value) {
                 setState(() {
@@ -427,13 +427,13 @@ class _LibraryPageState extends State<LibraryPage> with TickerProviderStateMixin
           child: TabBar(
           controller: _tabController,
             indicator: BoxDecoration(
-              color: const Color(0xFF0466c8),
+              color: Theme.of(context).colorScheme.primary,
               borderRadius: BorderRadius.circular(12),
             ),
             indicatorSize: TabBarIndicatorSize.tab,
             dividerColor: Colors.transparent,
-            labelColor: Colors.white,
-            unselectedLabelColor: const Color(0xFF0466c8),
+            labelColor: Theme.of(context).colorScheme.onPrimary,
+            unselectedLabelColor: Theme.of(context).colorScheme.primary,
             labelStyle: TextStyle(
               fontSize: screenWidth * 0.035,
               fontWeight: FontWeight.w600,
@@ -536,7 +536,7 @@ class _LibraryPageState extends State<LibraryPage> with TickerProviderStateMixin
             Icon(
               Icons.error_outline_rounded,
               size: 64,
-              color: Colors.red.withOpacity(0.6),
+              color: Theme.of(context).colorScheme.error.withOpacity(0.6),
             ),
             const SizedBox(height: 16),
             Text(
@@ -555,7 +555,7 @@ class _LibraryPageState extends State<LibraryPage> with TickerProviderStateMixin
             Text(
               state.message,
               style: TextStyle(
-                color: Colors.red.withOpacity(0.8),
+                color: Theme.of(context).colorScheme.error.withOpacity(0.8),
                 fontSize: 14,
               ),
               textAlign: TextAlign.center,
@@ -570,7 +570,7 @@ class _LibraryPageState extends State<LibraryPage> with TickerProviderStateMixin
               )),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF0466c8),
-                foregroundColor: Colors.white,
+                foregroundColor: Theme.of(context).colorScheme.onPrimary,
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -779,7 +779,7 @@ class _LibraryPageState extends State<LibraryPage> with TickerProviderStateMixin
                   style: TextStyle(
                     fontSize: screenWidth * 0.05,
                 fontWeight: FontWeight.bold,
-                    color: const Color(0xFF0466c8),
+                    color: Theme.of(context).colorScheme.primary,
               ),
               textAlign: TextAlign.center,
             ),
@@ -809,7 +809,7 @@ class _LibraryPageState extends State<LibraryPage> with TickerProviderStateMixin
                   ),
               style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF0466c8),
-                    foregroundColor: Colors.white,
+                    foregroundColor: Theme.of(context).colorScheme.onPrimary,
                     padding: EdgeInsets.symmetric(
                       horizontal: screenWidth * 0.06,
                       vertical: screenWidth * 0.04,
@@ -948,19 +948,19 @@ class _LibraryPageState extends State<LibraryPage> with TickerProviderStateMixin
   Widget _buildLoadingCard() {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF0466c8).withOpacity(0.15),
+            color: Theme.of(context).colorScheme.primary.withOpacity(0.15),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
         ],
       ),
-      child: const Center(
+      child: Center(
         child: CircularProgressIndicator(
-          valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF0466c8)),
+          valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).colorScheme.primary),
         ),
       ),
     );
@@ -1044,7 +1044,7 @@ class _LibraryPageState extends State<LibraryPage> with TickerProviderStateMixin
                           child: Text(
                             (book['format'] ?? '').toString().toUpperCase(),
                             style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                              color: Colors.white,
+                              color: Theme.of(context).colorScheme.onPrimary,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
@@ -1054,7 +1054,7 @@ class _LibraryPageState extends State<LibraryPage> with TickerProviderStateMixin
                           Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(Icons.star, size: 14, color: Colors.amber),
+                              Icon(Icons.star, size: 14, color: Colors.amber),
                               const SizedBox(width: 2),
                               Text(
                                 double.tryParse(book['rating'].toString())?.toStringAsFixed(1) ?? '0.0',

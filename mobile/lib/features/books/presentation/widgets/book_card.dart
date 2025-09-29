@@ -166,7 +166,7 @@ class _BookCardState extends State<BookCard> with TickerProviderStateMixin {
               Text('Book added to library!'),
             ],
           ),
-          backgroundColor: const Color(0xFF1E3A8A),
+          backgroundColor: Theme.of(context).colorScheme.error,
           duration: const Duration(seconds: 2),
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(
@@ -214,7 +214,7 @@ class _BookCardState extends State<BookCard> with TickerProviderStateMixin {
               Text(widget.isFavorite ? 'Removed from favorites' : 'Added to favorites!'),
             ],
           ),
-          backgroundColor: const Color(0xFF0466c8),
+          backgroundColor: Theme.of(context).colorScheme.primary,
           duration: const Duration(seconds: 2),
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(
@@ -265,24 +265,24 @@ class _BookCardState extends State<BookCard> with TickerProviderStateMixin {
           ? const EdgeInsets.symmetric(vertical: 6)
           : EdgeInsets.only(right: widget.width != null ? 0 : screenWidth * 0.03), // No margin for grid layout, margin for horizontal scroll
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(widget.compact ? 12 : 20),
         boxShadow: widget.compact
             ? [
                 BoxShadow(
-                  color: const Color(0xFF1E3A8A).withOpacity(0.06),
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.06),
                   blurRadius: 6,
                   offset: const Offset(0, 2),
                 ),
               ]
             : [
                 BoxShadow(
-                  color: const Color(0xFF1E3A8A).withOpacity(0.15),
+                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.15),
                   blurRadius: 20,
                   offset: const Offset(0, 10),
                 ),
                 BoxShadow(
-                  color: const Color(0xFF1E3A8A).withOpacity(0.08),
+                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.08),
                   blurRadius: 8,
                   offset: const Offset(0, 4),
                 ),
@@ -301,13 +301,13 @@ class _BookCardState extends State<BookCard> with TickerProviderStateMixin {
                 height: widget.compact ? cardWidth * 0.35 : cardWidth * 0.8, // More compact cover in list mode
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.vertical(top: Radius.circular(widget.compact ? 12 : 20)),
-                  gradient: const LinearGradient(
+                  gradient: LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                     colors: [
-                      Color(0xFF1E3A8A), // Dark blue
-                      Color(0xFF3B82F6), // Medium blue
-                      Color(0xFF60A5FA), // Light blue
+                      Theme.of(context).colorScheme.primary, // Primary color
+                      Theme.of(context).colorScheme.secondary, // Secondary color
+                      Theme.of(context).colorScheme.primary.withOpacity(0.7), // Light primary
                     ],
                     stops: [0.0, 0.5, 1.0],
                   ),
@@ -342,7 +342,7 @@ class _BookCardState extends State<BookCard> with TickerProviderStateMixin {
                       end: Alignment.bottomCenter,
                       colors: [
                         Colors.transparent,
-                        Colors.black.withOpacity(0.7),
+                        Theme.of(context).shadowColor.withOpacity(0.7),
                       ],
                       stops: const [0.0, 1.0],
                     ),
@@ -351,7 +351,7 @@ class _BookCardState extends State<BookCard> with TickerProviderStateMixin {
                   child: Text(
                     widget.book.title,
                     style: TextStyle(
-                      color: Colors.white,
+                      color: Theme.of(context).colorScheme.onSurface,
                       fontSize: _getResponsiveFontSize(cardWidth, widget.compact ? 0.055 : 0.075),
                       fontWeight: FontWeight.bold,
                       height: 1.2,
@@ -359,7 +359,7 @@ class _BookCardState extends State<BookCard> with TickerProviderStateMixin {
                         Shadow(
                           offset: const Offset(0, 1),
                           blurRadius: 3,
-                          color: Colors.black,
+                          color: Theme.of(context).shadowColor,
                         ),
                       ],
                     ),
@@ -391,7 +391,7 @@ class _BookCardState extends State<BookCard> with TickerProviderStateMixin {
                   style: TextStyle(
                     fontSize: _getResponsiveFontSize(cardWidth, widget.compact ? 0.06 : 0.07), // Smaller font
                     fontWeight: FontWeight.bold,
-                    color: const Color(0xFF1E3A8A),
+                    color: Theme.of(context).colorScheme.onSurface,
                     height: 1.1, // Tighter line height
                   ),
                   maxLines: 1, // Single line to save space
@@ -405,7 +405,7 @@ class _BookCardState extends State<BookCard> with TickerProviderStateMixin {
                   Text(
                     widget.book.authors!,
                     style: TextStyle(
-                      color: const Color(0xFF3B82F6),
+                      color: Theme.of(context).colorScheme.primary,
                       fontSize: _getResponsiveFontSize(cardWidth, widget.compact ? 0.05 : 0.06),
                       fontWeight: FontWeight.w500,
                       height: 1.1, // Proper line height
@@ -429,11 +429,11 @@ class _BookCardState extends State<BookCard> with TickerProviderStateMixin {
                           vertical: cardWidth * 0.005, // Further reduced padding for grid layout
                         ),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF1E3A8A),
+                          color: Theme.of(context).colorScheme.primary,
                           borderRadius: BorderRadius.circular(cardWidth * 0.08),
                           boxShadow: [
                             BoxShadow(
-                              color: const Color(0xFF1E3A8A).withOpacity(0.3),
+                              color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
                               blurRadius: 6,
                               offset: const Offset(0, 2),
                             ),
@@ -445,14 +445,14 @@ class _BookCardState extends State<BookCard> with TickerProviderStateMixin {
                             Icon(
                               Icons.access_time_rounded,
                               size: _getResponsiveFontSize(cardWidth, widget.compact ? 0.05 : 0.06),
-                              color: Colors.white,
+                              color: Theme.of(context).colorScheme.onPrimary,
                             ),
                             SizedBox(width: cardWidth * (widget.compact ? 0.015 : 0.02)),
                             Flexible(
                               child: Text(
                                 _formatDuration(widget.book.duration),
                                 style: TextStyle(
-                                  color: Colors.white,
+                                  color: Theme.of(context).colorScheme.onPrimary,
                                   fontSize: _getResponsiveFontSize(cardWidth, widget.compact ? 0.045 : 0.05),
                                   fontWeight: FontWeight.w600,
                                 ),
@@ -475,10 +475,10 @@ class _BookCardState extends State<BookCard> with TickerProviderStateMixin {
                           vertical: cardWidth * 0.005, // Further reduced padding for grid layout
                         ),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF1E3A8A).withOpacity(0.1),
+                          color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(cardWidth * 0.08),
                           border: Border.all(
-                            color: const Color(0xFF1E3A8A),
+                            color: Theme.of(context).colorScheme.primary,
                             width: 1.0,
                           ),
                         ),
@@ -488,14 +488,14 @@ class _BookCardState extends State<BookCard> with TickerProviderStateMixin {
                             Icon(
                               Icons.star_rounded,
                               size: _getResponsiveFontSize(cardWidth, widget.compact ? 0.05 : 0.06),
-                              color: const Color(0xFF1E3A8A),
+                              color: Theme.of(context).colorScheme.primary,
                             ),
                             SizedBox(width: cardWidth * (widget.compact ? 0.015 : 0.02)),
                             Flexible(
                               child: Text(
                                 (widget.book.rating ?? 0.0).toStringAsFixed(1),
                                 style: TextStyle(
-                                  color: const Color(0xFF1E3A8A),
+                                  color: Theme.of(context).colorScheme.primary,
                                   fontSize: _getResponsiveFontSize(cardWidth, widget.compact ? 0.045 : 0.05),
                                   fontWeight: FontWeight.bold,
                                 ),
@@ -557,11 +557,11 @@ class _BookCardState extends State<BookCard> with TickerProviderStateMixin {
       width: cardWidth,
       margin: const EdgeInsets.symmetric(vertical: 6),
       decoration: BoxDecoration(
-        color: widget.backgroundColor ?? Colors.white,
+        color: widget.backgroundColor ?? Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF1E3A8A).withOpacity(0.06),
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.06),
             blurRadius: 6,
             offset: const Offset(0, 2),
           ),
@@ -577,7 +577,7 @@ class _BookCardState extends State<BookCard> with TickerProviderStateMixin {
               child: Container(
                 width: 72,
                 height: 96,
-                color: const Color(0xFFE5E7EB),
+                color: Theme.of(context).colorScheme.surface,
                 child: widget.book.coverImageUrl != null
                     ? CachedNetworkImage(
                         imageUrl: _buildFullImageUrl(widget.book.coverImageUrl!),
@@ -602,7 +602,7 @@ class _BookCardState extends State<BookCard> with TickerProviderStateMixin {
                     style: TextStyle(
                       fontSize: _getResponsiveFontSize(cardWidth, 0.06),
                       fontWeight: FontWeight.w700,
-                      color: const Color(0xFF1E3A8A),
+                            color: Theme.of(context).colorScheme.primary,
                       height: 1.15,
                     ),
                     maxLines: 2,
@@ -613,7 +613,7 @@ class _BookCardState extends State<BookCard> with TickerProviderStateMixin {
                     Text(
                       widget.book.authors!,
                       style: TextStyle(
-                        color: const Color(0xFF3B82F6),
+                        color: Theme.of(context).colorScheme.primary,
                         fontSize: _getResponsiveFontSize(cardWidth, 0.05),
                         fontWeight: FontWeight.w500,
                         height: 1.1,
@@ -627,18 +627,18 @@ class _BookCardState extends State<BookCard> with TickerProviderStateMixin {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF1E3A8A),
+                          color: Theme.of(context).colorScheme.primary,
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(Icons.access_time_rounded, size: 12, color: Colors.white),
+                            Icon(Icons.access_time_rounded, size: 12, color: Theme.of(context).colorScheme.onPrimary),
                             const SizedBox(width: 4),
                             Text(
                               _formatDuration(widget.book.duration),
-                              style: const TextStyle(
-                                color: Colors.white,
+                              style: TextStyle(
+                                color: Theme.of(context).colorScheme.onPrimary,
                                 fontSize: 12,
                                 fontWeight: FontWeight.w600,
                               ),
@@ -650,19 +650,19 @@ class _BookCardState extends State<BookCard> with TickerProviderStateMixin {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF1E3A8A).withOpacity(0.1),
+                          color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: const Color(0xFF1E3A8A), width: 1),
+                          border: Border.all(color: Theme.of(context).colorScheme.primary, width: 1),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(Icons.star_rounded, size: 12, color: Color(0xFF1E3A8A)),
+                            Icon(Icons.star_rounded, size: 12, color: Theme.of(context).colorScheme.primary),
                             const SizedBox(width: 4),
                             Text(
                               (widget.book.rating ?? 0.0).toStringAsFixed(1),
-                              style: const TextStyle(
-                                color: Color(0xFF1E3A8A),
+                              style: TextStyle(
+                                color: Theme.of(context).colorScheme.primary,
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold,
                               ),
@@ -683,15 +683,15 @@ class _BookCardState extends State<BookCard> with TickerProviderStateMixin {
 
   Widget _buildGradientBackground(double cardWidth) {
     return Container(
-      decoration: const BoxDecoration(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      decoration: BoxDecoration(
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            Color(0xFF1E3A8A),
-            Color(0xFF3B82F6),
-            Color(0xFF60A5FA),
+            Theme.of(context).colorScheme.primary,
+            Theme.of(context).colorScheme.secondary,
+            Theme.of(context).colorScheme.primary.withOpacity(0.7),
           ],
           stops: [0.0, 0.5, 1.0],
         ),

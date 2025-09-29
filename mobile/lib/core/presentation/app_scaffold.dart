@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import 'package:teekoob/core/services/localization_service.dart';
+import 'package:teekoob/core/services/language_service.dart';
 import 'package:teekoob/core/services/navigation_service.dart';
 import 'package:teekoob/features/home/presentation/pages/home_page.dart';
 import 'package:teekoob/features/books/presentation/pages/books_page.dart';
@@ -43,17 +45,19 @@ class _AppScaffoldState extends State<AppScaffold> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: IndexedStack(
-        index: _currentIndex,
-        children: _pages,
-      ),
-      bottomNavigationBar: Container(
+    return Consumer<LanguageService>(
+      builder: (context, languageService, child) {
+        return Scaffold(
+          body: IndexedStack(
+            index: _currentIndex,
+            children: _pages,
+          ),
+          bottomNavigationBar: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).colorScheme.surface,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
+              color: Theme.of(context).shadowColor.withOpacity(0.1),
               blurRadius: 8,
               offset: const Offset(0, -2),
             ),
@@ -74,9 +78,9 @@ class _AppScaffoldState extends State<AppScaffold> {
             final route = NavigationService.getRouteForTab(index);
             context.go(route);
           },
-          backgroundColor: Colors.white,
-          selectedItemColor: const Color(0xFF0466c8),
-          unselectedItemColor: Colors.grey.shade600,
+          backgroundColor: Theme.of(context).colorScheme.surface,
+          selectedItemColor: Theme.of(context).colorScheme.primary,
+          unselectedItemColor: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
           selectedLabelStyle: const TextStyle(
             fontWeight: FontWeight.w600,
             fontSize: 12,
@@ -89,34 +93,44 @@ class _AppScaffoldState extends State<AppScaffold> {
             BottomNavigationBarItem(
               icon: Icon(
                 Icons.home,
-                color: _currentIndex == 0 ? const Color(0xFF0466c8) : Colors.grey.shade600,
+                color: _currentIndex == 0 
+                    ? Theme.of(context).colorScheme.primary 
+                    : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
               ),
-              label: 'Home',
+              label: LocalizationService.getHomeText,
             ),
             BottomNavigationBarItem(
               icon: Icon(
                 Icons.explore,
-                color: _currentIndex == 1 ? const Color(0xFF0466c8) : Colors.grey.shade600,
+                color: _currentIndex == 1 
+                    ? Theme.of(context).colorScheme.primary 
+                    : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
               ),
-              label: 'Explore',
+              label: LocalizationService.getBooksText,
             ),
             BottomNavigationBarItem(
               icon: Icon(
                 Icons.library_books,
-                color: _currentIndex == 2 ? const Color(0xFF0466c8) : Colors.grey.shade600,
+                color: _currentIndex == 2 
+                    ? Theme.of(context).colorScheme.primary 
+                    : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
               ),
-              label: 'Library',
+              label: LocalizationService.getLibraryText,
             ),
             BottomNavigationBarItem(
               icon: Icon(
                 Icons.person,
-                color: _currentIndex == 3 ? const Color(0xFF0466c8) : Colors.grey.shade600,
+                color: _currentIndex == 3 
+                    ? Theme.of(context).colorScheme.primary 
+                    : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
               ),
-              label: 'Profile',
+              label: LocalizationService.getProfileText,
             ),
           ],
         ),
       ),
+    );
+      },
     );
   }
 }

@@ -84,10 +84,10 @@ class _BookFiltersState extends State<BookFilters> {
                         englishText: 'Filters & Sort',
                         somaliText: 'Shaandhaynta & Habka',
                       ),
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFF1E3A8A),
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
                     ),
                   ),
@@ -98,9 +98,9 @@ class _BookFiltersState extends State<BookFilters> {
                     ),
                     child: IconButton(
                       onPressed: () => Navigator.of(context).pop(),
-                      icon: const Icon(
+                      icon: Icon(
                         Icons.close,
-                        color: Color(0xFF1E3A8A),
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
                     ),
                   ),
@@ -168,16 +168,16 @@ class _BookFiltersState extends State<BookFilters> {
                       },
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 16),
-                        side: const BorderSide(color: Color(0xFF1E3A8A)),
+                        side: BorderSide(color: Theme.of(context).colorScheme.outline),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
                       child: Text(
                         LocalizationService.getClearText,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 16,
-                          color: Color(0xFF1E3A8A),
+                          color: Theme.of(context).colorScheme.onSurface,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -195,7 +195,7 @@ class _BookFiltersState extends State<BookFilters> {
                         );
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF0466c8),
+                        backgroundColor: Theme.of(context).colorScheme.primary,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(
@@ -205,7 +205,7 @@ class _BookFiltersState extends State<BookFilters> {
                       ),
                       child: Text(
                         LocalizationService.getApplyText,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
                         ),
@@ -230,10 +230,10 @@ class _BookFiltersState extends State<BookFilters> {
       children: [
         Text(
           title,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w600,
-            color: Color(0xFF1E3A8A),
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
         const SizedBox(height: 12),
@@ -244,11 +244,11 @@ class _BookFiltersState extends State<BookFilters> {
 
   Widget _buildCategoryFilter() {
     if (_isLoadingCategories) {
-      return const Center(
+      return Center(
         child: Padding(
-          padding: EdgeInsets.all(20),
+          padding: const EdgeInsets.all(20),
           child: CircularProgressIndicator(
-            valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF0466c8)),
+            valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).colorScheme.primary),
           ),
         ),
       );
@@ -326,15 +326,15 @@ class _BookFiltersState extends State<BookFilters> {
         constraints: BoxConstraints(maxWidth: maxWidth),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF0466c8) : Colors.grey[100],
+          color: isSelected ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: isSelected ? const Color(0xFF0466c8) : Colors.grey[300]!,
+            color: isSelected ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.outline,
             width: 1.5,
           ),
           boxShadow: isSelected ? [
             BoxShadow(
-              color: const Color(0xFF0466c8).withOpacity(0.3),
+              color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -441,8 +441,8 @@ class _BookFiltersState extends State<BookFilters> {
               contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             ),
             dropdownColor: Colors.white,
-            style: const TextStyle(
-              color: Color(0xFF1E3A8A),
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurface,
               fontSize: 16,
             ),
             items: [
@@ -497,8 +497,8 @@ class _BookFiltersState extends State<BookFilters> {
               contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             ),
             dropdownColor: Colors.white,
-            style: const TextStyle(
-              color: Color(0xFF1E3A8A),
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurface,
               fontSize: 16,
             ),
             items: [

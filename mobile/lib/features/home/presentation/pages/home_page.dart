@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:teekoob/core/services/localization_service.dart';
 import 'package:teekoob/features/books/bloc/books_bloc.dart';
 import 'package:teekoob/features/books/presentation/widgets/book_card.dart';
 import 'package:teekoob/core/models/book_model.dart';
@@ -176,7 +177,7 @@ class _HomePageState extends State<HomePage> {
         }
       },
       child: Scaffold(
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).colorScheme.background,
         body: SafeArea(
           child: Column(
             children: [
@@ -209,19 +210,19 @@ class _HomePageState extends State<HomePage> {
 
   Widget _buildHeader() {
     return Container(
-      color: const Color(0xFF0466c8), // Blue
+      color: Theme.of(context).colorScheme.primary,
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       child: Row(
         children: [
           // Title (centered)
           Expanded(
             child: Text(
-              'Home',
+              LocalizationService.getHomeText,
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
-                color: Colors.white,
+                color: Theme.of(context).colorScheme.onPrimary,
               ),
             ),
           ),
@@ -230,13 +231,13 @@ class _HomePageState extends State<HomePage> {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.surface,
               borderRadius: BorderRadius.circular(20),
             ),
             child: Icon(
               Icons.notifications_none,
               size: 20,
-              color: const Color(0xFF0466c8),
+              color: Theme.of(context).colorScheme.onPrimary,
             ),
           ),
         ],
@@ -252,12 +253,12 @@ class _HomePageState extends State<HomePage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Filter by Category',
+          Text(
+            LocalizationService.getFilterByCategoryText,
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: Color(0xFF1E3A8A),
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
           const SizedBox(height: 12),
@@ -273,7 +274,7 @@ class _HomePageState extends State<HomePage> {
                   Padding(
                     padding: const EdgeInsets.only(right: 12),
                     child: _buildCategoryChip(
-                      'All Categories',
+                      LocalizationService.getAllCategoriesText,
                       null,
                       0,
                       _selectedCategoryIds.isEmpty,
@@ -297,10 +298,10 @@ class _HomePageState extends State<HomePage> {
               ),
             )
           else
-            const Text(
-              'No categories available',
+            Text(
+              LocalizationService.getNoCategoriesAvailableText,
               style: TextStyle(
-                color: Colors.grey,
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                 fontSize: 14,
               ),
             ),
@@ -312,22 +313,22 @@ class _HomePageState extends State<HomePage> {
   Widget _buildCategoryChip(String label, String? categoryId, int count, bool isSelected, [String? color]) {
     final chipColor = color != null 
         ? Color(int.parse(color.replaceAll('#', '0xFF')))
-        : const Color(0xFF1E3A8A);
+        : Theme.of(context).colorScheme.primary;
     
     return GestureDetector(
       onTap: () => _filterBooksByCategory(categoryId),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(
-          color: isSelected ? chipColor : Colors.grey.shade100,
+          color: isSelected ? chipColor : Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: isSelected ? chipColor : Colors.grey.shade300,
+            color: isSelected ? chipColor : Theme.of(context).colorScheme.outline,
             width: 1.5,
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Theme.of(context).shadowColor.withOpacity(0.05),
               blurRadius: 4,
               offset: const Offset(0, 2),
             ),
@@ -339,7 +340,7 @@ class _HomePageState extends State<HomePage> {
             Text(
               label,
               style: TextStyle(
-                color: isSelected ? Colors.white : Colors.black87,
+                color: isSelected ? Colors.white : Theme.of(context).colorScheme.onSurface,
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
               ),
@@ -349,13 +350,13 @@ class _HomePageState extends State<HomePage> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: isSelected ? Colors.white : Colors.grey.shade200,
+                  color: isSelected ? Colors.white : Theme.of(context).colorScheme.surface,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
                   count.toString(),
                   style: TextStyle(
-                    color: isSelected ? Colors.black87 : Colors.grey.shade600,
+                    color: isSelected ? Colors.black87 : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
                   ),
@@ -376,7 +377,7 @@ class _HomePageState extends State<HomePage> {
           height: 40,
           width: 100,
           decoration: BoxDecoration(
-            color: Colors.grey.shade300,
+            color: Theme.of(context).colorScheme.surface,
             borderRadius: BorderRadius.circular(12),
           ),
         ),
@@ -391,12 +392,12 @@ class _HomePageState extends State<HomePage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Section Title
-          const Text(
-            'Featured Book',
+          Text(
+            LocalizationService.getFeaturedBookText,
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
-              color: Colors.black87,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
           const SizedBox(height: 16),
@@ -431,7 +432,7 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
           ] else ...[
-            _buildEmptyState('No featured book available'),
+            _buildEmptyState(LocalizationService.getNoFeaturedBookAvailableText),
           ],
         ],
       ),
@@ -444,9 +445,9 @@ class _HomePageState extends State<HomePage> {
     if (_isLoadingRecentBooks)
       return _buildLoadingHorizontalScroll();
     else if (_recentBooks.isNotEmpty)
-      return _buildBooksHorizontalScroll(_recentBooks, 'Recent Books');
+      return _buildBooksHorizontalScroll(_recentBooks, LocalizationService.getRecentBooksText);
     else
-      return _buildEmptyState('No recent books available');
+      return _buildEmptyState(LocalizationService.getNoRecentBooksAvailableText);
   }
 
   Widget _buildNewReleasesSection() {
@@ -455,9 +456,9 @@ class _HomePageState extends State<HomePage> {
     if (_isLoadingNewReleases)
       return _buildLoadingHorizontalScroll();
     else if (_newReleases.isNotEmpty)
-      return _buildBooksHorizontalScroll(_newReleases, 'New Releases');
+      return _buildBooksHorizontalScroll(_newReleases, LocalizationService.getNewReleasesText);
     else
-      return _buildEmptyState('No new releases available');
+      return _buildEmptyState(LocalizationService.getNoNewReleasesAvailableText);
   }
 
   Widget _buildRecommendedBooksSection() {
@@ -470,22 +471,22 @@ class _HomePageState extends State<HomePage> {
     if (_isLoadingRandomBooks)
       return _buildLoadingHorizontalScroll();
     else if (_randomBooks.isNotEmpty)
-      return _buildBooksHorizontalScroll(_randomBooks, 'Recommended Books');
+      return _buildBooksHorizontalScroll(_randomBooks, LocalizationService.getRecommendedBooksText);
     else
-      return _buildEmptyState('No recommended books available');
+      return _buildEmptyState(LocalizationService.getNoRecommendedBooksAvailableText);
   }
 
   Widget _buildEmptyState(String message) {
     // Determine section title and route based on message
-    String sectionTitle = 'Recent Books';
-    String route = '/all-books/recent/Recent Books';
+    String sectionTitle = LocalizationService.getRecentBooksText;
+    String route = '/all-books/recent/${LocalizationService.getRecentBooksText}';
     
-    if (message.contains('new releases')) {
-      sectionTitle = 'New Releases';
-      route = '/all-books/new-releases/New Releases';
-    } else if (message.contains('recommended')) {
-      sectionTitle = 'Recommended Books';
-      route = '/all-books/recommended/Recommended Books';
+    if (message.contains('new releases') || message.contains('soo saarid')) {
+      sectionTitle = LocalizationService.getNewReleasesText;
+      route = '/all-books/new-releases/${LocalizationService.getNewReleasesText}';
+    } else if (message.contains('recommended') || message.contains('la soo jeediyay')) {
+      sectionTitle = LocalizationService.getRecommendedBooksText;
+      route = '/all-books/recommended/${LocalizationService.getRecommendedBooksText}';
     }
     
     return Column(
@@ -499,10 +500,10 @@ class _HomePageState extends State<HomePage> {
             children: [
               Text(
                 sectionTitle,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
-                  color: Colors.black87,
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
               TextButton(
@@ -510,7 +511,7 @@ class _HomePageState extends State<HomePage> {
                   context.go(route);
                 },
                 child: Text(
-                  'View All',
+                  LocalizationService.getViewAllText,
                   style: TextStyle(
                     color: Theme.of(context).primaryColor,
                     fontWeight: FontWeight.w600,
@@ -526,9 +527,9 @@ class _HomePageState extends State<HomePage> {
           height: _getResponsiveHorizontalCardHeight() + 20, // Use responsive height
           margin: const EdgeInsets.symmetric(horizontal: 20),
           decoration: BoxDecoration(
-            color: Colors.grey.shade100,
+            color: Theme.of(context).colorScheme.surface,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.grey.shade300),
+            border: Border.all(color: Theme.of(context).colorScheme.outline),
           ),
           child: Center(
             child: Column(
@@ -537,14 +538,14 @@ class _HomePageState extends State<HomePage> {
                 Icon(
                   Icons.book_outlined,
                   size: 48,
-                  color: Colors.grey.shade400,
+                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
                 ),
                 const SizedBox(height: 16),
                 Text(
                   message,
                   style: TextStyle(
                     fontSize: 16,
-                    color: Colors.grey.shade600,
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -625,24 +626,24 @@ class _HomePageState extends State<HomePage> {
             children: [
               Text(
                 sectionTitle,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
-                  color: Colors.black87,
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
               TextButton(
                 onPressed: () {
-                  if (sectionTitle == 'Recent Books') {
-                    context.go('/all-books/recent/Recent Books');
-                  } else if (sectionTitle == 'New Releases') {
-                    context.go('/all-books/new-releases/New Releases');
-                  } else if (sectionTitle == 'Recommended Books') {
-                    context.go('/all-books/recommended/Recommended Books');
+                  if (sectionTitle == LocalizationService.getRecentBooksText) {
+                    context.go('/all-books/recent/${LocalizationService.getRecentBooksText}');
+                  } else if (sectionTitle == LocalizationService.getNewReleasesText) {
+                    context.go('/all-books/new-releases/${LocalizationService.getNewReleasesText}');
+                  } else if (sectionTitle == LocalizationService.getRecommendedBooksText) {
+                    context.go('/all-books/recommended/${LocalizationService.getRecommendedBooksText}');
                   }
                 },
                 child: Text(
-                  'View All',
+                  LocalizationService.getViewAllText,
                   style: TextStyle(
                     color: Theme.of(context).primaryColor,
                     fontWeight: FontWeight.w600,
@@ -711,10 +712,10 @@ class _HomePageState extends State<HomePage> {
               child: Container(
                 margin: EdgeInsets.only(right: index < 2 ? 12 : 0),
                 height: 160,
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
-                  borderRadius: BorderRadius.circular(12),
-                ),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surface,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
               ),
             ),
           ),
@@ -726,10 +727,10 @@ class _HomePageState extends State<HomePage> {
               child: Container(
                 margin: EdgeInsets.only(right: index < 2 ? 12 : 0),
                 height: 160,
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
-                  borderRadius: BorderRadius.circular(12),
-                ),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surface,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
               ),
             ),
           ),
@@ -749,10 +750,10 @@ class _HomePageState extends State<HomePage> {
             margin: EdgeInsets.only(right: index < 4 ? 16 : 0),
             width: _getResponsiveHorizontalCardWidth() * 0.8, // Responsive width (80% of card width)
             height: _getResponsiveHorizontalCardHeight(), // Responsive height
-            decoration: BoxDecoration(
-              color: Colors.grey.shade300,
-              borderRadius: BorderRadius.circular(12),
-            ),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surface,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
           );
         },
       ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
+import 'package:teekoob/features/auth/bloc/auth_bloc.dart';
 // import 'package:shared_preferences/shared_preferences.dart'; // Removed - no local storage
 
 // Events
@@ -20,6 +21,15 @@ class ChangeTheme extends ThemeEvent {
 
   @override
   List<Object?> get props => [theme];
+}
+
+class LoadUserTheme extends ThemeEvent {
+  final String themePreference;
+
+  const LoadUserTheme(this.themePreference);
+
+  @override
+  List<Object?> get props => [themePreference];
 }
 
 // States
@@ -49,9 +59,10 @@ class ThemeLoaded extends ThemeState {
 class ThemeBloc extends Bloc<ThemeEvent, ThemeState> {
   static const String _themeKey = 'app_theme';
 
-  ThemeBloc() : super(ThemeInitial()) {
+  ThemeBloc() : super(const ThemeLoaded(themeMode: ThemeMode.system, themeString: 'system')) {
     on<LoadTheme>(_onLoadTheme);
     on<ChangeTheme>(_onChangeTheme);
+    on<LoadUserTheme>(_onLoadUserTheme);
   }
 
   Future<void> _onLoadTheme(LoadTheme event, Emitter<ThemeState> emit) async {
@@ -112,6 +123,37 @@ class ThemeBloc extends Bloc<ThemeEvent, ThemeState> {
       emit(ThemeLoaded(
         themeMode: themeMode,
         themeString: event.theme,
+      ));
+      print('🎨 ThemeBloc: Emitted ThemeLoaded with mode: $themeMode, string: ${event.theme}');
+    } catch (e) {
+      // If there's an error, keep the current state
+      if (state is ThemeLoaded) {
+        emit(state);
+      }
+    }
+  }
+
+  Future<void> _onLoadUserTheme(LoadUserTheme event, Emitter<ThemeState> emit) async {
+    try {
+      final themeString = event.themePreference;
+      
+      ThemeMode themeMode;
+      switch (themeString) {
+        case 'light':
+          themeMode = ThemeMode.light;
+          break;
+        case 'dark':
+          themeMode = ThemeMode.dark;
+          break;
+        case 'system':
+        default:
+          themeMode = ThemeMode.system;
+          break;
+      }
+
+      emit(ThemeLoaded(
+        themeMode: themeMode,
+        themeString: themeString,
       ));
     } catch (e) {
       // If there's an error, keep the current state

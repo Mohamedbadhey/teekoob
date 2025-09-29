@@ -46,15 +46,15 @@ class _SearchBarState extends State<SearchBar> {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: const Color(0xFF1E3A8A).withOpacity(0.2),
+          color: Theme.of(context).colorScheme.outline.withOpacity(0.2),
           width: 2,
         ),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF1E3A8A).withOpacity(0.1),
+            color: Theme.of(context).shadowColor.withOpacity(0.1),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -77,12 +77,12 @@ class _SearchBarState extends State<SearchBar> {
             margin: const EdgeInsets.all(8),
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: const Color(0xFF0466c8).withOpacity(0.1),
+              color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(
               Icons.search,
-              color: const Color(0xFF0466c8),
+              color: Theme.of(context).colorScheme.primary,
               size: 20,
             ),
           ),
@@ -116,9 +116,9 @@ class _SearchBarState extends State<SearchBar> {
           ),
         ),
         textInputAction: TextInputAction.search,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 16,
-          color: Color(0xFF1E3A8A),
+          color: Theme.of(context).colorScheme.onSurface,
         ),
       ),
     );

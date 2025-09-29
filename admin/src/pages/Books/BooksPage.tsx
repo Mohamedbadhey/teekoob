@@ -73,7 +73,8 @@ import {
   deleteBook,
   createBook,
   updateBook,
-  getBookCategories
+  getBookCategories,
+  getBook
 } from '../../services/adminAPI';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
@@ -186,6 +187,7 @@ const BooksPage: React.FC = () => {
     is_premium: false,
     ebook_content: ''  // Initialize ebook content field
   });
+
 
   // File upload state
   const [uploadedFiles, setUploadedFiles] = useState<{
@@ -1134,25 +1136,53 @@ const BooksPage: React.FC = () => {
     setActiveStep(0);
   };
 
-  const handleEditBook = (book: Book) => {
-    setSelectedBook(book);
-    setFormData({
-      title: book.title,
-      title_somali: book.title_somali,
-      description: book.description,
-      description_somali: book.description_somali,
-      authors: book.authors,
-      authors_somali: book.authors_somali,
-      selectedCategories: book.categories || [],  // Use categories from book
-      language: book.language,
-      format: book.format,
-      duration: book.duration,
-      page_count: book.page_count,
-      is_featured: Boolean(book.is_featured),
-      is_new_release: Boolean(book.is_new_release),
-      is_premium: Boolean(book.is_premium),
-      ebook_content: book.ebook_content || ''
-    });
+  const handleEditBook = async (book: Book) => {
+    // Fetch the complete book data including ebook content
+    try {
+      const completeBookData = await getBook(book.id);
+      
+      setSelectedBook(completeBookData || book);
+      setFormData({
+        title: completeBookData?.title || book.title,
+        title_somali: completeBookData?.title_somali || book.title_somali,
+        description: completeBookData?.description || book.description,
+        description_somali: completeBookData?.description_somali || book.description_somali,
+        authors: completeBookData?.authors || book.authors,
+        authors_somali: completeBookData?.authors_somali || book.authors_somali,
+        selectedCategories: completeBookData?.categories || book.categories || [],
+        language: completeBookData?.language || book.language,
+        format: completeBookData?.format || book.format,
+        duration: completeBookData?.duration || book.duration,
+        page_count: completeBookData?.page_count || book.page_count,
+        is_featured: Boolean(completeBookData?.is_featured ?? book.is_featured),
+        is_new_release: Boolean(completeBookData?.is_new_release ?? book.is_new_release),
+        is_premium: Boolean(completeBookData?.is_premium ?? book.is_premium),
+        ebook_content: completeBookData?.ebook_content || book.ebook_content || ''
+      });
+      
+    } catch (error) {
+      console.error('Error fetching complete book data:', error);
+      // Fallback to using the book data from the list
+      setSelectedBook(book);
+      setFormData({
+        title: book.title,
+        title_somali: book.title_somali,
+        description: book.description,
+        description_somali: book.description_somali,
+        authors: book.authors,
+        authors_somali: book.authors_somali,
+        selectedCategories: book.categories || [],
+        language: book.language,
+        format: book.format,
+        duration: book.duration,
+        page_count: book.page_count,
+        is_featured: Boolean(book.is_featured),
+        is_new_release: Boolean(book.is_new_release),
+        is_premium: Boolean(book.is_premium),
+        ebook_content: book.ebook_content || ''
+      });
+    }
+    
     setShowBookDialog(true);
     setActiveStep(0);
   };

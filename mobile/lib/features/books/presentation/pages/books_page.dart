@@ -158,7 +158,7 @@ class _BooksPageState extends State<BooksPage> {
         }
       },
       child: Scaffold(
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).colorScheme.background,
         body: SafeArea(
           child: Column(
             children: [
@@ -221,13 +221,13 @@ class _BooksPageState extends State<BooksPage> {
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [
-                const Color(0xFF0466c8),
-                const Color(0xFFE55A1A),
+                Theme.of(context).colorScheme.primary,
+                Theme.of(context).colorScheme.secondary,
               ],
             ),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFF0466c8).withOpacity(0.3),
+                color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
                 blurRadius: 12,
                 offset: const Offset(0, 4),
               ),
@@ -247,22 +247,22 @@ class _BooksPageState extends State<BooksPage> {
                 Container(
                   padding: EdgeInsets.all(screenWidth * 0.02), // 2% of screen width
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
+                    color: Theme.of(context).colorScheme.surface.withOpacity(0.2),
                     borderRadius: BorderRadius.circular(screenWidth * 0.03), // 3% of screen width
                   ),
                   child: Icon(
                     Icons.explore_rounded,
-                    color: Colors.white,
+                    color: Theme.of(context).colorScheme.onPrimary,
                     size: screenWidth * 0.06, // 6% of screen width
                   ),
                 ),
                 SizedBox(width: screenWidth * 0.03), // 3% of screen width
                         Text(
-                  'Explore Books',
+                  LocalizationService.getExploreBooksText,
                   style: TextStyle(
                     fontSize: screenWidth * 0.055, // 5.5% of screen width
                     fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                    color: Theme.of(context).colorScheme.onPrimary,
                     letterSpacing: 0.5,
                   ),
                         ),
@@ -273,11 +273,11 @@ class _BooksPageState extends State<BooksPage> {
           // Filter button with badge
           Container(
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.surface,
               borderRadius: BorderRadius.circular(screenWidth * 0.04), // 4% of screen width
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
+                  color: Theme.of(context).shadowColor.withOpacity(0.1),
                   blurRadius: 8,
                   offset: const Offset(0, 2),
                 ),
@@ -289,7 +289,7 @@ class _BooksPageState extends State<BooksPage> {
                         Icon(
                     Icons.tune_rounded,
                     size: screenWidth * 0.06, // 6% of screen width
-                    color: const Color(0xFF0466c8),
+                    color: Theme.of(context).colorScheme.primary,
                   ),
                   if (_hasActiveFilters())
                     Positioned(
@@ -298,8 +298,8 @@ class _BooksPageState extends State<BooksPage> {
                       child: Container(
                         width: screenWidth * 0.02, // 2% of screen width
                         height: screenWidth * 0.02, // 2% of screen width
-                        decoration: const BoxDecoration(
-                          color: Color(0xFF1E3A8A),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.error,
                           shape: BoxShape.circle,
                         ),
                       ),
@@ -392,18 +392,18 @@ class _BooksPageState extends State<BooksPage> {
               ),
               borderRadius: BorderRadius.circular(20),
             ),
-            child: const Center(
+            child: Center(
               child: CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF0466c8)),
+                valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).colorScheme.primary),
                 strokeWidth: 3,
               ),
             ),
           ),
           const SizedBox(height: 24),
           Text(
-            'Discovering amazing books...',
+            LocalizationService.getDiscoveringBooksText,
             style: TextStyle(
-              color: const Color(0xFF1E3A8A),
+              color: Theme.of(context).colorScheme.onSurface,
               fontSize: 18,
               fontWeight: FontWeight.w600,
               letterSpacing: 0.3,
@@ -424,7 +424,7 @@ class _BooksPageState extends State<BooksPage> {
             width: 120,
             height: 120,
             decoration: BoxDecoration(
-              color: Colors.grey[100],
+              color: Theme.of(context).colorScheme.surface,
               borderRadius: BorderRadius.circular(60),
             ),
             child: Icon(
@@ -435,11 +435,11 @@ class _BooksPageState extends State<BooksPage> {
           ),
           const SizedBox(height: 24),
           Text(
-            'Oops! Something went wrong',
+            LocalizationService.getSomethingWentWrongText,
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: const Color(0xFF1E3A8A),
+              color: Theme.of(context).colorScheme.onSurface,
             ),
             textAlign: TextAlign.center,
           ),
@@ -447,7 +447,7 @@ class _BooksPageState extends State<BooksPage> {
           Text(
             state.message,
             style: TextStyle(
-              color: Colors.grey[600],
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
               fontSize: 14,
             ),
             textAlign: TextAlign.center,
@@ -456,10 +456,10 @@ class _BooksPageState extends State<BooksPage> {
           ElevatedButton.icon(
             onPressed: _loadInitialData,
             icon: const Icon(Icons.refresh),
-            label: const Text('Try Again'),
+            label: Text(LocalizationService.getTryAgainText),
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF0466c8),
-              foregroundColor: Colors.white,
+              foregroundColor: Theme.of(context).colorScheme.onPrimary,
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -505,20 +505,20 @@ class _BooksPageState extends State<BooksPage> {
             ),
             const SizedBox(height: 32),
             Text(
-              'Start Your Journey',
+              LocalizationService.getStartYourJourneyText,
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
-                color: const Color(0xFF1E3A8A),
+                color: Theme.of(context).colorScheme.onSurface,
                 letterSpacing: 0.5,
               ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 12),
             Text(
-              'Discover thousands of amazing books waiting for you. Use the search bar or filters to find your next favorite read.',
+              LocalizationService.getDiscoverBooksDescriptionText,
               style: TextStyle(
-                color: Colors.grey[600],
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                 fontSize: 16,
                 height: 1.5,
               ),
@@ -535,10 +535,10 @@ class _BooksPageState extends State<BooksPage> {
                     _loadBooksWithFilters();
                   },
                   icon: const Icon(Icons.refresh_rounded),
-                  label: const Text('Refresh'),
+                  label: Text(LocalizationService.getRefreshText),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF1E3A8A),
-                    foregroundColor: Colors.white,
+                    foregroundColor: Theme.of(context).colorScheme.onPrimary,
                     padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -549,7 +549,7 @@ class _BooksPageState extends State<BooksPage> {
                 OutlinedButton.icon(
                   onPressed: () => _showFiltersDialog(),
                   icon: const Icon(Icons.tune_rounded),
-                  label: const Text('Filter'),
+                  label: Text(LocalizationService.getFilterText),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: const Color(0xFF1E3A8A),
                     side: const BorderSide(color: Color(0xFF1E3A8A)),
@@ -607,7 +607,7 @@ class _BooksPageState extends State<BooksPage> {
                 ),
                 child: Icon(
                   Icons.search_rounded,
-                  color: const Color(0xFF1E3A8A),
+                  color: Theme.of(context).colorScheme.onSurface,
                   size: 24,
                 ),
               ),
@@ -632,7 +632,7 @@ class _BooksPageState extends State<BooksPage> {
                       '"${state.query}"',
                       style: TextStyle(
                         fontSize: 14,
-                        color: Colors.grey[600],
+                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                         fontStyle: FontStyle.italic,
                       ),
                     ),
@@ -647,8 +647,8 @@ class _BooksPageState extends State<BooksPage> {
                 ),
           child: Text(
                   '${state.books.length} found',
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onPrimary,
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
                   ),
@@ -692,7 +692,7 @@ class _BooksPageState extends State<BooksPage> {
                 label: Text(LocalizationService.getLoadMoreText),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF1E3A8A),
-                  foregroundColor: Colors.white,
+                  foregroundColor: Theme.of(context).colorScheme.onPrimary,
                   padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
@@ -723,49 +723,43 @@ class _BooksPageState extends State<BooksPage> {
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                     colors: [
-                      Colors.grey[100]!,
-                      Colors.grey[50]!,
+                      Theme.of(context).colorScheme.surface,
+                      Theme.of(context).colorScheme.background,
                     ],
                   ),
                   borderRadius: BorderRadius.circular(70),
                   border: Border.all(
-                    color: Colors.grey[200]!,
+                    color: Theme.of(context).colorScheme.outline,
                     width: 2,
                   ),
                 ),
                 child: Icon(
                   Icons.search_off_rounded,
                   size: 70,
-                  color: Colors.grey[400],
+                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
                 ),
               ),
               const SizedBox(height: 32),
             Text(
-              LocalizationService.getLocalizedText(
-                  englishText: 'No Books Found',
-                  somaliText: 'Kutubta Lama Helin',
-                ),
-                style: const TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF1E3A8A),
-                  letterSpacing: 0.5,
-                ),
-                textAlign: TextAlign.center,
+              LocalizationService.getNoBooksFoundText,
+              style: const TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF1E3A8A),
+                letterSpacing: 0.5,
               ),
+              textAlign: TextAlign.center,
+            ),
               const SizedBox(height: 12),
             Text(
-              LocalizationService.getLocalizedText(
-                  englishText: 'Try adjusting your search terms or filters to find what you\'re looking for.',
-                  somaliText: 'Isku day inaad beddesho raadinta ama shaandhaynta si aad u heshid waxa aad raadineysid.',
-                ),
-                style: TextStyle(
-                  color: Colors.grey[600],
-                  fontSize: 16,
-                  height: 1.5,
-                ),
-                textAlign: TextAlign.center,
+              LocalizationService.getTryAdjustingSearchText,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                fontSize: 16,
+                height: 1.5,
               ),
+              textAlign: TextAlign.center,
+            ),
               const SizedBox(height: 24),
               // Action buttons
               Row(
@@ -777,10 +771,10 @@ class _BooksPageState extends State<BooksPage> {
                       _loadBooksWithFilters();
                     },
                     icon: const Icon(Icons.refresh_rounded),
-                    label: const Text('Clear Search'),
+                    label: Text(LocalizationService.getClearSearchText),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF1E3A8A),
-                      foregroundColor: Colors.white,
+                      foregroundColor: Theme.of(context).colorScheme.onPrimary,
                       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -791,7 +785,7 @@ class _BooksPageState extends State<BooksPage> {
                   OutlinedButton.icon(
                     onPressed: () => _showFiltersDialog(),
                     icon: const Icon(Icons.tune_rounded),
-                    label: const Text('Adjust Filters'),
+                    label: Text(LocalizationService.getAdjustFiltersText),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: const Color(0xFF1E3A8A),
                       side: const BorderSide(color: Color(0xFF1E3A8A)),
@@ -869,9 +863,9 @@ class _BooksPageState extends State<BooksPage> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
         ),
         child: BookFilters(
         selectedCategories: _selectedCategories,
