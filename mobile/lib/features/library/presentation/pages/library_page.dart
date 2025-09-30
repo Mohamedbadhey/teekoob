@@ -15,9 +15,7 @@ class LibraryPage extends StatefulWidget {
   State<LibraryPage> createState() => _LibraryPageState();
 }
 
-class _LibraryPageState extends State<LibraryPage> with TickerProviderStateMixin {
-  late TabController _tabController;
-  int _currentTabIndex = 0;
+class _LibraryPageState extends State<LibraryPage> {
   final TextEditingController _searchController = TextEditingController();
   bool _isSearching = false;
   String _searchQuery = '';
@@ -26,12 +24,6 @@ class _LibraryPageState extends State<LibraryPage> with TickerProviderStateMixin
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
-    _tabController.addListener(() {
-      setState(() {
-        _currentTabIndex = _tabController.index;
-      });
-    });
     
     // Load library data
     _loadLibraryData();
@@ -39,7 +31,6 @@ class _LibraryPageState extends State<LibraryPage> with TickerProviderStateMixin
 
   @override
   void dispose() {
-    _tabController.dispose();
     _searchController.dispose();
     super.dispose();
   }
@@ -63,8 +54,6 @@ class _LibraryPageState extends State<LibraryPage> with TickerProviderStateMixin
           children: [
             _buildModernHeader(),
             _buildSearchSection(),
-            _buildStatsSection(),
-            _buildTabBar(),
             Expanded(
               child: BlocListener<LibraryBloc, LibraryState>(
                 listener: (context, state) {
@@ -84,21 +73,12 @@ class _LibraryPageState extends State<LibraryPage> with TickerProviderStateMixin
                   builder: (context, state) {
                     print('🔍 LibraryPage BlocBuilder: Current state = ${state.runtimeType}');
                     
-                    if (state is LibraryLoading) {
-                      print('📱 LibraryPage: Showing loading state');
-                      return _buildLoadingState();
-                    } else if (state is LibraryError) {
-                      print('❌ LibraryPage: Showing error state - ${state.message}');
-                      return _buildErrorState(state);
-                    } else if (state is LibrarySearchResults) {
+                    if (state is LibrarySearchResults) {
                       print('🔍 LibraryPage: Showing search results - ${state.results.length} results');
                       return _buildSearchResults(state);
-                    } else if (state is LibraryLoaded) {
-                      print('📚 LibraryPage: Showing library content - ${state.library.length} books');
-                      return _buildTabContent(state);
                     } else {
-                      print('⏳ LibraryPage: Initial/Unknown state, showing loading state');
-                      return _buildLoadingState();
+                      // Show premium offline message when not searching
+                      return _buildPremiumOfflineMessage();
                     }
                   },
                 ),
@@ -310,276 +290,104 @@ class _LibraryPageState extends State<LibraryPage> with TickerProviderStateMixin
     );
   }
 
-  Widget _buildStatsSection() {
-    return BlocBuilder<LibraryBloc, LibraryState>(
-      builder: (context, state) {
-        if (state is! LibraryLoaded) return const SizedBox.shrink();
-        
-        final stats = state.stats;
-        return LayoutBuilder(
-          builder: (context, constraints) {
-            final screenWidth = constraints.maxWidth;
-            return Container(
-              margin: EdgeInsets.symmetric(horizontal: screenWidth * 0.05),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: _buildStatCard(
-                      'Total Books',
-                      'Dhammaan Kutubta',
-                      stats['totalBooks']?.toString() ?? '0',
-                      Icons.library_books_rounded,
-                      const Color(0xFF0466c8),
-                      screenWidth,
-                    ),
-                  ),
-                  SizedBox(width: screenWidth * 0.03),
-                  Expanded(
-                    child: _buildStatCard(
-                      'Reading',
-                      'Akhrinta',
-                      stats['readingBooks']?.toString() ?? '0',
-                      Icons.menu_book_rounded,
-                      const Color(0xFF3B82F6),
-                      screenWidth,
-                    ),
-                  ),
-                  SizedBox(width: screenWidth * 0.03),
-                  Expanded(
-                    child: _buildStatCard(
-                      'Favorites',
-                      'Ku Xiisatay',
-                      stats['favoriteBooks']?.toString() ?? '0',
-                      Icons.favorite_rounded,
-                      const Color(0xFF0466c8),
-                      screenWidth,
-                    ),
-                  ),
-                ],
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
 
-  Widget _buildStatCard(String titleEn, String titleSo, String value, IconData icon, Color color, double screenWidth) {
-    return Container(
-      padding: EdgeInsets.all(screenWidth * 0.03),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: color.withOpacity(0.2),
-          width: 1,
-        ),
-      ),
-      child: Column(
-        children: [
-          Icon(
-            icon,
-            color: color,
-            size: screenWidth * 0.05,
-          ),
-          SizedBox(height: screenWidth * 0.02),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: screenWidth * 0.05,
-              fontWeight: FontWeight.bold,
-              color: color,
-            ),
-          ),
-          SizedBox(height: screenWidth * 0.01),
-          Text(
-            LocalizationService.getLocalizedText(
-              englishText: titleEn,
-              somaliText: titleSo,
-            ),
-            style: TextStyle(
-              fontSize: screenWidth * 0.03,
-              color: color.withOpacity(0.8),
-              fontWeight: FontWeight.w500,
-            ),
-            textAlign: TextAlign.center,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTabBar() {
+  Widget _buildPremiumOfflineMessage() {
     return LayoutBuilder(
       builder: (context, constraints) {
         final screenWidth = constraints.maxWidth;
-        return Container(
-          margin: EdgeInsets.symmetric(
-            horizontal: screenWidth * 0.05,
-            vertical: screenWidth * 0.03,
+        return Center(
+          child: Padding(
+            padding: EdgeInsets.all(screenWidth * 0.08),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  width: screenWidth * 0.3,
+                  height: screenWidth * 0.3,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        const Color(0xFF0466c8).withOpacity(0.1),
+                        const Color(0xFF3A7BD5).withOpacity(0.1),
+                        const Color(0xFF5A8BD8).withOpacity(0.1),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(screenWidth * 0.15),
+                    border: Border.all(
+                      color: const Color(0xFF0466c8).withOpacity(0.2),
+                      width: 2,
+                    ),
+                  ),
+                  child: Icon(
+                    Icons.offline_bolt_rounded,
+                    size: screenWidth * 0.15,
+                    color: const Color(0xFF0466c8).withOpacity(0.6),
+                  ),
+                ),
+                SizedBox(height: screenWidth * 0.06),
+                Text(
+                  LocalizationService.getLocalizedText(
+                    englishText: 'Premium Offline Access',
+                    somaliText: 'Helitaanka Premium Offline',
+                  ),
+                  style: TextStyle(
+                    fontSize: screenWidth * 0.05,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                SizedBox(height: screenWidth * 0.03),
+                Text(
+                  LocalizationService.getLocalizedText(
+                    englishText: 'As a premium user, you can download books for offline reading. Use the search above to find and download your favorite books.',
+                    somaliText: 'Sida isticmaale premium ah, waxaad ku soo dejisan kartaa kutubta si aad u akhrin offline. Isticmaal raadista kor ku yaalla si aad u hesho oo u soo dejiso kutubta aad jeceshahay.',
+                  ),
+                  style: TextStyle(
+                    fontSize: screenWidth * 0.04,
+                    color: const Color(0xFF0466c8).withOpacity(0.7),
+                    height: 1.4,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                SizedBox(height: screenWidth * 0.08),
+                ElevatedButton.icon(
+                  onPressed: () => context.go('/home/books'),
+                  icon: Icon(
+                    Icons.explore_rounded,
+                    size: screenWidth * 0.05,
+                  ),
+                  label: Text(
+                    LocalizationService.getLocalizedText(
+                      englishText: 'Browse Books',
+                      somaliText: 'Eeg Kutubta',
+                    ),
+                    style: TextStyle(
+                      fontSize: screenWidth * 0.04,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF0466c8),
+                    foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                    padding: EdgeInsets.symmetric(
+                      horizontal: screenWidth * 0.06,
+                      vertical: screenWidth * 0.04,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    elevation: 4,
+                    shadowColor: const Color(0xFF0466c8).withOpacity(0.3),
+                  ),
+                ),
+              ],
+            ),
           ),
-          decoration: BoxDecoration(
-            color: const Color(0xFF0466c8).withOpacity(0.05),
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: TabBar(
-          controller: _tabController,
-            indicator: BoxDecoration(
-              color: Theme.of(context).colorScheme.primary,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            indicatorSize: TabBarIndicatorSize.tab,
-            dividerColor: Colors.transparent,
-            labelColor: Theme.of(context).colorScheme.onPrimary,
-            unselectedLabelColor: Theme.of(context).colorScheme.primary,
-            labelStyle: TextStyle(
-              fontSize: screenWidth * 0.035,
-              fontWeight: FontWeight.w600,
-            ),
-            unselectedLabelStyle: TextStyle(
-              fontSize: screenWidth * 0.035,
-              fontWeight: FontWeight.w500,
-            ),
-          tabs: [
-            Tab(
-              icon: Icon(
-                  _currentTabIndex == 0 ? Icons.library_books_rounded : Icons.library_books_outlined,
-                  size: screenWidth * 0.05,
-              ),
-              text: LocalizationService.getLocalizedText(
-                  englishText: 'All',
-                  somaliText: 'Dhammaan',
-              ),
-            ),
-            Tab(
-              icon: Icon(
-                  _currentTabIndex == 1 ? Icons.headphones_rounded : Icons.headphones_outlined,
-                  size: screenWidth * 0.05,
-              ),
-              text: LocalizationService.getLocalizedText(
-                  englishText: 'Audio',
-                  somaliText: 'Codka',
-              ),
-            ),
-            Tab(
-              icon: Icon(
-                  _currentTabIndex == 2 ? Icons.favorite_rounded : Icons.favorite_border_rounded,
-                  size: screenWidth * 0.05,
-              ),
-              text: LocalizationService.getLocalizedText(
-                englishText: 'Favorites',
-                somaliText: 'Ku Xiisatay',
-              ),
-            ),
-            Tab(
-              icon: Icon(
-                  _currentTabIndex == 3 ? Icons.download_rounded : Icons.download_outlined,
-                  size: screenWidth * 0.05,
-              ),
-              text: LocalizationService.getLocalizedText(
-                englishText: 'Downloads',
-                somaliText: 'Soo Dejinta',
-              ),
-            ),
-          ],
-        ),
         );
       },
-    );
-  }
-
-  Widget _buildTabContent(LibraryLoaded state) {
-    return TabBarView(
-        controller: _tabController,
-      children: [
-        _buildAllBooksTab(state),
-        _buildAudiobooksTab(state),
-        _buildFavoritesTab(state),
-        _buildDownloadsTab(state),
-      ],
-    );
-  }
-
-  Widget _buildLoadingState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          CircularProgressIndicator(
-            valueColor: AlwaysStoppedAnimation<Color>(const Color(0xFF0466c8)),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            LocalizationService.getLocalizedText(
-              englishText: 'Loading your library...',
-              somaliText: 'Waxaan soo gelinaynaa maktabaddaada...',
-            ),
-            style: const TextStyle(
-              color: Color(0xFF0466c8),
-              fontSize: 16,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildErrorState(LibraryError state) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.error_outline_rounded,
-              size: 64,
-              color: Theme.of(context).colorScheme.error.withOpacity(0.6),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              LocalizationService.getLocalizedText(
-                englishText: 'Error loading library',
-                somaliText: 'Qalad ayaa ka dhacay maktabadda',
-              ),
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF0466c8),
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              state.message,
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.error.withOpacity(0.8),
-                fontSize: 14,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton.icon(
-              onPressed: _loadLibraryData,
-              icon: const Icon(Icons.refresh_rounded),
-              label: Text(LocalizationService.getLocalizedText(
-                englishText: 'Retry',
-                somaliText: 'Dib u day',
-              )),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF0466c8),
-                foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 
@@ -630,204 +438,6 @@ class _LibraryPageState extends State<LibraryPage> with TickerProviderStateMixin
     return _buildBooksGrid(state.results);
   }
 
-  Widget _buildAllBooksTab(LibraryLoaded state) {
-    if (state.library.isEmpty) {
-      return _buildEmptyState(
-        icon: Icons.library_books_rounded,
-        title: LocalizationService.getLocalizedText(
-          englishText: 'Your library is empty',
-          somaliText: 'Maktabaddaada waa madhan',
-        ),
-        subtitle: LocalizationService.getLocalizedText(
-          englishText: 'Start adding books to your library',
-          somaliText: 'Bilaabo inaad ku dartid kutubta maktabaddaada',
-        ),
-        actionText: LocalizationService.getLocalizedText(
-          englishText: 'Browse Books',
-          somaliText: 'Eeg Kutubta',
-        ),
-        onAction: () => context.go('/home/books'),
-      );
-    }
-
-    return _buildBooksGrid(state.library);
-  }
-
-  Widget _buildAudiobooksTab(LibraryLoaded state) {
-    final audiobooks = state.library.where((item) {
-      // Filter for audiobooks - you might need to adjust this based on your data structure
-      return item['format'] == 'audio' || item['isAudiobook'] == true;
-    }).toList();
-    
-    if (audiobooks.isEmpty) {
-      return _buildEmptyState(
-        icon: Icons.headphones_rounded,
-        title: LocalizationService.getLocalizedText(
-          englishText: 'No audiobooks yet',
-          somaliText: 'Kutubta codka ma jiraan',
-        ),
-        subtitle: LocalizationService.getLocalizedText(
-          englishText: 'Add audiobooks to start listening',
-          somaliText: 'Ku dar kutubta codka si aad u bilowdo inaad dhegayso',
-        ),
-        actionText: LocalizationService.getLocalizedText(
-          englishText: 'Find Audiobooks',
-          somaliText: 'Raadi Kutubta Codka',
-        ),
-        onAction: () => context.go('/home/books'),
-      );
-    }
-
-    return _buildBooksGrid(audiobooks);
-  }
-
-  Widget _buildFavoritesTab(LibraryLoaded state) {
-    if (state.favorites.isEmpty) {
-      return _buildEmptyState(
-        icon: Icons.favorite_rounded,
-        title: LocalizationService.getLocalizedText(
-          englishText: 'No favorites yet',
-          somaliText: 'Ku xiisatay ma jiraan',
-        ),
-        subtitle: LocalizationService.getLocalizedText(
-          englishText: 'Mark books as favorite to see them here',
-          somaliText: 'Ku calaamadee kutubta si aad u aragto halkan',
-        ),
-        actionText: LocalizationService.getLocalizedText(
-          englishText: 'Browse Books',
-          somaliText: 'Eeg Kutubta',
-        ),
-        onAction: () => context.go('/home/books'),
-      );
-    }
-
-    return _buildBooksGrid(state.favorites);
-  }
-
-  Widget _buildDownloadsTab(LibraryLoaded state) {
-    final downloads = state.library.where((item) {
-      // Filter for downloaded books - you might need to adjust this based on your data structure
-      return item['isDownloaded'] == true || item['status'] == 'downloaded';
-    }).toList();
-    
-    if (downloads.isEmpty) {
-      return _buildEmptyState(
-        icon: Icons.download_rounded,
-        title: LocalizationService.getLocalizedText(
-          englishText: 'No downloads yet',
-          somaliText: 'Soo dejinta ma jiraan',
-        ),
-        subtitle: LocalizationService.getLocalizedText(
-          englishText: 'Download books to read offline',
-          somaliText: 'Soo deji kutubta si aad u akhrin offline',
-        ),
-        actionText: LocalizationService.getLocalizedText(
-          englishText: 'Browse Books',
-          somaliText: 'Eeg Kutubta',
-        ),
-        onAction: () => context.go('/home/books'),
-      );
-    }
-
-    return _buildBooksGrid(downloads);
-  }
-
-  Widget _buildEmptyState({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required String actionText,
-    required VoidCallback onAction,
-  }) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final screenWidth = constraints.maxWidth;
-    return Center(
-      child: Padding(
-            padding: EdgeInsets.all(screenWidth * 0.08),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-                  width: screenWidth * 0.3,
-                  height: screenWidth * 0.3,
-              decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        const Color(0xFF0466c8).withOpacity(0.1),
-                        const Color(0xFF3A7BD5).withOpacity(0.1),
-                        const Color(0xFF5A8BD8).withOpacity(0.1),
-                      ],
-                    ),
-                    borderRadius: BorderRadius.circular(screenWidth * 0.15),
-                    border: Border.all(
-                      color: const Color(0xFF0466c8).withOpacity(0.2),
-                      width: 2,
-                    ),
-              ),
-              child: Icon(
-                icon,
-                    size: screenWidth * 0.15,
-                    color: const Color(0xFF0466c8).withOpacity(0.6),
-              ),
-            ),
-                SizedBox(height: screenWidth * 0.06),
-            Text(
-              title,
-                  style: TextStyle(
-                    fontSize: screenWidth * 0.05,
-                fontWeight: FontWeight.bold,
-                    color: Theme.of(context).colorScheme.primary,
-              ),
-              textAlign: TextAlign.center,
-            ),
-                SizedBox(height: screenWidth * 0.03),
-            Text(
-              subtitle,
-                  style: TextStyle(
-                    fontSize: screenWidth * 0.04,
-                    color: const Color(0xFF0466c8).withOpacity(0.7),
-                    height: 1.4,
-              ),
-              textAlign: TextAlign.center,
-            ),
-                SizedBox(height: screenWidth * 0.08),
-            ElevatedButton.icon(
-              onPressed: onAction,
-                  icon: Icon(
-                    Icons.explore_rounded,
-                    size: screenWidth * 0.05,
-                  ),
-                  label: Text(
-                    actionText,
-                    style: TextStyle(
-                      fontSize: screenWidth * 0.04,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-              style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF0466c8),
-                    foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                    padding: EdgeInsets.symmetric(
-                      horizontal: screenWidth * 0.06,
-                      vertical: screenWidth * 0.04,
-                    ),
-                shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                ),
-                    elevation: 4,
-                    shadowColor: const Color(0xFF0466c8).withOpacity(0.3),
-              ),
-            ),
-          ],
-        ),
-      ),
-        );
-      },
-    );
-  }
 
   Widget _buildBooksGrid(List<Map<String, dynamic>> books) {
     return LayoutBuilder(
@@ -873,7 +483,7 @@ class _LibraryPageState extends State<LibraryPage> with TickerProviderStateMixin
           mainAxisSpacing = 20;
         }
         
-    return GridView.builder(
+        return GridView.builder(
           padding: EdgeInsets.fromLTRB(
             screenWidth * 0.05, // 5% of screen width
             0, 
@@ -885,90 +495,20 @@ class _LibraryPageState extends State<LibraryPage> with TickerProviderStateMixin
             childAspectRatio: childAspectRatio,
             crossAxisSpacing: crossAxisSpacing,
             mainAxisSpacing: mainAxisSpacing,
-      ),
-      itemCount: books.length,
-      itemBuilder: (context, index) {
-        final item = books[index];
-            return _buildLibraryBookCard(item);
+          ),
+          itemCount: books.length,
+          itemBuilder: (context, index) {
+            final item = books[index];
+            return _buildSimpleBookCard(item);
           },
         );
       },
     );
   }
 
-  Widget _buildLibraryBookCard(Map<String, dynamic> libraryItem) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final screenWidth = constraints.maxWidth;
-        final screenHeight = MediaQuery.of(context).size.height;
-        
-        // Get book data from storage service first
-        final bookId = libraryItem['bookId'];
-        // Note: No local storage - cannot get book from storage
-        final localBook = null;
-        
-        if (localBook != null) {
-          // Book found in local storage, use it
-          return BookCard(
-            book: localBook,
-            onTap: () => context.go('/book/${localBook.id}'),
-            showLibraryActions: true,
-            isInLibrary: true,
-            isFavorite: libraryItem['isFavorite'] ?? false,
-            userId: _userId,
-          );
-        } else {
-          // Book not in local storage, fetch from database
-          return FutureBuilder<Book?>(
-            future: context.read<LibraryBloc>().fetchBookById(bookId),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return _buildLoadingCard();
-              } else if (snapshot.hasData && snapshot.data != null) {
-                final book = snapshot.data!;
-                return BookCard(
-                  book: book,
-                  onTap: () => context.go('/book/${book.id}'),
-                  showLibraryActions: true,
-                  isInLibrary: true,
-                  isFavorite: libraryItem['isFavorite'] ?? false,
-                  userId: _userId,
-                );
-              } else {
-                // Book not found, show fallback card
-                return _buildMapBookCard(libraryItem);
-              }
-            },
-          );
-        }
-      },
-    );
-  }
-
-  Widget _buildLoadingCard() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Theme.of(context).colorScheme.primary.withOpacity(0.15),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: Center(
-        child: CircularProgressIndicator(
-          valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).colorScheme.primary),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildMapBookCard(Map<String, dynamic> book) {
+  Widget _buildSimpleBookCard(Map<String, dynamic> book) {
     return GestureDetector(
-      onTap: () => context.go('/home/books/${book['id']}'),
+      onTap: () => context.go('/book/${book['bookId'] ?? book['id']}'),
       child: Container(
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.surface,
@@ -997,7 +537,11 @@ class _LibraryPageState extends State<LibraryPage> with TickerProviderStateMixin
                   ),
                   color: Theme.of(context).colorScheme.surfaceVariant,
                 ),
-                child: _buildMapPlaceholderCover(book),
+                child: Icon(
+                  Icons.book,
+                  size: 32,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.6),
+                ),
               ),
             ),
             Expanded(
@@ -1008,9 +552,7 @@ class _LibraryPageState extends State<LibraryPage> with TickerProviderStateMixin
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      (LocalizationService.currentLanguage == 'so' && (book['titleSomali'] ?? '').toString().isNotEmpty)
-                          ? (book['titleSomali'] ?? '').toString()
-                          : (book['title'] ?? '').toString(),
+                      book['title'] ?? 'Unknown Book',
                       style: Theme.of(context).textTheme.titleSmall?.copyWith(
                         fontWeight: FontWeight.w600,
                       ),
@@ -1018,20 +560,14 @@ class _LibraryPageState extends State<LibraryPage> with TickerProviderStateMixin
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 4),
-                    if ((book['authors'] is List && (book['authors'] as List).isNotEmpty) ||
-                        (book['authorsSomali'] is List && (book['authorsSomali'] as List).isNotEmpty))
-                      Text(
-                        (LocalizationService.currentLanguage == 'so' && book['authorsSomali'] is List && (book['authorsSomali'] as List).isNotEmpty)
-                            ? (book['authorsSomali'] as List).first.toString()
-                            : (book['authors'] is List && (book['authors'] as List).isNotEmpty
-                                ? (book['authors'] as List).first.toString()
-                                : ''),
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                    Text(
+                      book['authors'] ?? 'Unknown Author',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                       ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                     const Spacer(),
                     Row(
                       children: [
@@ -1042,7 +578,7 @@ class _LibraryPageState extends State<LibraryPage> with TickerProviderStateMixin
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(
-                            (book['format'] ?? '').toString().toUpperCase(),
+                            (book['format'] ?? 'BOOK').toString().toUpperCase(),
                             style: Theme.of(context).textTheme.labelSmall?.copyWith(
                               color: Theme.of(context).colorScheme.onPrimary,
                               fontWeight: FontWeight.w500,
@@ -1076,32 +612,5 @@ class _LibraryPageState extends State<LibraryPage> with TickerProviderStateMixin
     );
   }
 
-  Widget _buildMapPlaceholderCover(Map<String, dynamic> book) {
-    return Container(
-      color: Theme.of(context).colorScheme.surfaceVariant,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.book,
-            size: 32,
-            color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.6),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            (LocalizationService.currentLanguage == 'so' && (book['titleSomali'] ?? '').toString().isNotEmpty)
-                ? (book['titleSomali'] ?? '').toString()
-                : (book['title'] ?? '').toString(),
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.6),
-            ),
-            textAlign: TextAlign.center,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
-      ),
-    );
-  }
 
 }
