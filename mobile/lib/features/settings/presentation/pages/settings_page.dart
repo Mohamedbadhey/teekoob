@@ -596,10 +596,9 @@ class _SettingsPageState extends State<SettingsPage> {
     await languageService.changeLanguage(language);
     
     if (authState is Authenticated) {
+      // Only update settings, don't trigger profile update to avoid logout
       context.read<SettingsBloc>().add(UpdateLanguage(authState.user.id, language));
-      context.read<AuthBloc>().add(UpdateProfileRequested(
-        language: language,
-      ));
+      
       _showSuccessMessage(LocalizationService.getLocalizedText(
         englishText: 'Language updated successfully!',
         somaliText: 'Luqadda si guul leh ayaa loo cusboonaysiiyay!',

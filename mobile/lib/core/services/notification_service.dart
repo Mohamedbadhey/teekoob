@@ -63,34 +63,56 @@ class NotificationService {
 
   /// Request notification permissions
   Future<bool> requestPermissions() async {
-    if (Platform.isAndroid) {
-      final status = await Permission.notification.request();
-      return status.isGranted;
-    } else if (Platform.isIOS) {
-      final result = await _flutterLocalNotificationsPlugin
-          .resolvePlatformSpecificImplementation<
-              IOSFlutterLocalNotificationsPlugin>()
-          ?.requestPermissions(
-            alert: true,
-            badge: true,
-            sound: true,
-          );
-      return result ?? false;
+    try {
+      // Check if running on web
+      if (kIsWeb) {
+        debugPrint('🔔 NotificationService: Web platform detected - notifications not supported');
+        return false;
+      }
+      
+      if (Platform.isAndroid) {
+        final status = await Permission.notification.request();
+        return status.isGranted;
+      } else if (Platform.isIOS) {
+        final result = await _flutterLocalNotificationsPlugin
+            .resolvePlatformSpecificImplementation<
+                IOSFlutterLocalNotificationsPlugin>()
+            ?.requestPermissions(
+              alert: true,
+              badge: true,
+              sound: true,
+            );
+        return result ?? false;
+      }
+      return false;
+    } catch (e) {
+      debugPrint('🔔 NotificationService: Error requesting permissions: $e');
+      return false;
     }
-    return false;
   }
 
   /// Check if notifications are enabled
   Future<bool> areNotificationsEnabled() async {
-    if (Platform.isAndroid) {
-      final status = await Permission.notification.status;
-      return status.isGranted;
-    } else if (Platform.isIOS) {
-      // For iOS, we'll assume permissions are granted if we can initialize
-      // The actual permission check happens during requestPermissions()
-      return true;
+    try {
+      // Check if running on web
+      if (kIsWeb) {
+        debugPrint('🔔 NotificationService: Web platform detected - notifications not supported');
+        return false;
+      }
+      
+      if (Platform.isAndroid) {
+        final status = await Permission.notification.status;
+        return status.isGranted;
+      } else if (Platform.isIOS) {
+        // For iOS, we'll assume permissions are granted if we can initialize
+        // The actual permission check happens during requestPermissions()
+        return true;
+      }
+      return false;
+    } catch (e) {
+      debugPrint('🔔 NotificationService: Error checking notification status: $e');
+      return false;
     }
-    return false;
   }
 
   /// Schedule a book reminder notification

@@ -482,9 +482,6 @@ class AuthService {
     String? bio,
   }) async {
     try {
-      // Note: No local storage - cannot get current user
-      throw Exception('No user logged in - no local storage');
-
       final response = await _networkService.put('/auth/profile', data: {
         'firstName': firstName,
         'lastName': lastName,
@@ -498,8 +495,9 @@ class AuthService {
       });
 
       if (response.statusCode == 200) {
-        // Note: No local storage - cannot get current user
-        throw Exception('No user logged in - no local storage');
+        // Return updated user data from response
+        final userData = response.data['user'] as Map<String, dynamic>;
+        return User.fromJson(userData);
       } else {
         throw Exception('Profile update failed');
       }

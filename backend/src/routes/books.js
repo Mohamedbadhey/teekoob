@@ -217,7 +217,7 @@ router.get('/', asyncHandler(async (req, res) => {
         'authors', 'authors_somali', 'language', 'format', 'cover_image_url',
         'audio_url', 'ebook_content', 'sample_url', 'duration', 'page_count',
         'rating', 'review_count', 'is_featured', 'is_new_release', 'is_premium',
-        'metadata', 'created_at', 'updated_at'
+        'is_free', 'metadata', 'created_at', 'updated_at'
       );
 
     // Apply search filter
