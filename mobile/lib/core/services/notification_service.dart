@@ -28,7 +28,7 @@ class NotificationService {
 
     // Android initialization settings
     const AndroidInitializationSettings androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
-    
+
     // iOS initialization settings
     const DarwinInitializationSettings iosSettings = DarwinInitializationSettings(
       requestAlertPermission: true,
@@ -57,7 +57,7 @@ class NotificationService {
           .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
           ?.requestNotificationsPermission();
 
-      return result ?? false;
+        return result ?? false;
     } catch (e) {
       print('❌ Error requesting notification permissions: $e');
       return false;

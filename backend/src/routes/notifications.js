@@ -1,0 +1,414 @@
+const express = require('express');
+const router = express.Router();
+const admin = require('firebase-admin');
+const cron = require('node-cron');
+const { Pool } = require('pg');
+
+// Initialize Firebase Admin SDK
+if (!admin.apps.length) {
+  admin.initializeApp({
+    credential: admin.credential.applicationDefault(),
+    projectId: 'teekoob', // Your Firebase project ID
+  });
+}
+
+// Database connection
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+});
+
+// Store for FCM tokens and notification preferences
+const userTokens = new Map();
+const notificationPreferences = new Map();
+
+// Schedule random book notifications every 10 minutes
+cron.schedule('*/10 * * * *', async () => {
+  try {
+    console.log('🔔 Running scheduled random book notification...');
+    await sendRandomBookNotifications();
+  } catch (error) {
+    console.error('❌ Error in scheduled notification:', error);
+  }
+});
+
+// Register FCM token
+router.post('/register-token', async (req, res) => {
+  try {
+    const { fcmToken, platform, enabled } = req.body;
+    const userId = req.user?.id;
+
+    if (!fcmToken) {
+      return res.status(400).json({ error: 'FCM token is required' });
+    }
+
+    // Store token in database
+    await pool.query(
+      'INSERT INTO user_fcm_tokens (user_id, fcm_token, platform, enabled, created_at) VALUES ($1, $2, $3, $4, NOW()) ON CONFLICT (user_id, fcm_token) DO UPDATE SET enabled = $4, updated_at = NOW()',
+      [userId, fcmToken, platform || 'mobile', enabled !== false]
+    );
+
+    // Store in memory for quick access
+    if (userId) {
+      userTokens.set(userId, fcmToken);
+    }
+
+    console.log(`🔔 FCM token registered for user ${userId}`);
+    res.json({ success: true, message: 'FCM token registered successfully' });
+  } catch (error) {
+    console.error('❌ Error registering FCM token:', error);
+    res.status(500).json({ error: 'Failed to register FCM token' });
+  }
+});
+
+// Enable/disable random book notifications
+router.post('/enable-random-books', async (req, res) => {
+  try {
+    const { enabled, interval, platform } = req.body;
+    const userId = req.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({ error: 'User not authenticated' });
+    }
+
+    // Store preference in database
+    await pool.query(
+      'INSERT INTO notification_preferences (user_id, random_books_enabled, random_books_interval, platform, created_at) VALUES ($1, $2, $3, $4, NOW()) ON CONFLICT (user_id) DO UPDATE SET random_books_enabled = $2, random_books_interval = $3, updated_at = NOW()',
+      [userId, enabled, interval || 10, platform || 'mobile']
+    );
+
+    // Store in memory
+    notificationPreferences.set(userId, {
+      randomBooksEnabled: enabled,
+      interval: interval || 10,
+      platform: platform || 'mobile'
+    });
+
+    console.log(`🔔 Random book notifications ${enabled ? 'enabled' : 'disabled'} for user ${userId}`);
+    res.json({ 
+      success: true, 
+      message: `Random book notifications ${enabled ? 'enabled' : 'disabled'}` 
+    });
+  } catch (error) {
+    console.error('❌ Error updating notification preferences:', error);
+    res.status(500).json({ error: 'Failed to update notification preferences' });
+  }
+});
+
+// Disable random book notifications
+router.post('/disable-random-books', async (req, res) => {
+  try {
+    const { enabled, platform } = req.body;
+    const userId = req.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({ error: 'User not authenticated' });
+    }
+
+    // Update preference in database
+    await pool.query(
+      'UPDATE notification_preferences SET random_books_enabled = $1, updated_at = NOW() WHERE user_id = $2',
+      [false, userId]
+    );
+
+    // Update in memory
+    const preferences = notificationPreferences.get(userId);
+    if (preferences) {
+      preferences.randomBooksEnabled = false;
+      notificationPreferences.set(userId, preferences);
+    }
+
+    console.log(`🔔 Random book notifications disabled for user ${userId}`);
+    res.json({ success: true, message: 'Random book notifications disabled' });
+  } catch (error) {
+    console.error('❌ Error disabling notifications:', error);
+    res.status(500).json({ error: 'Failed to disable notifications' });
+  }
+});
+
+// Send test notification with real book
+router.post('/send-test', async (req, res) => {
+  try {
+    const userId = req.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({ error: 'User not authenticated' });
+    }
+
+    const fcmToken = userTokens.get(userId);
+    if (!fcmToken) {
+      return res.status(400).json({ error: 'FCM token not found for user' });
+    }
+
+    // Get a random book from database for test
+    const booksResult = await pool.query(`
+      SELECT id, title, title_somali, description, description_somali, 
+             cover_image_url, authors, authors_somali, genre, genre_somali,
+             is_featured, is_new_release, rating, review_count
+      FROM books 
+      WHERE (is_featured = true OR is_new_release = true OR rating >= 4.0)
+      ORDER BY RANDOM() 
+      LIMIT 1
+    `);
+
+    if (booksResult.rows.length === 0) {
+      // Fallback to any book
+      const fallbackResult = await pool.query(`
+        SELECT id, title, title_somali, description, description_somali, 
+               cover_image_url, authors, authors_somali, genre, genre_somali,
+               is_featured, is_new_release, rating, review_count
+        FROM books 
+        ORDER BY RANDOM() 
+        LIMIT 1
+      `);
+      
+      if (fallbackResult.rows.length === 0) {
+        return res.status(404).json({ error: 'No books available for test notification' });
+      }
+      
+      booksResult.rows = fallbackResult.rows;
+    }
+
+    const testBook = booksResult.rows[0];
+    console.log(`🔔 Test notification using book: ${testBook.title}`);
+
+    // Get user's preferred language
+    const userResult = await pool.query('SELECT preferred_language FROM users WHERE id = $1', [userId]);
+    const userLanguage = userResult.rows[0]?.preferred_language || 'en';
+    const isSomali = userLanguage === 'so';
+
+    // Create notification content based on user language
+    let title, body;
+    if (isSomali) {
+      title = '📚 Tijaabada Buug!';
+      const bookTitle = testBook.title_somali || testBook.title;
+      const description = testBook.description_somali || testBook.description || 'Buug xiiso leh oo ka mid ah kuwa bogga hore!';
+      const author = testBook.authors_somali ? JSON.parse(testBook.authors_somali)[0] : 'Qoraaga';
+      body = `${bookTitle}\n\n${author}\n\n${description}`;
+    } else {
+      title = '📚 Test Book Alert!';
+      const bookTitle = testBook.title;
+      const description = testBook.description || 'This is a test notification with a real book from Teekoob!';
+      const author = testBook.authors ? JSON.parse(testBook.authors)[0] : 'Author';
+      body = `${bookTitle}\n\n${author}\n\n${description}`;
+    }
+
+    const message = {
+      notification: {
+        title: title,
+        body: body,
+      },
+      data: {
+        bookId: testBook.id.toString(),
+        type: 'test',
+        platform: 'mobile',
+        bookTitle: testBook.title,
+        bookTitleSomali: testBook.title_somali || testBook.title,
+        coverImage: testBook.cover_image_url || '',
+        isFeatured: testBook.is_featured ? 'true' : 'false',
+        isNewRelease: testBook.is_new_release ? 'true' : 'false',
+        rating: testBook.rating ? testBook.rating.toString() : '0',
+      },
+      token: fcmToken,
+    };
+
+    const response = await admin.messaging().send(message);
+    console.log(`🔔 Test notification sent successfully: ${response}`);
+    console.log(`📖 Test book: ${testBook.title} by ${testBook.authors ? JSON.parse(testBook.authors)[0] : 'Unknown Author'}`);
+
+    res.json({ 
+      success: true, 
+      message: 'Test notification sent successfully',
+      book: {
+        id: testBook.id,
+        title: testBook.title,
+        titleSomali: testBook.title_somali,
+        author: testBook.authors ? JSON.parse(testBook.authors)[0] : 'Unknown Author',
+        isFeatured: testBook.is_featured,
+        isNewRelease: testBook.is_new_release,
+        rating: testBook.rating
+      }
+    });
+  } catch (error) {
+    console.error('❌ Error sending test notification:', error);
+    res.status(500).json({ error: 'Failed to send test notification' });
+  }
+});
+
+// Get random book and send notifications
+async function sendRandomBookNotifications() {
+  try {
+    console.log('🔔 Starting random book notification process...');
+    
+    // Get all users who have random book notifications enabled
+    const result = await pool.query(`
+      SELECT u.id, u.email, u.first_name, u.last_name, u.preferred_language,
+             nf.fcm_token, np.random_books_enabled, np.random_books_interval
+      FROM users u
+      JOIN user_fcm_tokens nf ON u.id = nf.user_id
+      JOIN notification_preferences np ON u.id = np.user_id
+      WHERE nf.enabled = true AND np.random_books_enabled = true
+    `);
+
+    if (result.rows.length === 0) {
+      console.log('🔔 No users with random book notifications enabled');
+      return;
+    }
+
+    console.log(`🔔 Found ${result.rows.length} users with notifications enabled`);
+
+    // Get random books from database - prioritize featured and new releases
+    const booksResult = await pool.query(`
+      SELECT id, title, title_somali, description, description_somali, 
+             cover_image_url, authors, authors_somali, genre, genre_somali,
+             is_featured, is_new_release, rating, review_count
+      FROM books 
+      WHERE (is_featured = true OR is_new_release = true OR rating >= 4.0)
+      ORDER BY RANDOM() 
+      LIMIT 20
+    `);
+
+    if (booksResult.rows.length === 0) {
+      console.log('🔔 No featured books found, getting any random books...');
+      // Fallback to any books if no featured books
+      const fallbackResult = await pool.query(`
+        SELECT id, title, title_somali, description, description_somali, 
+               cover_image_url, authors, authors_somali, genre, genre_somali,
+               is_featured, is_new_release, rating, review_count
+        FROM books 
+        ORDER BY RANDOM() 
+        LIMIT 10
+      `);
+      
+      if (fallbackResult.rows.length === 0) {
+        console.log('🔔 No books available for notifications');
+        return;
+      }
+      
+      booksResult.rows = fallbackResult.rows;
+    }
+
+    const randomBook = booksResult.rows[Math.floor(Math.random() * booksResult.rows.length)];
+    console.log(`🔔 Selected random book: ${randomBook.title} (ID: ${randomBook.id})`);
+
+    // Send notifications to all enabled users
+    const promises = result.rows.map(async (user) => {
+      try {
+        const isSomali = user.preferred_language === 'so';
+        
+        // Create notification content based on user language
+        let title, body;
+        if (isSomali) {
+          title = '📚 Buug Xiiso Leh!';
+          const bookTitle = randomBook.title_somali || randomBook.title;
+          const description = randomBook.description_somali || randomBook.description || 'Buug xiiso leh oo ka mid ah kuwa bogga hore!';
+          const author = randomBook.authors_somali ? JSON.parse(randomBook.authors_somali)[0] : 'Qoraaga';
+          body = `${bookTitle}\n\n${author}\n\n${description}`;
+        } else {
+          title = '📚 Featured Book Alert!';
+          const bookTitle = randomBook.title;
+          const description = randomBook.description || 'Discover this amazing book from our homepage collections!';
+          const author = randomBook.authors ? JSON.parse(randomBook.authors)[0] : 'Author';
+          body = `${bookTitle}\n\n${author}\n\n${description}`;
+        }
+
+        const message = {
+          notification: {
+            title: title,
+            body: body,
+          },
+          data: {
+            bookId: randomBook.id.toString(),
+            type: 'random_book',
+            platform: 'mobile',
+            bookTitle: randomBook.title,
+            bookTitleSomali: randomBook.title_somali || randomBook.title,
+            coverImage: randomBook.cover_image_url || '',
+            isFeatured: randomBook.is_featured ? 'true' : 'false',
+            isNewRelease: randomBook.is_new_release ? 'true' : 'false',
+            rating: randomBook.rating ? randomBook.rating.toString() : '0',
+          },
+          token: user.fcm_token,
+        };
+
+        const response = await admin.messaging().send(message);
+        console.log(`🔔 Random book notification sent to user ${user.email}: ${response}`);
+        
+        // Log the book details for debugging
+        console.log(`📖 Book details: ${randomBook.title} by ${randomBook.authors ? JSON.parse(randomBook.authors)[0] : 'Unknown Author'}`);
+        
+      } catch (error) {
+        console.error(`❌ Error sending notification to user ${user.email}:`, error);
+      }
+    });
+
+    await Promise.all(promises);
+    console.log(`🔔 Random book notifications sent to ${result.rows.length} users`);
+    
+    // Log successful notification
+    console.log(`✅ Successfully sent random book notification: "${randomBook.title}" to ${result.rows.length} users`);
+    
+  } catch (error) {
+    console.error('❌ Error in sendRandomBookNotifications:', error);
+  }
+}
+
+// Get notification preferences
+router.get('/preferences', async (req, res) => {
+  try {
+    const userId = req.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({ error: 'User not authenticated' });
+    }
+
+    const result = await pool.query(
+      'SELECT * FROM notification_preferences WHERE user_id = $1',
+      [userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.json({
+        randomBooksEnabled: false,
+        interval: 10,
+        platform: 'mobile'
+      });
+    }
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('❌ Error getting notification preferences:', error);
+    res.status(500).json({ error: 'Failed to get notification preferences' });
+  }
+});
+
+// Update notification preferences
+router.put('/preferences', async (req, res) => {
+  try {
+    const { randomBooksEnabled, interval, platform } = req.body;
+    const userId = req.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({ error: 'User not authenticated' });
+    }
+
+    await pool.query(
+      'INSERT INTO notification_preferences (user_id, random_books_enabled, random_books_interval, platform, created_at) VALUES ($1, $2, $3, $4, NOW()) ON CONFLICT (user_id) DO UPDATE SET random_books_enabled = $2, random_books_interval = $3, platform = $4, updated_at = NOW()',
+      [userId, randomBooksEnabled, interval || 10, platform || 'mobile']
+    );
+
+    // Update in memory
+    notificationPreferences.set(userId, {
+      randomBooksEnabled,
+      interval: interval || 10,
+      platform: platform || 'mobile'
+    });
+
+    res.json({ success: true, message: 'Notification preferences updated' });
+  } catch (error) {
+    console.error('❌ Error updating notification preferences:', error);
+    res.status(500).json({ error: 'Failed to update notification preferences' });
+  }
+});
+
+module.exports = router;

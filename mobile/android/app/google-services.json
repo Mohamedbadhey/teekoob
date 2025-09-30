@@ -1,45 +1,43 @@
 {
   "project_info": {
-    "project_number": "993998505686",
-    "project_id": "loginproject-e428a",
-    "storage_bucket": "loginproject-e428a.firebasestorage.app"
+    "project_number": "4861039733",
+    "project_id": "teekoob",
+    "storage_bucket": "teekoob.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:993998505686:android:8967c9be0c2525bb0e2b77",
-        "android_client_info": {
-          "package_name": "com.example.log"
-        }
-      },
-      "oauth_client": [],
-      "api_key": [
-        {
-          "current_key": "AIzaSyBOfog7UU2NDuxqRrXSJNvDjdMC2W8DPdk"
-        }
-      ],
-      "services": {
-        "appinvite_service": {
-          "other_platform_oauth_client": []
-        }
-      }
-    },
-    {
-      "client_info": {
-        "mobilesdk_app_id": "1:993998505686:android:810dc9af5aeee3b70e2b77",
+        "mobilesdk_app_id": "1:4861039733:android:a4c2a00b30ea81d006543c",
         "android_client_info": {
           "package_name": "com.example.mobile"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "4861039733-db4ode2aiqps85n3t116i4eabvjrnur7.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
-          "current_key": "AIzaSyBOfog7UU2NDuxqRrXSJNvDjdMC2W8DPdk"
+          "current_key": "AIzaSyAilWZWYgi5vPpymMPJpvCZnW63Nz1wawQ"
         }
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "4861039733-db4ode2aiqps85n3t116i4eabvjrnur7.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "4861039733-hmccm6ifr07kcbk2al0a22f85f57svf8.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.mobile"
+              }
+            }
+          ]
         }
       }
     }

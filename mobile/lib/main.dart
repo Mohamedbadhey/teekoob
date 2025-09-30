@@ -2,13 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:teekoob/core/config/app_router.dart';
 import 'package:teekoob/core/config/app_theme.dart';
 import 'package:teekoob/core/services/localization_service.dart';
 import 'package:teekoob/core/services/language_service.dart';
 import 'package:teekoob/core/services/theme_service.dart';
-import 'package:teekoob/core/services/firebase_notification_service.dart';
+import 'package:flutter/foundation.dart';
+
+// Simple notification service (no Firebase)
+import 'package:teekoob/core/services/simple_notification_service.dart';
+import 'package:teekoob/core/services/notification_service_interface.dart';
 
 import 'package:teekoob/features/auth/services/auth_service.dart';
 import 'package:teekoob/features/auth/bloc/auth_bloc.dart';
@@ -24,23 +27,16 @@ import 'package:teekoob/features/settings/services/settings_service.dart';
 import 'package:teekoob/features/settings/bloc/settings_bloc.dart';
 import 'package:teekoob/features/subscription/services/subscription_service.dart';
 import 'package:teekoob/features/subscription/bloc/subscription_bloc.dart';
-import 'package:teekoob/core/services/notification_service.dart';
 import 'package:teekoob/core/bloc/notification_bloc.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
-  // Initialize Firebase
-  await Firebase.initializeApp();
-  
   // Initialize Localization
   await LocalizationService.initialize();
   
-  // Initialize Firebase Notification Service
-  await FirebaseNotificationService().initialize();
-  
-  // Subscribe to random book notifications
-  await FirebaseNotificationService().subscribeToRandomBookNotifications();
+  // Initialize simple notification service (mobile only, no Firebase)
+  await SimpleNotificationService().initialize();
   
   runApp(TeekoobApp());
 }
@@ -73,8 +69,8 @@ class TeekoobApp extends StatelessWidget {
             RepositoryProvider<SubscriptionService>(
               create: (context) => SubscriptionService(),
             ),
-            RepositoryProvider<NotificationService>(
-              create: (context) => NotificationService(),
+            RepositoryProvider<NotificationServiceInterface>(
+              create: (context) => SimpleNotificationService(),
             ),
           ],
                 child: MultiBlocProvider(
@@ -116,7 +112,7 @@ class TeekoobApp extends StatelessWidget {
               ),
               BlocProvider<NotificationBloc>(
                 create: (context) => NotificationBloc(
-                  notificationService: context.read<NotificationService>(),
+                  notificationService: context.read<NotificationServiceInterface>(),
                 ),
               ),
             ],

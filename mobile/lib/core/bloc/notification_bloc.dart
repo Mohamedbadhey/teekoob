@@ -3,7 +3,7 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:teekoob/core/models/book_model.dart';
-import 'package:teekoob/core/services/notification_service.dart';
+import 'package:teekoob/core/services/notification_service_interface.dart';
 
 // Events
 abstract class NotificationEvent extends Equatable {
@@ -236,9 +236,9 @@ class NotificationError extends NotificationState {
 
 // BLoC
 class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
-  final NotificationService _notificationService;
+  final NotificationServiceInterface _notificationService;
 
-  NotificationBloc({required NotificationService notificationService})
+  NotificationBloc({required NotificationServiceInterface notificationService})
       : _notificationService = notificationService,
         super(const NotificationInitial()) {
     

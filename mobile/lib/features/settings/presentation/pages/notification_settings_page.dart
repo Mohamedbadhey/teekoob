@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:teekoob/core/bloc/notification_bloc.dart';
-import 'package:teekoob/core/services/firebase_notification_service.dart';
+import 'package:teekoob/core/services/simple_notification_service.dart';
 import 'package:teekoob/core/services/localization_service.dart';
 
 class NotificationSettingsPage extends StatefulWidget {
@@ -13,7 +13,7 @@ class NotificationSettingsPage extends StatefulWidget {
 
 class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
   bool _randomBookNotificationsEnabled = true;
-  final FirebaseNotificationService _firebaseNotificationService = FirebaseNotificationService();
+  final SimpleNotificationService _notificationService = SimpleNotificationService();
 
   @override
   void initState() {
@@ -178,8 +178,8 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
                 somaliText: 'Ogeysiisyo Buugag Kala Duwan',
               )),
               subtitle: Text(LocalizationService.getLocalizedText(
-                englishText: 'Get random book recommendations every 10 minutes via Google Firebase',
-                somaliText: 'Hel talooyin buugag kala duwan 10 daqiiqo kasta Google Firebase',
+                englishText: 'Get random book recommendations every 10 minutes',
+                somaliText: 'Hel talooyin buugag kala duwan 10 daqiiqo kasta',
               )),
               value: _randomBookNotificationsEnabled,
               onChanged: (value) async {
@@ -187,29 +187,29 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
                   _randomBookNotificationsEnabled = value;
                 });
                 
-                if (value) {
-                  await _firebaseNotificationService.subscribeToRandomBookNotifications();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(LocalizationService.getLocalizedText(
-                        englishText: 'Random book notifications enabled via Google Firebase!',
-                        somaliText: 'Ogeysiisyooyinka buugag kala duwan ayaa la furay Google Firebase!',
-                      )),
-                      backgroundColor: Colors.green,
-                    ),
-                  );
-                } else {
-                  await _firebaseNotificationService.unsubscribeFromRandomBookNotifications();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(LocalizationService.getLocalizedText(
-                        englishText: 'Random book notifications disabled',
-                        somaliText: 'Ogeysiisyooyinka buugag kala duwan ayaa la xidhay',
-                      )),
-                      backgroundColor: Colors.orange,
-                    ),
-                  );
-                }
+                    if (value) {
+                      await _notificationService.enableRandomBookNotifications();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(LocalizationService.getLocalizedText(
+                            englishText: 'Random book notifications enabled!',
+                            somaliText: 'Ogeysiisyooyinka buugag kala duwan ayaa la furay!',
+                          )),
+                          backgroundColor: Colors.green,
+                        ),
+                      );
+                    } else {
+                      await _notificationService.disableRandomBookNotifications();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(LocalizationService.getLocalizedText(
+                            englishText: 'Random book notifications disabled',
+                            somaliText: 'Ogeysiisyooyinka buugag kala duwan ayaa la xidhay',
+                          )),
+                          backgroundColor: Colors.orange,
+                        ),
+                      );
+                    }
               },
             ),
             
@@ -225,18 +225,18 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
                 somaliText: 'Dir ogeysiis tijaabadeed oo buug kala duwan ah',
               )),
               trailing: const Icon(Icons.arrow_forward_ios),
-                  onTap: () async {
-                    await _firebaseNotificationService.sendTestNotification();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(LocalizationService.getLocalizedText(
-                          englishText: 'Test notification sent via Google Firebase!',
-                          somaliText: 'Ogeysiiska tijaabadeed ayaa la diray Google Firebase!',
-                        )),
-                        backgroundColor: Colors.blue,
-                      ),
-                    );
-                  },
+              onTap: () async {
+                await _notificationService.sendTestNotification();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(LocalizationService.getLocalizedText(
+                      englishText: 'Test notification sent!',
+                      somaliText: 'Ogeysiiska tijaabadeed ayaa la diray!',
+                    )),
+                    backgroundColor: Colors.blue,
+                  ),
+                );
+              },
             ),
             
             // Daily Reading Reminders

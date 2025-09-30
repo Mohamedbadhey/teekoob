@@ -52,6 +52,9 @@ try {
   const setupRoutes = require('./routes/setup');
   console.log('✅ Setup routes loaded');
   
+  const notificationRoutes = require('./routes/notifications');
+  console.log('✅ Notification routes loaded');
+  
   console.log('📦 Loading middleware...');
   const { errorHandler } = require('./middleware/errorHandler');
   console.log('✅ Error handler loaded');
@@ -61,9 +64,6 @@ try {
   
   const logger = require('./utils/logger');
   console.log('✅ Logger loaded');
-  
-  const notificationService = require('./services/notification_service');
-  console.log('✅ Notification service loaded');
   
   console.log('🚀 Creating Express app...');
   const app = express();
@@ -268,6 +268,9 @@ try {
   app.use('/api/v1/admin', authenticateToken, requireAdmin, adminRoutes);
   console.log('✅ Admin routes registered');
   
+  app.use('/api/v1/notifications', authenticateToken, notificationRoutes);
+  console.log('✅ Notification routes registered');
+  
   // 404 handler
   app.use('*', (req, res) => {
     res.status(404).json({ 
@@ -283,38 +286,25 @@ try {
   
   console.log('🚀 Starting server...');
   // Start server
-  app.listen(PORT, async () => {
+  app.listen(PORT, () => {
     console.log(`🚀 Teekoob Backend Server running on port ${PORT}`);
     console.log(`📚 Environment: ${process.env.NODE_ENV}`);
     console.log(`🔗 Health check: http://localhost:${PORT}/health`);
     logger.info(`🚀 Teekoob Backend Server running on port ${PORT}`);
     logger.info(`📚 Environment: ${process.env.NODE_ENV}`);
     logger.info(`🔗 Health check: http://localhost:${PORT}/health`);
-    
-    // Initialize and start notification service
-    try {
-      await notificationService.initialize();
-      await notificationService.startRandomBookNotifications();
-      console.log('🔥 Random book notifications started - every 10 minutes');
-      logger.info('🔥 Random book notifications started - every 10 minutes');
-    } catch (error) {
-      console.error('❌ Error starting notification service:', error);
-      logger.error('❌ Error starting notification service:', error);
-    }
   });
   
   // Graceful shutdown
-  process.on('SIGTERM', async () => {
+  process.on('SIGTERM', () => {
     console.log('SIGTERM received, shutting down gracefully');
     logger.info('SIGTERM received, shutting down gracefully');
-    await notificationService.stopRandomBookNotifications();
     process.exit(0);
   });
   
-  process.on('SIGINT', async () => {
+  process.on('SIGINT', () => {
     console.log('SIGINT received, shutting down gracefully');
     logger.info('SIGINT received, shutting down gracefully');
-    await notificationService.stopRandomBookNotifications();
     process.exit(0);
   });
   
