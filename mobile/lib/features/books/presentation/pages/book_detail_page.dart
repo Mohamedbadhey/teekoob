@@ -91,56 +91,87 @@ class _BookDetailPageState extends State<BookDetailPage> {
   @override
   Widget build(BuildContext context) {
     if (isLoading) {
-      return Scaffold(
-        backgroundColor: Colors.white,
-        body: const Center(
-          child: CircularProgressIndicator(),
+      return PopScope(
+        canPop: false,
+        onPopInvoked: (didPop) async {
+          if (!didPop) {
+            await AppRouter.handleAndroidBackButton(context);
+          }
+        },
+        child: Scaffold(
+          backgroundColor: Colors.white,
+          body: const Center(
+            child: CircularProgressIndicator(),
+          ),
         ),
       );
     }
 
     if (error != null) {
-      return Scaffold(
-        backgroundColor: Colors.white,
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.error_outline,
-                size: 64,
-                color: Colors.red.shade300,
-              ),
-              const SizedBox(height: 16),
-              Text(
-                error!,
-                style: const TextStyle(
-                  fontSize: 16,
-                  color: Colors.red,
+      return PopScope(
+        canPop: false,
+        onPopInvoked: (didPop) async {
+          if (!didPop) {
+            await AppRouter.handleAndroidBackButton(context);
+          }
+        },
+        child: Scaffold(
+          backgroundColor: Colors.white,
+          body: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.error_outline,
+                  size: 64,
+                  color: Colors.red.shade300,
                 ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: _loadBookDetails,
-                child: const Text('Retry'),
-              ),
-            ],
+                const SizedBox(height: 16),
+                Text(
+                  error!,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    color: Colors.red,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
+                ElevatedButton(
+                  onPressed: _loadBookDetails,
+                  child: const Text('Retry'),
+                ),
+              ],
+            ),
           ),
         ),
       );
     }
 
     if (book == null) {
-      return Scaffold(
-        backgroundColor: Colors.white,
-        body: const Center(
-          child: Text('Book not found'),
+      return PopScope(
+        canPop: false,
+        onPopInvoked: (didPop) async {
+          if (!didPop) {
+            await AppRouter.handleAndroidBackButton(context);
+          }
+        },
+        child: Scaffold(
+          backgroundColor: Colors.white,
+          body: const Center(
+            child: Text('Book not found'),
+          ),
         ),
       );
     }
 
-    return Scaffold(
+    return PopScope(
+      canPop: false,
+      onPopInvoked: (didPop) async {
+        if (!didPop) {
+          await AppRouter.handleAndroidBackButton(context);
+        }
+      },
+      child: Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
         child: Column(
@@ -187,8 +218,9 @@ class _BookDetailPageState extends State<BookDetailPage> {
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildHeader(BuildContext context) {
     return Container(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:teekoob/features/auth/presentation/pages/login_page.dart';
 import 'package:teekoob/features/auth/presentation/pages/register_page.dart';
@@ -185,6 +186,52 @@ class AppRouter {
       Navigator.of(context).pop();
     } else {
       context.go(home);
+    }
+  }
+  
+  // Handle Android back button with consistent behavior
+  static Future<bool> handleAndroidBackButton(BuildContext context) async {
+    if (Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
+      return false; // Prevent default back button behavior
+    } else {
+      context.go(home);
+      return false; // Prevent default back button behavior
+    }
+  }
+  
+  // Show exit confirmation dialog
+  static Future<void> showExitConfirmationDialog(BuildContext context) async {
+    final result = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Exit App'),
+          content: const Text('Are you ready to close the app?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text(
+                'Exit',
+                style: TextStyle(
+                  color: Colors.red,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (result == true) {
+      // User confirmed exit - close the app
+      SystemNavigator.pop();
     }
   }
   

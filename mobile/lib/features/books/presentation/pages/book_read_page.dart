@@ -119,23 +119,38 @@ Note: We attempted to extract text from the PDF but were unable to. We've provid
   @override
   Widget build(BuildContext context) {
     if (_book == null) {
-      return Scaffold(
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Text('Book not found'),
-              ElevatedButton(
-                onPressed: () => context.pop(),
-                child: const Text('Go Back'),
-              ),
-            ],
+      return PopScope(
+        canPop: false,
+        onPopInvoked: (didPop) async {
+          if (!didPop) {
+            await AppRouter.handleAndroidBackButton(context);
+          }
+        },
+        child: Scaffold(
+          body: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Text('Book not found'),
+                ElevatedButton(
+                  onPressed: () => context.pop(),
+                  child: const Text('Go Back'),
+                ),
+              ],
+            ),
           ),
         ),
       );
     }
     
-    return Scaffold(
+    return PopScope(
+      canPop: false,
+      onPopInvoked: (didPop) async {
+        if (!didPop) {
+          await AppRouter.handleAndroidBackButton(context);
+        }
+      },
+      child: Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
         child: Column(
@@ -150,8 +165,9 @@ Note: We attempted to extract text from the PDF but were unable to. We've provid
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildHeader(BuildContext context, Book book) {
     return Container(

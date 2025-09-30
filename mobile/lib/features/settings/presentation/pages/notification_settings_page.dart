@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:teekoob/core/bloc/notification_bloc.dart';
+import 'package:teekoob/core/services/firebase_notification_service.dart';
+import 'package:teekoob/core/services/localization_service.dart';
 
 class NotificationSettingsPage extends StatefulWidget {
   const NotificationSettingsPage({Key? key}) : super(key: key);
@@ -10,12 +12,24 @@ class NotificationSettingsPage extends StatefulWidget {
 }
 
 class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
+  bool _randomBookNotificationsEnabled = true;
+  final FirebaseNotificationService _firebaseNotificationService = FirebaseNotificationService();
+
   @override
   void initState() {
     super.initState();
     // Initialize notifications and load pending notifications
     context.read<NotificationBloc>().add(const InitializeNotifications());
     context.read<NotificationBloc>().add(const LoadPendingNotifications());
+    _loadRandomBookNotificationStatus();
+  }
+
+  Future<void> _loadRandomBookNotificationStatus() async {
+    // Check if random book notifications are currently enabled
+    // This would typically be stored in user preferences
+    setState(() {
+      _randomBookNotificationsEnabled = true; // Default to enabled
+    });
   }
 
   @override
@@ -156,6 +170,74 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
               ),
             ),
             const SizedBox(height: 16),
+            
+            // Random Book Notifications
+            SwitchListTile(
+              title: Text(LocalizationService.getLocalizedText(
+                englishText: 'Random Book Notifications',
+                somaliText: 'Ogeysiisyo Buugag Kala Duwan',
+              )),
+              subtitle: Text(LocalizationService.getLocalizedText(
+                englishText: 'Get random book recommendations every 10 minutes via Google Firebase',
+                somaliText: 'Hel talooyin buugag kala duwan 10 daqiiqo kasta Google Firebase',
+              )),
+              value: _randomBookNotificationsEnabled,
+              onChanged: (value) async {
+                setState(() {
+                  _randomBookNotificationsEnabled = value;
+                });
+                
+                if (value) {
+                  await _firebaseNotificationService.subscribeToRandomBookNotifications();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(LocalizationService.getLocalizedText(
+                        englishText: 'Random book notifications enabled via Google Firebase!',
+                        somaliText: 'Ogeysiisyooyinka buugag kala duwan ayaa la furay Google Firebase!',
+                      )),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                } else {
+                  await _firebaseNotificationService.unsubscribeFromRandomBookNotifications();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(LocalizationService.getLocalizedText(
+                        englishText: 'Random book notifications disabled',
+                        somaliText: 'Ogeysiisyooyinka buugag kala duwan ayaa la xidhay',
+                      )),
+                      backgroundColor: Colors.orange,
+                    ),
+                  );
+                }
+              },
+            ),
+            
+            // Test Random Book Notification
+            ListTile(
+              leading: const Icon(Icons.notifications_active),
+              title: Text(LocalizationService.getLocalizedText(
+                englishText: 'Test Random Book Notification',
+                somaliText: 'Tijaabi Ogeysiiska Buug Kala Duwan',
+              )),
+              subtitle: Text(LocalizationService.getLocalizedText(
+                englishText: 'Send a test notification with a random book',
+                somaliText: 'Dir ogeysiis tijaabadeed oo buug kala duwan ah',
+              )),
+              trailing: const Icon(Icons.arrow_forward_ios),
+                  onTap: () async {
+                    await _firebaseNotificationService.sendTestNotification();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(LocalizationService.getLocalizedText(
+                          englishText: 'Test notification sent via Google Firebase!',
+                          somaliText: 'Ogeysiiska tijaabadeed ayaa la diray Google Firebase!',
+                        )),
+                        backgroundColor: Colors.blue,
+                      ),
+                    );
+                  },
+            ),
             
             // Daily Reading Reminders
             SwitchListTile(

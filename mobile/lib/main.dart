@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:teekoob/core/config/app_router.dart';
 import 'package:teekoob/core/config/app_theme.dart';
 import 'package:teekoob/core/services/localization_service.dart';
 import 'package:teekoob/core/services/language_service.dart';
 import 'package:teekoob/core/services/theme_service.dart';
+import 'package:teekoob/core/services/firebase_notification_service.dart';
 
 import 'package:teekoob/features/auth/services/auth_service.dart';
 import 'package:teekoob/features/auth/bloc/auth_bloc.dart';
@@ -28,16 +30,17 @@ import 'package:teekoob/core/bloc/notification_bloc.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
+  // Initialize Firebase
+  await Firebase.initializeApp();
+  
   // Initialize Localization
   await LocalizationService.initialize();
   
-  // Initialize Notification Service
-  await NotificationService().initialize();
+  // Initialize Firebase Notification Service
+  await FirebaseNotificationService().initialize();
   
-  // Request notification permissions and schedule hourly notifications on app install
-  final notificationService = NotificationService();
-  await notificationService.requestPermissions();
-  await notificationService.scheduleHourlyRandomBookNotifications();
+  // Subscribe to random book notifications
+  await FirebaseNotificationService().subscribeToRandomBookNotifications();
   
   runApp(TeekoobApp());
 }

@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:teekoob/core/services/localization_service.dart';
 import 'package:teekoob/core/services/language_service.dart';
 import 'package:teekoob/core/services/navigation_service.dart';
+import 'package:teekoob/core/config/app_router.dart';
 import 'package:teekoob/features/home/presentation/pages/home_page.dart';
 import 'package:teekoob/features/books/presentation/pages/books_page.dart';
 import 'package:teekoob/features/library/presentation/pages/library_page.dart';
@@ -43,11 +45,71 @@ class _AppScaffoldState extends State<AppScaffold> {
     print('Updated current index to: $_currentIndex'); // Debug log
   }
 
+  Future<void> _showExitConfirmationDialog(BuildContext context) async {
+    final result = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text(
+            LocalizationService.getLocalizedText(
+              englishText: 'Exit App',
+              somaliText: 'Ka Bax App-ka',
+            ),
+          ),
+          content: Text(
+            LocalizationService.getLocalizedText(
+              englishText: 'Are you ready to close the app?',
+              somaliText: 'Ma diyaar u tahay inaad xirto app-ka?',
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: Text(
+                LocalizationService.getLocalizedText(
+                  englishText: 'Cancel',
+                  somaliText: 'Jooji',
+                ),
+              ),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: Text(
+                LocalizationService.getLocalizedText(
+                  englishText: 'Exit',
+                  somaliText: 'Ka Bax',
+                ),
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.error,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (result == true) {
+      // User confirmed exit - close the app
+      SystemNavigator.pop();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Consumer<LanguageService>(
-      builder: (context, languageService, child) {
-        return Scaffold(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (!didPop) {
+          // Show exit confirmation dialog when Android back button is pressed
+          await _showExitConfirmationDialog(context);
+        }
+      },
+      child: Consumer<LanguageService>(
+        builder: (context, languageService, child) {
+          return Scaffold(
           body: IndexedStack(
             index: _currentIndex,
             children: _pages,
@@ -130,7 +192,8 @@ class _AppScaffoldState extends State<AppScaffold> {
         ),
       ),
     );
-      },
+        },
+      ),
     );
   }
 }

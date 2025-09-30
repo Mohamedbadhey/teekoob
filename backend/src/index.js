@@ -62,6 +62,9 @@ try {
   const logger = require('./utils/logger');
   console.log('✅ Logger loaded');
   
+  const notificationService = require('./services/notification_service');
+  console.log('✅ Notification service loaded');
+  
   console.log('🚀 Creating Express app...');
   const app = express();
   const PORT = process.env.PORT || 3000;
@@ -280,25 +283,38 @@ try {
   
   console.log('🚀 Starting server...');
   // Start server
-  app.listen(PORT, () => {
+  app.listen(PORT, async () => {
     console.log(`🚀 Teekoob Backend Server running on port ${PORT}`);
     console.log(`📚 Environment: ${process.env.NODE_ENV}`);
     console.log(`🔗 Health check: http://localhost:${PORT}/health`);
     logger.info(`🚀 Teekoob Backend Server running on port ${PORT}`);
     logger.info(`📚 Environment: ${process.env.NODE_ENV}`);
     logger.info(`🔗 Health check: http://localhost:${PORT}/health`);
+    
+    // Initialize and start notification service
+    try {
+      await notificationService.initialize();
+      await notificationService.startRandomBookNotifications();
+      console.log('🔥 Random book notifications started - every 10 minutes');
+      logger.info('🔥 Random book notifications started - every 10 minutes');
+    } catch (error) {
+      console.error('❌ Error starting notification service:', error);
+      logger.error('❌ Error starting notification service:', error);
+    }
   });
   
   // Graceful shutdown
-  process.on('SIGTERM', () => {
+  process.on('SIGTERM', async () => {
     console.log('SIGTERM received, shutting down gracefully');
     logger.info('SIGTERM received, shutting down gracefully');
+    await notificationService.stopRandomBookNotifications();
     process.exit(0);
   });
   
-  process.on('SIGINT', () => {
+  process.on('SIGINT', async () => {
     console.log('SIGINT received, shutting down gracefully');
     logger.info('SIGINT received, shutting down gracefully');
+    await notificationService.stopRandomBookNotifications();
     process.exit(0);
   });
   
