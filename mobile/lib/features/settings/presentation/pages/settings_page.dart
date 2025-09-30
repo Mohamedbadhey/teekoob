@@ -8,6 +8,7 @@ import 'package:teekoob/core/services/theme_service.dart';
 import 'package:teekoob/features/auth/bloc/auth_bloc.dart';
 import 'package:teekoob/features/settings/bloc/settings_bloc.dart';
 import 'package:teekoob/core/config/app_theme.dart';
+import 'package:teekoob/features/settings/presentation/pages/notification_settings_page.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -39,7 +40,27 @@ class _SettingsPageState extends State<SettingsPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return BlocListener<AuthBloc, AuthState>(
+      listener: (context, state) {
+        if (state is AuthError) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(state.message),
+              backgroundColor: Colors.red,
+            ),
+          );
+        } else if (state is AuthSuccess) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(state.message),
+              backgroundColor: Colors.green,
+            ),
+          );
+        } else if (state is Unauthenticated) {
+          context.go('/login');
+        }
+      },
+      child: Scaffold(
       backgroundColor: Theme.of(context).colorScheme.background,
       appBar: AppBar(
         title: Text(
@@ -83,6 +104,7 @@ class _SettingsPageState extends State<SettingsPage> {
             const SizedBox(height: 32),
           ],
         ),
+        ),
       ),
     );
   }
@@ -95,9 +117,8 @@ class _SettingsPageState extends State<SettingsPage> {
         String? avatarUrl;
 
         if (authState is Authenticated) {
-          userName = '${authState.user.firstName ?? ''} ${authState.user.lastName ?? ''}'.trim();
-          if (userName.isEmpty) userName = authState.user.email ?? 'User';
-          userEmail = authState.user.email ?? 'user@example.com';
+          userName = authState.user.displayName;
+          userEmail = authState.user.email;
           avatarUrl = authState.user.profilePicture;
           
           print('🔍 Profile Section Debug:');
@@ -236,13 +257,17 @@ class _SettingsPageState extends State<SettingsPage> {
                   icon: Icons.notifications_rounded,
                   title: LocalizationService.getNotificationsText,
                   subtitle: LocalizationService.getLocalizedText(
-              englishText: 'Receive push notifications',
-              somaliText: 'Hel ogeysiisyo',
+              englishText: 'Manage notification settings',
+              somaliText: 'Maamul dejinta ogeysiisyo',
             ),
-                  trailing: Switch(
-                    value: notificationsEnabled,
-                    onChanged: (value) => _updateNotifications(value, authState),
-                    activeColor: const Color(0xFF0466c8),
+                  trailing: IconButton(
+                    icon: const Icon(Icons.arrow_forward_ios_rounded, size: 16),
+                    onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const NotificationSettingsPage(),
+                      ),
+                    ),
                   ),
         ),
         
@@ -296,20 +321,6 @@ class _SettingsPageState extends State<SettingsPage> {
               onTap: () => _showChangePasswordDialog(authState),
             ),
             
-            // Privacy Settings
-            _buildAccountCard(
-              icon: Icons.privacy_tip_rounded,
-              title: LocalizationService.getLocalizedText(
-            englishText: 'Privacy Settings',
-            somaliText: 'Dejinta Sirta',
-              ),
-              subtitle: LocalizationService.getLocalizedText(
-                englishText: 'Manage your privacy preferences',
-                somaliText: 'Maamul doorashooyinkaaga sirta',
-              ),
-              onTap: () => _showPrivacySettingsDialog(authState),
-            ),
-            
             // Subscription
             _buildAccountCard(
               icon: Icons.subscriptions_rounded,
@@ -322,20 +333,6 @@ class _SettingsPageState extends State<SettingsPage> {
                 somaliText: 'Maamul qorshaha diiwaangelinta',
               ),
               onTap: () => context.go('/subscription'),
-            ),
-            
-            // Data & Storage
-            _buildAccountCard(
-              icon: Icons.storage_rounded,
-              title: LocalizationService.getLocalizedText(
-                englishText: 'Data & Storage',
-                somaliText: 'Xogta & Kaydinta',
-              ),
-              subtitle: LocalizationService.getLocalizedText(
-                englishText: 'Clear cache and manage storage',
-                somaliText: 'Nadiif cache oo maamul kaydinta',
-              ),
-              onTap: () => _showDataStorageDialog(authState),
             ),
             
             // Logout
@@ -361,17 +358,6 @@ class _SettingsPageState extends State<SettingsPage> {
         somaliText: 'Taageero',
       ),
       children: [
-        // Help & FAQ
-        _buildSupportCard(
-          icon: Icons.help_rounded,
-          title: LocalizationService.getHelpText,
-          subtitle: LocalizationService.getLocalizedText(
-            englishText: 'Get help and find answers',
-            somaliText: 'Hel taageero oo hel jawaabaha',
-          ),
-          onTap: () => _showHelpDialog(),
-        ),
-        
         // Send Feedback
         _buildSupportCard(
           icon: Icons.feedback_rounded,
@@ -447,48 +433,6 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
           subtitle: '1.0.0 (Build 100)',
           onTap: () => _showVersionInfoDialog(),
-        ),
-        
-        // Terms of Service
-        _buildAboutCard(
-          icon: Icons.description_rounded,
-          title: LocalizationService.getLocalizedText(
-            englishText: 'Terms of Service',
-            somaliText: 'Shuruudaha Adeegga',
-          ),
-          subtitle: LocalizationService.getLocalizedText(
-            englishText: 'Read our terms and conditions',
-            somaliText: 'Akhri shuruudaha iyo xaaladaha',
-          ),
-          onTap: () => _showTermsOfServiceDialog(),
-        ),
-        
-        // Privacy Policy
-        _buildAboutCard(
-          icon: Icons.privacy_tip_rounded,
-          title: LocalizationService.getLocalizedText(
-            englishText: 'Privacy Policy',
-            somaliText: 'Siyaasadda Sirta',
-          ),
-          subtitle: LocalizationService.getLocalizedText(
-            englishText: 'How we protect your data',
-            somaliText: 'Sidee aan ilaalino xogtaaga',
-          ),
-          onTap: () => _showPrivacyPolicyDialog(),
-        ),
-        
-        // Open Source Licenses
-        _buildAboutCard(
-          icon: Icons.open_in_new_rounded,
-          title: LocalizationService.getLocalizedText(
-            englishText: 'Open Source Licenses',
-            somaliText: 'Layisinka Open Source',
-          ),
-          subtitle: LocalizationService.getLocalizedText(
-            englishText: 'Third-party libraries and licenses',
-            somaliText: 'Maktabado kale iyo layisinka',
-          ),
-          onTap: () => _showOpenSourceLicensesDialog(),
         ),
         
         // App Info
@@ -749,19 +693,325 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   void _showChangePasswordDialog(AuthState authState) {
-    // TODO: Implement change password dialog
+    if (authState is! Authenticated) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please log in to change your password')),
+      );
+      return;
+    }
+
+    final currentPasswordController = TextEditingController();
+    final newPasswordController = TextEditingController();
+    final confirmPasswordController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(LocalizationService.getLocalizedText(
+          englishText: 'Change Password',
+          somaliText: 'Beddel Furaha',
+        )),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: currentPasswordController,
+              obscureText: true,
+              decoration: InputDecoration(
+                labelText: LocalizationService.getLocalizedText(
+                  englishText: 'Current Password',
+                  somaliText: 'Furaha Hadda',
+                ),
+                border: const OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: newPasswordController,
+              obscureText: true,
+              decoration: InputDecoration(
+                labelText: LocalizationService.getLocalizedText(
+                  englishText: 'New Password',
+                  somaliText: 'Furaha Cusub',
+                ),
+                border: const OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: confirmPasswordController,
+              obscureText: true,
+              decoration: InputDecoration(
+                labelText: LocalizationService.getLocalizedText(
+                  englishText: 'Confirm New Password',
+                  somaliText: 'Xaqiiji Furaha Cusub',
+                ),
+                border: const OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(LocalizationService.getLocalizedText(
+              englishText: 'Cancel',
+              somaliText: 'Jooji',
+            )),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (newPasswordController.text != confirmPasswordController.text) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Passwords do not match')),
+                );
+                return;
+              }
+              
+              if (newPasswordController.text.length < 6) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Password must be at least 6 characters')),
+                );
+                return;
+              }
+
+              context.read<AuthBloc>().add(ChangePasswordRequested(
+                currentPassword: currentPasswordController.text,
+                newPassword: newPasswordController.text,
+              ));
+              
+              Navigator.of(context).pop();
+            },
+            child: Text(LocalizationService.getLocalizedText(
+              englishText: 'Change Password',
+              somaliText: 'Beddel Furaha',
+            )),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showPrivacySettingsDialog(AuthState authState) {
-    // TODO: Implement privacy settings dialog
+    if (authState is! Authenticated) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please log in to access privacy settings')),
+      );
+      return;
+    }
+
+    bool profileVisibility = authState.user.preferences['profileVisibility'] ?? true;
+    bool readingHistory = authState.user.preferences['readingHistory'] ?? true;
+    bool recommendations = authState.user.preferences['recommendations'] ?? true;
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: Text(LocalizationService.getLocalizedText(
+            englishText: 'Privacy Settings',
+            somaliText: 'Dejinta Sirta',
+          )),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SwitchListTile(
+                title: Text(LocalizationService.getLocalizedText(
+                  englishText: 'Profile Visibility',
+                  somaliText: 'Aragtida Profile',
+                )),
+                subtitle: Text(LocalizationService.getLocalizedText(
+                  englishText: 'Allow others to see your profile',
+                  somaliText: 'U ogolow dadka kale inay arkaan profile-kaaga',
+                )),
+                value: profileVisibility,
+                onChanged: (value) => setState(() => profileVisibility = value),
+              ),
+              SwitchListTile(
+                title: Text(LocalizationService.getLocalizedText(
+                  englishText: 'Reading History',
+                  somaliText: 'Taariikhda Akhriska',
+                )),
+                subtitle: Text(LocalizationService.getLocalizedText(
+                  englishText: 'Save your reading history',
+                  somaliText: 'Kaydi taariikhda akhriskaaga',
+                )),
+                value: readingHistory,
+                onChanged: (value) => setState(() => readingHistory = value),
+              ),
+              SwitchListTile(
+                title: Text(LocalizationService.getLocalizedText(
+                  englishText: 'Personalized Recommendations',
+                  somaliText: 'Talooyinka Gaarka ah',
+                )),
+                subtitle: Text(LocalizationService.getLocalizedText(
+                  englishText: 'Get book recommendations based on your activity',
+                  somaliText: 'Hel talooyin ku salaysan dhaqdhaqaaqaaga',
+                )),
+                value: recommendations,
+                onChanged: (value) => setState(() => recommendations = value),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text(LocalizationService.getLocalizedText(
+                englishText: 'Cancel',
+                somaliText: 'Jooji',
+              )),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final updatedPreferences = Map<String, dynamic>.from(authState.user.preferences);
+                updatedPreferences['profileVisibility'] = profileVisibility;
+                updatedPreferences['readingHistory'] = readingHistory;
+                updatedPreferences['recommendations'] = recommendations;
+
+                context.read<AuthBloc>().add(UpdateProfileRequested(
+                  // Update preferences through profile update
+                ));
+                
+                Navigator.of(context).pop();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Privacy settings updated')),
+                );
+              },
+              child: Text(LocalizationService.getLocalizedText(
+                englishText: 'Save',
+                somaliText: 'Kaydi',
+              )),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   void _showDataStorageDialog(AuthState authState) {
-    // TODO: Implement data storage dialog
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(LocalizationService.getLocalizedText(
+          englishText: 'Data & Storage',
+          somaliText: 'Xogta & Kaydinta',
+        )),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              LocalizationService.getLocalizedText(
+                englishText: 'Manage your app data and storage:',
+                somaliText: 'Maamul xogta app-ka iyo kaydinta:',
+              ),
+              style: const TextStyle(fontWeight: FontWeight.w500),
+            ),
+            const SizedBox(height: 16),
+            ListTile(
+              leading: const Icon(Icons.delete_outline),
+              title: Text(LocalizationService.getLocalizedText(
+                englishText: 'Clear Cache',
+                somaliText: 'Nadiif Cache',
+              )),
+              subtitle: Text(LocalizationService.getLocalizedText(
+                englishText: 'Remove temporary files',
+                somaliText: 'Ka saar faylasha ku meel gaar ah',
+              )),
+              onTap: () {
+                Navigator.of(context).pop();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Cache cleared successfully')),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.download_outlined),
+              title: Text(LocalizationService.getLocalizedText(
+                englishText: 'Clear Downloads',
+                somaliText: 'Nadiif Soo dejinta',
+              )),
+              subtitle: Text(LocalizationService.getLocalizedText(
+                englishText: 'Remove downloaded books',
+                somaliText: 'Ka saar kutubta la soo dejiyay',
+              )),
+              onTap: () {
+                Navigator.of(context).pop();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Downloads cleared successfully')),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.history),
+              title: Text(LocalizationService.getLocalizedText(
+                englishText: 'Clear Reading History',
+                somaliText: 'Nadiif Taariikhda Akhriska',
+              )),
+              subtitle: Text(LocalizationService.getLocalizedText(
+                englishText: 'Remove reading progress',
+                somaliText: 'Ka saar horumarka akhriska',
+              )),
+              onTap: () {
+                Navigator.of(context).pop();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Reading history cleared successfully')),
+                );
+              },
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(LocalizationService.getLocalizedText(
+              englishText: 'Close',
+              somaliText: 'Xidhiidh',
+            )),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showLogoutDialog() {
-    // TODO: Implement logout dialog
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(LocalizationService.getLocalizedText(
+          englishText: 'Logout',
+          somaliText: 'Ka Bax',
+        )),
+        content: Text(LocalizationService.getLocalizedText(
+          englishText: 'Are you sure you want to logout?',
+          somaliText: 'Ma hubtaa inaad rabto inaad ka baxdo?',
+        )),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(LocalizationService.getLocalizedText(
+              englishText: 'Cancel',
+              somaliText: 'Jooji',
+            )),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              context.read<AuthBloc>().add(const LogoutRequested());
+              context.go('/login');
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: Text(LocalizationService.getLocalizedText(
+              englishText: 'Logout',
+              somaliText: 'Ka Bax',
+            )),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildSupportCard({

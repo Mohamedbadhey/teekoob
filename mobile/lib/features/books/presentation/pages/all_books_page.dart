@@ -3,8 +3,10 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:teekoob/features/books/bloc/books_bloc.dart';
 import 'package:teekoob/features/books/presentation/widgets/book_card.dart';
+import 'package:teekoob/features/books/presentation/widgets/shimmer_book_card.dart';
 import 'package:teekoob/core/models/book_model.dart';
 import 'package:teekoob/features/library/bloc/library_bloc.dart';
+import 'package:teekoob/core/config/app_router.dart';
 
 class AllBooksPage extends StatefulWidget {
   final String category;
@@ -49,6 +51,9 @@ class _AllBooksPageState extends State<AllBooksPage> {
       case 'featured':
         context.read<BooksBloc>().add(const LoadFeaturedBooks(limit: 50));
         break;
+      case 'free':
+        context.read<BooksBloc>().add(const LoadFreeBooks(limit: 50));
+        break;
       default:
         context.read<BooksBloc>().add(const LoadBooks(limit: 50));
     }
@@ -64,7 +69,7 @@ class _AllBooksPageState extends State<AllBooksPage> {
         title: Row(
           children: [
             GestureDetector(
-              onTap: () => context.go('/home'),
+              onTap: () => AppRouter.handleBackNavigation(context),
               child: const Icon(
                 Icons.arrow_back,
                 color: Colors.white,
@@ -100,6 +105,11 @@ class _AllBooksPageState extends State<AllBooksPage> {
               _books = state.books;
               _isLoading = false;
             });
+          } else if (state is FreeBooksLoaded && widget.category == 'free') {
+            setState(() {
+              _books = state.books;
+              _isLoading = false;
+            });
           } else if (state is BooksLoaded && widget.category == 'all') {
             setState(() {
               _books = state.books;
@@ -108,11 +118,27 @@ class _AllBooksPageState extends State<AllBooksPage> {
           }
         },
         child: _isLoading
-            ? const Center(child: CircularProgressIndicator())
+            ? _buildShimmerLoading()
             : _books.isEmpty
                 ? _buildEmptyState()
                 : _buildBooksGrid(),
       ),
+    );
+  }
+
+  Widget _buildShimmerLoading() {
+    return GridView.builder(
+      padding: const EdgeInsets.all(16),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        childAspectRatio: 0.75,
+        crossAxisSpacing: 16,
+        mainAxisSpacing: 16,
+      ),
+      itemCount: 6, // Show 6 shimmer cards
+      itemBuilder: (context, index) {
+        return ShimmerBookCard();
+      },
     );
   }
 
@@ -238,11 +264,9 @@ class _AllBooksPageState extends State<AllBooksPage> {
     final availableWidth = screenWidth - 32 - (_getResponsiveGridSpacing() * (crossAxisCount - 1)); // 32 for proper padding, spacing between cards
     final cardWidth = availableWidth / crossAxisCount;
     
-    // Add extra height to prevent overflow in grid layout
-    final adjustedCardHeight = cardHeight + 10; // Add 10px extra height for grid layout
-    
-    // Calculate aspect ratio: width / height
-    return cardWidth / adjustedCardHeight;
+    // Use a more appropriate aspect ratio for grid layout
+    // Grid cards should be more square-like for better visual balance
+    return 0.75; // Fixed aspect ratio for consistent grid layout
   }
 
   // Get responsive horizontal card height (same as HomePage)

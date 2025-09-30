@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:teekoob/features/player/services/audio_state_manager.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:webview_flutter/webview_flutter.dart';
+import 'package:teekoob/core/config/app_router.dart';
 
 class BookReadPage extends StatefulWidget {
   const BookReadPage({super.key});
@@ -162,10 +163,10 @@ Note: We attempted to extract text from the PDF but were unable to. We've provid
         children: [
           // Back Button
           IconButton(
-            onPressed: () => context.pop(),
+            onPressed: () => AppRouter.handleBackNavigation(context),
             icon: const Icon(
               Icons.arrow_back,
-              color: Colors.white, // White text on orange background
+              color: Colors.white,
               size: 24,
             ),
           ),

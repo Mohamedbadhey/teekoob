@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:teekoob/core/services/localization_service.dart';
 import 'package:teekoob/features/books/bloc/books_bloc.dart';
 import 'package:teekoob/features/books/presentation/widgets/book_card.dart';
+import 'package:teekoob/features/books/presentation/widgets/shimmer_book_card.dart';
 import 'package:teekoob/core/models/book_model.dart';
 import 'package:teekoob/core/models/category_model.dart';
 import 'package:teekoob/features/library/bloc/library_bloc.dart';
@@ -45,6 +46,16 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _loadInitialData() {
+    // Set all loading states to true initially
+    setState(() {
+      _isLoadingFeatured = true;
+      _isLoadingNewReleases = true;
+      _isLoadingRecentBooks = true;
+      _isLoadingFreeBooks = true;
+      _isLoadingRandomBooks = true;
+      _isLoadingCategories = true;
+    });
+    
     // Load featured books (for featured section)
     context.read<BooksBloc>().add(const LoadFeaturedBooks(limit: 6));
     
@@ -417,7 +428,15 @@ class _HomePageState extends State<HomePage> {
           const SizedBox(height: 16),
           
           // Featured Book Card
-          if (_featuredBooks.isNotEmpty) ...[
+          if (_isLoadingFeatured) ...[
+            SizedBox(
+              width: double.infinity,
+              child: ShimmerBookCard(
+                width: double.infinity,
+                height: _getResponsiveHorizontalCardHeight(),
+              ),
+            ),
+          ] else if (_featuredBooks.isNotEmpty) ...[
             SizedBox(
               width: double.infinity,
               child: BlocBuilder<LibraryBloc, LibraryState>(
@@ -766,19 +785,18 @@ class _HomePageState extends State<HomePage> {
 
   Widget _buildLoadingHorizontalScroll() {
     return SizedBox(
-      height: _getResponsiveHorizontalScrollHeight(), // Responsive height
+      height: _getResponsiveHorizontalScrollHeight(),
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.only(left: 20),
         itemCount: 5,
         itemBuilder: (context, index) {
           return Container(
             margin: EdgeInsets.only(right: index < 4 ? 16 : 0),
-            width: _getResponsiveHorizontalCardWidth() * 0.8, // Responsive width (80% of card width)
-            height: _getResponsiveHorizontalCardHeight(), // Responsive height
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surface,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
+            child: ShimmerBookCard(
+              width: _getResponsiveHorizontalCardWidth(),
+              height: _getResponsiveHorizontalCardHeight(),
+            ),
           );
         },
       ),

@@ -179,6 +179,15 @@ class AppRouter {
   // Pop navigation
   static void goBack(BuildContext context) => context.pop();
   
+  // Consistent back navigation that respects navigation stack
+  static void handleBackNavigation(BuildContext context) {
+    if (Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
+    } else {
+      context.go(home);
+    }
+  }
+  
   // Replace current route
   static void replaceWithHome(BuildContext context) => context.go(home);
   static void replaceWithLogin(BuildContext context) => context.go(login);

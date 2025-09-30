@@ -5,6 +5,7 @@ import 'package:teekoob/core/models/book_model.dart';
 import 'package:teekoob/core/config/app_config.dart';
 import 'package:teekoob/features/player/services/audio_player_service.dart';
 import 'package:teekoob/features/player/services/audio_state_manager.dart';
+import 'package:teekoob/core/config/app_router.dart';
 
 class AudioPlayerPage extends StatefulWidget {
   final String bookId;
@@ -273,8 +274,8 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
         child: Row(
           children: [
             IconButton(
-              onPressed: () => context.pop(),
-              icon: const Icon(Icons.arrow_back, color: Colors.white), // White on orange
+              onPressed: () => AppRouter.handleBackNavigation(context),
+              icon: const Icon(Icons.arrow_back, color: Colors.white),
             ),
             Expanded(
               child: Text(

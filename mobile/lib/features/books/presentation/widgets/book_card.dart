@@ -251,9 +251,9 @@ class _BookCardState extends State<BookCard> with TickerProviderStateMixin {
     final theme = Theme.of(context);
     
     // Responsive sizing based on screen dimensions
-    final cardWidth = widget.compact
-        ? (widget.width ?? (screenWidth - (screenWidth * 0.10)))
-        : (widget.width ?? _getResponsiveWidth(screenWidth));
+    final cardWidth = widget.width ?? (widget.compact
+        ? (screenWidth - (screenWidth * 0.10))
+        : _getResponsiveWidth(screenWidth));
     final cardHeight = widget.height ?? _getResponsiveHeight(screenHeight);
     
     Widget cardContent = widget.compact
@@ -263,7 +263,7 @@ class _BookCardState extends State<BookCard> with TickerProviderStateMixin {
       // height: cardHeight, // REMOVED FIXED HEIGHT - let content determine height
       margin: widget.compact
           ? const EdgeInsets.symmetric(vertical: 6)
-          : EdgeInsets.only(right: widget.width != null ? 0 : screenWidth * 0.03), // No margin for grid layout, margin for horizontal scroll
+          : EdgeInsets.zero, // No margin for grid layout
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(widget.compact ? 12 : 20),
@@ -643,6 +643,26 @@ class _BookCardState extends State<BookCard> with TickerProviderStateMixin {
                       overflow: TextOverflow.ellipsis,
                     ),
                   const SizedBox(height: 8),
+                  
+                  // Free book badge for compact mode
+                  if (widget.book.isFree)
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.green,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        'FREE',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  
                   Row(
                     children: [
                       Container(

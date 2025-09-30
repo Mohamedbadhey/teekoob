@@ -22,12 +22,22 @@ import 'package:teekoob/features/settings/services/settings_service.dart';
 import 'package:teekoob/features/settings/bloc/settings_bloc.dart';
 import 'package:teekoob/features/subscription/services/subscription_service.dart';
 import 'package:teekoob/features/subscription/bloc/subscription_bloc.dart';
+import 'package:teekoob/core/services/notification_service.dart';
+import 'package:teekoob/core/bloc/notification_bloc.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
   // Initialize Localization
   await LocalizationService.initialize();
+  
+  // Initialize Notification Service
+  await NotificationService().initialize();
+  
+  // Request notification permissions and schedule hourly notifications on app install
+  final notificationService = NotificationService();
+  await notificationService.requestPermissions();
+  await notificationService.scheduleHourlyRandomBookNotifications();
   
   runApp(TeekoobApp());
 }
@@ -59,6 +69,9 @@ class TeekoobApp extends StatelessWidget {
             ),
             RepositoryProvider<SubscriptionService>(
               create: (context) => SubscriptionService(),
+            ),
+            RepositoryProvider<NotificationService>(
+              create: (context) => NotificationService(),
             ),
           ],
                 child: MultiBlocProvider(
@@ -96,6 +109,11 @@ class TeekoobApp extends StatelessWidget {
               BlocProvider<SubscriptionBloc>(
                 create: (context) => SubscriptionBloc(
                   subscriptionService: context.read<SubscriptionService>(),
+                ),
+              ),
+              BlocProvider<NotificationBloc>(
+                create: (context) => NotificationBloc(
+                  notificationService: context.read<NotificationService>(),
                 ),
               ),
             ],

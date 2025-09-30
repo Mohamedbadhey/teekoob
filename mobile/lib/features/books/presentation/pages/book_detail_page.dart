@@ -7,10 +7,11 @@ import 'package:teekoob/core/config/app_config.dart';
 import 'package:teekoob/features/books/bloc/books_bloc.dart';
 import 'package:teekoob/features/books/services/books_service.dart';
 // import 'package:teekoob/core/services/storage_service.dart'; // Removed - no local storage
-import 'package:teekoob/core/services/navigation_service.dart';
+import 'package:teekoob/core/config/app_router.dart';
 import 'package:teekoob/features/books/presentation/pages/book_read_page.dart';
 import 'package:teekoob/features/player/presentation/pages/audio_player_page.dart';
 import 'package:teekoob/features/player/services/audio_state_manager.dart';
+import 'package:teekoob/core/presentation/widgets/book_reminder_widget.dart';
 
 class BookDetailPage extends StatefulWidget {
   final String bookId;
@@ -171,6 +172,11 @@ class _BookDetailPageState extends State<BookDetailPage> {
                     // Rating Section
                     _buildRatingSection(),
                     
+                    // Book Reminder Widget
+                    BookReminderWidget(book: book!),
+                    
+                    const SizedBox(height: 24),
+                    
                     // Text Blocks
                     _buildTextBlocks(),
                   ],
@@ -192,27 +198,8 @@ class _BookDetailPageState extends State<BookDetailPage> {
         child: Row(
           children: [
             IconButton(
-              onPressed: () async {
-                print('Back button pressed'); // Debug log
-                try {
-                  if (Navigator.of(context).canPop()) {
-                    print('Can pop, going back'); // Debug log
-                    Navigator.of(context).pop();
-                  } else {
-                    print('Cannot pop, navigating to last visited tab'); // Debug log
-                    // Navigate to the last visited bottom navigation tab
-                    final lastTab = await NavigationService.getLastTab();
-                    final route = NavigationService.getRouteForTab(lastTab);
-                    print('Navigating to last visited tab: $lastTab, route: $route'); // Debug log
-                    context.go(route);
-                  }
-                } catch (e) {
-                  print('Navigation error: $e'); // Debug log
-                  // Fallback to home page
-                  context.go('/home');
-                }
-              },
-              icon: const Icon(Icons.arrow_back, color: Colors.white), // White on orange
+              onPressed: () => AppRouter.handleBackNavigation(context),
+              icon: const Icon(Icons.arrow_back, color: Colors.white),
             ),
             Expanded(
               child: Text(

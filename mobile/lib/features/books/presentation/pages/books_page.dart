@@ -5,6 +5,7 @@ import 'package:teekoob/core/services/localization_service.dart';
 import 'package:teekoob/core/models/book_model.dart';
 import 'package:teekoob/features/books/bloc/books_bloc.dart';
 import 'package:teekoob/features/books/presentation/widgets/book_card.dart';
+import 'package:teekoob/features/books/presentation/widgets/shimmer_book_card.dart';
 import 'package:teekoob/features/books/presentation/widgets/search_bar.dart' as custom_search;
 import 'package:teekoob/features/books/presentation/widgets/book_filters.dart';
 import 'package:teekoob/features/library/bloc/library_bloc.dart';
@@ -373,45 +374,31 @@ class _BooksPageState extends State<BooksPage> {
 
 
   Widget _buildLoadingState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          // Animated loading container
-          Container(
-            width: 80,
-            height: 80,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  const Color(0xFF0466c8).withOpacity(0.1),
-                  const Color(0xFF1E3A8A).withOpacity(0.1),
-                ],
-              ),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Center(
-              child: CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).colorScheme.primary),
-                strokeWidth: 3,
-              ),
-            ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final screenWidth = constraints.maxWidth;
+        final screenHeight = MediaQuery.of(context).size.height;
+        
+        return ListView.builder(
+          padding: EdgeInsets.fromLTRB(
+            screenWidth * 0.05, // 5% of screen width
+            0, 
+            screenWidth * 0.05, // 5% of screen width
+            screenHeight * 0.02, // 2% of screen height
           ),
-          const SizedBox(height: 24),
-          Text(
-            LocalizationService.getDiscoveringBooksText,
-            style: TextStyle(
-              color: Theme.of(context).colorScheme.onSurface,
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 0.3,
-            ),
-          ),
-          // Removed extra loading subtitle per request
-        ],
-      ),
+          itemCount: 8, // Show 8 shimmer cards
+          itemBuilder: (context, index) {
+            // Alternate soft backgrounds for better distinction
+            final Color itemBg = index % 2 == 0
+              ? const Color(0xFFF8FAFF)
+              : const Color(0xFFFAFAFF);
+
+            return ShimmerBookCard(
+              compact: true,
+            );
+          },
+        );
+      },
     );
   }
 
