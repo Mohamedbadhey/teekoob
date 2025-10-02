@@ -81,9 +81,9 @@ dependencies:
   universal_html: ^2.2.4
   webview_flutter_web: ^0.2.3+4
   
-  # Notifications
-  flutter_local_notifications: ^19.4.2
-  timezone: ^0.10.0
+  # Firebase Cloud Messaging Only (No Local Notifications)
+  firebase_core: ^2.24.2
+  firebase_messaging: ^14.7.10
 
 dev_dependencies:
   flutter_lints: ^3.0.0

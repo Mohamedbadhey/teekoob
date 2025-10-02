@@ -9,8 +9,8 @@ import 'package:teekoob/core/services/language_service.dart';
 import 'package:teekoob/core/services/theme_service.dart';
 import 'package:flutter/foundation.dart';
 
-// Simple notification service (no Firebase)
-import 'package:teekoob/core/services/simple_notification_service.dart';
+// Firebase notification service
+import 'package:teekoob/core/services/firebase_notification_service.dart';
 import 'package:teekoob/core/services/notification_service_interface.dart';
 
 import 'package:teekoob/features/auth/services/auth_service.dart';
@@ -35,8 +35,8 @@ void main() async {
   // Initialize Localization
   await LocalizationService.initialize();
   
-  // Initialize simple notification service (mobile only, no Firebase)
-  await SimpleNotificationService().initialize();
+  // Initialize Firebase notification service (works when app is closed)
+  await FirebaseNotificationService().initialize();
   
   runApp(TeekoobApp());
 }
@@ -70,7 +70,7 @@ class TeekoobApp extends StatelessWidget {
               create: (context) => SubscriptionService(),
             ),
             RepositoryProvider<NotificationServiceInterface>(
-              create: (context) => SimpleNotificationService(),
+              create: (context) => FirebaseNotificationService(),
             ),
           ],
                 child: MultiBlocProvider(
