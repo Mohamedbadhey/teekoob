@@ -59,7 +59,7 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyAilWZWYgi5vPpymMPJpvCZnW63Nz1wawQ',
-    appId: '1:4861039733:ios:YOUR_ACTUAL_IOS_APP_ID', // ← Replace with your actual iOS app ID
+    appId: '1:4861039733:ios:a4c2a00b30ea81d006543c',
     messagingSenderId: '4861039733',
     projectId: 'teekoob',
     storageBucket: 'teekoob.firebasestorage.app',

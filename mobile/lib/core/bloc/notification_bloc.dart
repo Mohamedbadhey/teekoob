@@ -1,7 +1,6 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:teekoob/core/models/book_model.dart';
 import 'package:teekoob/core/services/notification_service_interface.dart';
 
@@ -123,7 +122,7 @@ class NotificationLoading extends NotificationState {
 
 class NotificationInitialized extends NotificationState {
   final bool hasPermission;
-  final List<PendingNotificationRequest> pendingNotifications;
+  final List<dynamic> pendingNotifications;
 
   const NotificationInitialized({
     required this.hasPermission,
@@ -217,7 +216,7 @@ class AllNotificationsCancelled extends NotificationState {
 }
 
 class PendingNotificationsLoaded extends NotificationState {
-  final List<PendingNotificationRequest> notifications;
+  final List<dynamic> notifications;
 
   const PendingNotificationsLoaded(this.notifications);
 
@@ -263,7 +262,7 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
       
       await _notificationService.initialize();
       final bool hasPermission = await _notificationService.areNotificationsEnabled();
-      final List<PendingNotificationRequest> pendingNotifications = 
+      final List<dynamic> pendingNotifications = 
           await _notificationService.getPendingNotifications();
       
       emit(NotificationInitialized(
@@ -434,7 +433,7 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
     try {
       emit(const NotificationLoading());
       
-      final List<PendingNotificationRequest> notifications = 
+      final List<dynamic> notifications = 
           await _notificationService.getPendingNotifications();
       
       emit(PendingNotificationsLoaded(notifications));

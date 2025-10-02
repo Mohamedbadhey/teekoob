@@ -1,58 +1,63 @@
-// Simple notification service that works on both web and mobile
+import 'dart:async';
+import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
-import 'dart:async';
-import 'dart:math';
-import 'package:teekoob/core/models/book_model.dart';
 import 'package:teekoob/core/services/notification_service_interface.dart';
+import 'package:teekoob/core/models/book_model.dart';
 import 'package:teekoob/features/books/services/books_service.dart';
 import 'package:teekoob/core/services/localization_service.dart';
 
-class SimpleNotificationService implements NotificationServiceInterface {
-  static final SimpleNotificationService _instance = SimpleNotificationService._internal();
-  factory SimpleNotificationService() => _instance;
-  SimpleNotificationService._internal();
+class MobileNotificationService implements NotificationServiceInterface {
+  static final MobileNotificationService _instance = MobileNotificationService._internal();
+  factory MobileNotificationService() => _instance;
+  MobileNotificationService._internal();
 
-  final FlutterLocalNotificationsPlugin _localNotifications = FlutterLocalNotificationsPlugin();
+  final FlutterLocalNotificationsPlugin _notifications = FlutterLocalNotificationsPlugin();
   final BooksService _booksService = BooksService();
   final Random _random = Random();
 
   bool _isInitialized = false;
+  Timer? _notificationTimer;
 
+  /// Initialize the notification service
   Future<void> initialize() async {
     if (_isInitialized) return;
 
     try {
-      // Initialize local notifications
-      await _initializeLocalNotifications();
-      
+      // Initialize timezone data
+      tz.initializeTimeZones();
+
+      // Android initialization settings
+      const AndroidInitializationSettings androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+
+      // iOS initialization settings
+      const DarwinInitializationSettings iosSettings = DarwinInitializationSettings(
+        requestAlertPermission: true,
+        requestBadgePermission: true,
+        requestSoundPermission: true,
+      );
+
+      const InitializationSettings settings = InitializationSettings(
+        android: androidSettings,
+        iOS: iosSettings,
+      );
+
+      await _notifications.initialize(
+        settings,
+        onDidReceiveNotificationResponse: _onNotificationTapped,
+      );
+
       // Request permissions
       await _requestPermissions();
-      
+
       _isInitialized = true;
-      print('🔔 Simple Notification Service initialized successfully');
+      print('🔔 Mobile Notification Service initialized successfully');
     } catch (e) {
-      print('❌ Error initializing Simple Notification Service: $e');
+      print('❌ Error initializing Mobile Notification Service: $e');
     }
-  }
-
-  Future<void> _initializeLocalNotifications() async {
-    const AndroidInitializationSettings androidSettings =
-        AndroidInitializationSettings('@mipmap/ic_launcher');
-    const DarwinInitializationSettings iosSettings = DarwinInitializationSettings();
-
-    const InitializationSettings settings = InitializationSettings(
-      android: androidSettings,
-      iOS: iosSettings,
-    );
-
-    await _localNotifications.initialize(
-      settings,
-      onDidReceiveNotificationResponse: _onNotificationTapped,
-    );
-    print('🔔 Local notifications initialized');
   }
 
   Future<void> _requestPermissions() async {
@@ -63,11 +68,11 @@ class SimpleNotificationService implements NotificationServiceInterface {
       }
 
       // Request permissions for mobile platforms
-      await _localNotifications
+      await _notifications
           .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
           ?.requestNotificationsPermission();
       
-      await _localNotifications
+      await _notifications
           .resolvePlatformSpecificImplementation<IOSFlutterLocalNotificationsPlugin>()
           ?.requestPermissions(
             alert: true,
@@ -85,8 +90,7 @@ class SimpleNotificationService implements NotificationServiceInterface {
     print('🔔 Notification tapped with payload: ${response.payload}');
     if (response.payload != null) {
       try {
-        final data = response.payload!;
-        final bookId = data;
+        final bookId = response.payload!;
         if (bookId.isNotEmpty) {
           print('Navigating to book detail for ID: $bookId');
           // TODO: Implement navigation to book detail page using GoRouter
@@ -101,7 +105,7 @@ class SimpleNotificationService implements NotificationServiceInterface {
     try {
       if (kIsWeb) return false;
       
-      final pendingNotifications = await _localNotifications.pendingNotificationRequests();
+      final pendingNotifications = await _notifications.pendingNotificationRequests();
       return true; // Assume enabled if we can get pending notifications
     } catch (e) {
       print('❌ Error checking notification status: $e');
@@ -109,10 +113,10 @@ class SimpleNotificationService implements NotificationServiceInterface {
     }
   }
 
-  Future<List<PendingNotificationRequest>> getPendingNotifications() async {
+  Future<List<dynamic>> getPendingNotifications() async {
     try {
       if (kIsWeb) return [];
-      return await _localNotifications.pendingNotificationRequests();
+      return await _notifications.pendingNotificationRequests();
     } catch (e) {
       print('❌ Error getting pending notifications: $e');
       return [];
@@ -128,6 +132,82 @@ class SimpleNotificationService implements NotificationServiceInterface {
     } catch (e) {
       print('❌ Error requesting permissions: $e');
       return false;
+    }
+  }
+
+  // Firebase Cloud Messaging methods (not supported - use local notifications)
+  String? getFCMToken() {
+    print('🔔 FCM not supported - using local notifications instead');
+    return null;
+  }
+
+  Future<void> enableRandomBookNotifications() async {
+    print('🔔 Random book notifications enabled via local notifications');
+    _startRandomBookNotifications();
+  }
+
+  Future<void> disableRandomBookNotifications() async {
+    print('🔔 Random book notifications disabled');
+    _stopRandomBookNotifications();
+  }
+
+  Future<void> sendTestNotification() async {
+    print('🔔 Sending test notification via local notifications');
+    await _sendRandomBookNotification();
+  }
+
+  void _startRandomBookNotifications() {
+    _stopRandomBookNotifications(); // Stop any existing timer
+    
+    // Send notification every 10 minutes
+    _notificationTimer = Timer.periodic(const Duration(minutes: 10), (timer) {
+      _sendRandomBookNotification();
+    });
+    
+    print('🔔 Random book notifications started (every 10 minutes)');
+  }
+
+  void _stopRandomBookNotifications() {
+    _notificationTimer?.cancel();
+    _notificationTimer = null;
+    print('🔔 Random book notifications stopped');
+  }
+
+  Future<void> _sendRandomBookNotification() async {
+    try {
+      // Get random books from service
+      final books = await _booksService.getBooks();
+      if (books.isEmpty) return;
+
+      final randomBook = books[_random.nextInt(books.length)];
+      
+      const AndroidNotificationDetails androidPlatformChannelSpecifics =
+          AndroidNotificationDetails(
+        'random_book_channel',
+        'Random Book Notifications',
+        channelDescription: 'Notifications for random book recommendations',
+        importance: Importance.high,
+        priority: Priority.high,
+        icon: '@mipmap/ic_launcher',
+      );
+      
+      const NotificationDetails platformChannelSpecifics =
+          NotificationDetails(android: androidPlatformChannelSpecifics);
+      
+      final title = _createBookNotificationTitle(randomBook);
+      final body = _createBookNotificationBody(randomBook);
+      
+      await _notifications.show(
+        randomBook.id.hashCode,
+        title,
+        body,
+        platformChannelSpecifics,
+        payload: randomBook.id.toString(),
+      );
+      
+      print('🔔 Random book notification sent: ${randomBook.title}');
+    } catch (e) {
+      print('❌ Error sending random book notification: $e');
     }
   }
 
@@ -151,7 +231,7 @@ class SimpleNotificationService implements NotificationServiceInterface {
       final title = customMessage ?? _createBookNotificationTitle(book);
       final body = customMessage ?? _createBookNotificationBody(book);
       
-      await _localNotifications.zonedSchedule(
+      await _notifications.zonedSchedule(
         book.id.hashCode,
         title,
         body,
@@ -226,7 +306,7 @@ class SimpleNotificationService implements NotificationServiceInterface {
       final title = customMessage ?? _createBookNotificationTitle(book);
       final body = customMessage ?? _createBookNotificationBody(book);
       
-      await _localNotifications.show(
+      await _notifications.show(
         book.id.hashCode,
         title,
         body,
@@ -234,9 +314,9 @@ class SimpleNotificationService implements NotificationServiceInterface {
         payload: book.id.toString(),
       );
       
-      print('🔔 Instant book reminder shown for ${book.title}');
+      print('🔔 Instant book reminder sent: ${book.title}');
     } catch (e) {
-      print('❌ Error showing instant book reminder: $e');
+      print('❌ Error sending instant book reminder: $e');
     }
   }
 
@@ -249,19 +329,20 @@ class SimpleNotificationService implements NotificationServiceInterface {
       await scheduleBookReminder(
         book: book,
         scheduledTime: scheduledTime,
-        customMessage: 'Check your reading progress! 📖',
+        customMessage: 'Continue reading ${book.title}! 📖',
       );
       
-      print('🔔 Reading progress reminder scheduled for ${book.title} in ${interval.inMinutes} minutes');
+      print('🔔 Reading progress reminder scheduled for ${book.title} in ${interval.inHours} hours');
     } catch (e) {
       print('❌ Error scheduling reading progress reminder: $e');
     }
   }
 
-  Future<void> cancelNotification(int notificationId) async {
+  Future<void> cancelNotification(int id) async {
     try {
-      await _localNotifications.cancel(notificationId);
-      print('🔔 Notification $notificationId cancelled');
+      if (kIsWeb) return;
+      await _notifications.cancel(id);
+      print('🔔 Notification cancelled: $id');
     } catch (e) {
       print('❌ Error cancelling notification: $e');
     }
@@ -269,133 +350,28 @@ class SimpleNotificationService implements NotificationServiceInterface {
 
   Future<void> cancelAllNotifications() async {
     try {
-      await _localNotifications.cancelAll();
+      if (kIsWeb) return;
+      await _notifications.cancelAll();
       print('🔔 All notifications cancelled');
     } catch (e) {
       print('❌ Error cancelling all notifications: $e');
     }
   }
 
-  Future<void> enableRandomBookNotifications() async {
-    try {
-      print('🔔 Random book notifications enabled');
-      // Start sending random book notifications every 10 minutes
-      _startRandomBookNotifications();
-    } catch (e) {
-      print('❌ Error enabling random book notifications: $e');
-    }
-  }
-
-  Future<void> disableRandomBookNotifications() async {
-    try {
-      print('🔔 Random book notifications disabled');
-      // Stop sending random book notifications
-      _stopRandomBookNotifications();
-    } catch (e) {
-      print('❌ Error disabling random book notifications: $e');
-    }
-  }
-
-  Future<void> sendTestNotification() async {
-    try {
-      if (kIsWeb) return;
-      
-      final book = await _getRandomBook();
-      if (book != null) {
-        await showInstantBookReminder(
-          book: book,
-          customMessage: 'Test notification with random book! 📚',
-        );
-        print('🔔 Test notification sent with book: ${book.title}');
-      } else {
-        print('❌ No books available for test notification');
-      }
-    } catch (e) {
-      print('❌ Error sending test notification: $e');
-    }
-  }
-
-  String? getFCMToken() => null; // No FCM token for simple notifications
-
-  Timer? _notificationTimer;
-
-  void _startRandomBookNotifications() {
-    _stopRandomBookNotifications(); // Stop any existing timer
-    
-    _notificationTimer = Timer.periodic(const Duration(minutes: 10), (timer) async {
-      try {
-        final book = await _getRandomBook();
-        if (book != null) {
-          await showInstantBookReminder(book: book);
-          print('🔔 Random book notification sent: ${book.title}');
-        }
-      } catch (e) {
-        print('❌ Error sending random book notification: $e');
-      }
-    });
-    
-    print('🔔 Random book notifications started (every 10 minutes)');
-  }
-
-  void _stopRandomBookNotifications() {
-    _notificationTimer?.cancel();
-    _notificationTimer = null;
-    print('🔔 Random book notifications stopped');
-  }
-
-  Future<Book?> _getRandomBook() async {
-    try {
-      // Get books from homepage collections (same as displayed on homepage)
-      final List<Future<List<Book>>> futures = [
-        _booksService.getFeaturedBooks(limit: 10),
-        _booksService.getNewReleases(limit: 10),
-        _booksService.getRecentBooks(limit: 10),
-        _booksService.getFreeBooks(limit: 10),
-        _booksService.getRandomBooks(limit: 10),
-      ];
-
-      final List<List<Book>> allCollections = await Future.wait(futures);
-      
-      // Combine all homepage books
-      final List<Book> allHomepageBooks = [];
-      for (final collection in allCollections) {
-        allHomepageBooks.addAll(collection);
-      }
-
-      if (allHomepageBooks.isEmpty) {
-        print('❌ No homepage books available for notifications');
-        return null;
-      }
-
-      // Select a random book from homepage collections
-      final randomBook = allHomepageBooks[_random.nextInt(allHomepageBooks.length)];
-      print('🔔 Selected random book from homepage: ${randomBook.title}');
-      
-      return randomBook;
-    } catch (e) {
-      print('❌ Error getting random book from homepage collections: $e');
-      return null;
-    }
-  }
-
   String _createBookNotificationTitle(Book book) {
-    final isSomali = LocalizationService.currentLanguage == 'so';
-    return isSomali ? '📚 Buug Xiiso Leh!' : '📚 Featured Book Alert!';
+    final isSomali = LocalizationService.currentLanguageCode == 'so';
+    if (isSomali) {
+      return '📚 Buug Xiiso Leh!';
+    } else {
+      return '📚 Featured Book Alert!';
+    }
   }
 
   String _createBookNotificationBody(Book book) {
-    final isSomali = LocalizationService.currentLanguage == 'so';
-    final bookTitle = isSomali ? book.titleSomali ?? book.title : book.title;
-    final description = isSomali ? book.descriptionSomali ?? book.description : book.description;
-    final author = isSomali 
-        ? (book.authorsSomali?.isNotEmpty == true ? book.authorsSomali![0] : 'Qoraaga')
-        : (book.authors?.isNotEmpty == true ? book.authors![0] : 'Author');
+    final isSomali = LocalizationService.currentLanguageCode == 'so';
+    final title = isSomali ? (book.titleSomali ?? book.title) : book.title;
+    final description = isSomali ? (book.descriptionSomali ?? book.description ?? 'Buug xiiso leh!') : (book.description ?? 'Discover this amazing book!');
     
-    return '$bookTitle\n\n$author\n\n${description ?? (isSomali ? 'Buug xiiso leh oo ka mid ah kuwa bogga hore!' : 'Discover this amazing book from our homepage collections!')}';
-  }
-
-  Future<void> dispose() async {
-    _stopRandomBookNotifications();
-    print('🔔 Simple Notification Service disposed');
+    return '$title\n\n$description';
   }
 }

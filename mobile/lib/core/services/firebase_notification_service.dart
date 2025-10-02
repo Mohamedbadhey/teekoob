@@ -12,10 +12,30 @@ import 'package:teekoob/core/services/localization_service.dart';
 // Background message handler - must be top-level function
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  print('🔔 Background message received: ${message.messageId}');
-  print('🔔 Title: ${message.notification?.title}');
-  print('🔔 Body: ${message.notification?.body}');
-  print('🔔 Data: ${message.data}');
+  print('🔔 ===== BACKGROUND MESSAGE RECEIVED =====');
+  print('🔔 Message ID: ${message.messageId}');
+  print('🔔 Message Type: ${message.messageType}');
+  print('🔔 Sent Time: ${message.sentTime}');
+  print('🔔 From: ${message.from}');
+  print('🔔 TTL: ${message.ttl}');
+  print('🔔 Collapse Key: ${message.collapseKey}');
+  
+  if (message.notification != null) {
+    print('🔔 ===== NOTIFICATION DATA =====');
+    print('🔔 Title: ${message.notification?.title}');
+    print('🔔 Body: ${message.notification?.body}');
+    print('🔔 Android: ${message.notification?.android}');
+    print('🔔 Apple: ${message.notification?.apple}');
+  }
+  
+  if (message.data.isNotEmpty) {
+    print('🔔 ===== MESSAGE DATA =====');
+    message.data.forEach((key, value) {
+      print('🔔 $key: $value');
+    });
+  }
+  
+  print('🔔 ===== END BACKGROUND MESSAGE =====');
 }
 
 class FirebaseNotificationService implements NotificationServiceInterface {
@@ -33,32 +53,48 @@ class FirebaseNotificationService implements NotificationServiceInterface {
   Future<void> initialize() async {
     if (_isInitialized) return;
 
+    print('🔔 ===== FIREBASE INITIALIZATION START =====');
+    print('🔔 Platform: ${kIsWeb ? "Web" : "Mobile"}');
+
     try {
-      // Initialize Firebase
+      // Initialize Firebase with error handling
+      print('🔔 Initializing Firebase Core...');
       await Firebase.initializeApp(
         options: DefaultFirebaseOptions.currentPlatform,
       );
+      print('🔔 ✅ Firebase Core initialized successfully');
 
-      // Set up background message handler
-      FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+      // Set up background message handler (only for mobile)
+      if (!kIsWeb) {
+        print('🔔 Setting up background message handler...');
+        FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+        print('🔔 ✅ Background message handler set up');
+      }
 
       // Request permissions
+      print('🔔 Requesting notification permissions...');
       await _requestPermissions();
 
       // Get FCM token
+      print('🔔 Getting FCM token...');
       await _getFCMToken();
 
       // Set up message listeners
+      print('🔔 Setting up message listeners...');
       _setupMessageListeners();
 
       _isInitialized = true;
-      print('🔔 Firebase Notification Service initialized successfully');
+      print('🔔 ✅ Firebase Notification Service initialized successfully');
+      print('🔔 ===== FIREBASE INITIALIZATION COMPLETE =====');
     } catch (e) {
-      print('❌ Error initializing Firebase Notification Service: $e');
+      print('🔔 ❌ Error initializing Firebase Notification Service: $e');
+      print('🔔 Stack trace: ${StackTrace.current}');
+      // Don't throw error - let app continue without notifications
     }
   }
 
   Future<void> _requestPermissions() async {
+    print('🔔 ===== REQUESTING PERMISSIONS =====');
     try {
       if (kIsWeb) {
         print('🔔 Web platform - skipping notification permissions');
@@ -66,6 +102,7 @@ class FirebaseNotificationService implements NotificationServiceInterface {
       }
 
       // Request FCM permissions
+      print('🔔 Requesting FCM permissions...');
       NotificationSettings settings = await _firebaseMessaging.requestPermission(
         alert: true,
         announcement: false,
@@ -76,24 +113,46 @@ class FirebaseNotificationService implements NotificationServiceInterface {
         sound: true,
       );
 
-      print('🔔 FCM Permission status: ${settings.authorizationStatus}');
+      print('🔔 ===== PERMISSION RESULTS =====');
+      print('🔔 Authorization Status: ${settings.authorizationStatus}');
+      print('🔔 Alert: ${settings.alert}');
+      print('🔔 Badge: ${settings.badge}');
+      print('🔔 Sound: ${settings.sound}');
+      print('🔔 Car Play: ${settings.carPlay}');
+      print('🔔 Critical Alert: ${settings.criticalAlert}');
+      print('🔔 Announcement: ${settings.announcement}');
+      print('🔔 ===== END PERMISSION RESULTS =====');
     } catch (e) {
-      print('❌ Error requesting notification permissions: $e');
+      print('🔔 ❌ Error requesting notification permissions: $e');
     }
   }
 
   Future<void> _getFCMToken() async {
+    print('🔔 ===== GETTING FCM TOKEN =====');
     try {
-      _fcmToken = await _firebaseMessaging.getToken();
-      print('🔔 FCM Token: $_fcmToken');
+      if (kIsWeb) {
+        print('🔔 Web platform - FCM token not available');
+        return;
+      }
       
-      // Register token with backend
+      print('🔔 Requesting FCM token from Firebase...');
+      _fcmToken = await _firebaseMessaging.getToken();
+      
       if (_fcmToken != null) {
+        print('🔔 ✅ FCM Token received successfully');
+        print('🔔 Token length: ${_fcmToken!.length} characters');
+        print('🔔 Token preview: ${_fcmToken!.substring(0, 20)}...');
+        
+        // Register token with backend
+        print('🔔 Registering token with backend...');
         await _registerTokenWithBackend(_fcmToken!);
+      } else {
+        print('🔔 ❌ FCM Token is null');
       }
     } catch (e) {
-      print('❌ Error getting FCM token: $e');
+      print('🔔 ❌ Error getting FCM token: $e');
     }
+    print('🔔 ===== END FCM TOKEN =====');
   }
 
   Future<void> _registerTokenWithBackend(String token) async {
@@ -107,27 +166,71 @@ class FirebaseNotificationService implements NotificationServiceInterface {
   }
 
   void _setupMessageListeners() {
+    print('🔔 ===== SETTING UP MESSAGE LISTENERS =====');
+    
+    if (kIsWeb) {
+      print('🔔 Web platform - message listeners not supported');
+      return;
+    }
+    
     // Handle foreground messages - NO LOCAL NOTIFICATIONS
+    print('🔔 Setting up foreground message listener...');
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-      print('🔔 Foreground message received: ${message.messageId}');
-      print('🔔 Title: ${message.notification?.title}');
-      print('🔔 Body: ${message.notification?.body}');
+      print('🔔 ===== FOREGROUND MESSAGE RECEIVED =====');
+      print('🔔 Message ID: ${message.messageId}');
+      print('🔔 Message Type: ${message.messageType}');
+      print('🔔 Sent Time: ${message.sentTime}');
+      print('🔔 From: ${message.from}');
+      
+      if (message.notification != null) {
+        print('🔔 ===== FOREGROUND NOTIFICATION DATA =====');
+        print('🔔 Title: ${message.notification?.title}');
+        print('🔔 Body: ${message.notification?.body}');
+        print('🔔 Android: ${message.notification?.android}');
+        print('🔔 Apple: ${message.notification?.apple}');
+      }
+      
+      if (message.data.isNotEmpty) {
+        print('🔔 ===== FOREGROUND MESSAGE DATA =====');
+        message.data.forEach((key, value) {
+          print('🔔 $key: $value');
+        });
+      }
+      
+      print('🔔 ===== END FOREGROUND MESSAGE =====');
       // No local notification shown - Firebase handles everything
     });
 
     // Handle messages when app is opened from background
+    print('🔔 Setting up background message opened listener...');
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-      print('🔔 Background message opened: ${message.messageId}');
+      print('🔔 ===== BACKGROUND MESSAGE OPENED =====');
+      print('🔔 Message ID: ${message.messageId}');
+      print('🔔 Title: ${message.notification?.title}');
+      print('🔔 Body: ${message.notification?.body}');
+      print('🔔 Data: ${message.data}');
+      print('🔔 ===== END BACKGROUND MESSAGE OPENED =====');
       _handleMessageTap(message);
     });
 
     // Handle messages when app is opened from terminated state
-    FirebaseMessaging.getInitialMessage().then((RemoteMessage? message) {
+    print('🔔 Setting up initial message listener...');
+    FirebaseMessaging.instance.getInitialMessage().then((RemoteMessage? message) {
       if (message != null) {
-        print('🔔 Initial message: ${message.messageId}');
+        print('🔔 ===== INITIAL MESSAGE FOUND =====');
+        print('🔔 Message ID: ${message.messageId}');
+        print('🔔 Title: ${message.notification?.title}');
+        print('🔔 Body: ${message.notification?.body}');
+        print('🔔 Data: ${message.data}');
+        print('🔔 ===== END INITIAL MESSAGE =====');
         _handleMessageTap(message);
+      } else {
+        print('🔔 No initial message found');
       }
     });
+    
+    print('🔔 ✅ All message listeners set up successfully');
+    print('🔔 ===== END MESSAGE LISTENERS SETUP =====');
   }
 
   void _handleMessageTap(RemoteMessage message) {
@@ -137,6 +240,11 @@ class FirebaseNotificationService implements NotificationServiceInterface {
       print('🔔 Navigating to book detail for ID: $bookId');
       // TODO: Implement navigation to book detail page using GoRouter
     }
+  }
+
+  Future<List<dynamic>> getPendingNotifications() async {
+    // No local notifications - return empty list
+    return [];
   }
 
   Future<bool> areNotificationsEnabled() async {
@@ -151,9 +259,31 @@ class FirebaseNotificationService implements NotificationServiceInterface {
     }
   }
 
-  Future<List<PendingNotificationRequest>> getPendingNotifications() async {
-    // No local notifications - return empty list
-    return [];
+  // Firebase Cloud Messaging methods
+  String? getFCMToken() => _fcmToken;
+
+  Future<void> enableRandomBookNotifications() async {
+    print('🔔 ===== ENABLING RANDOM BOOK NOTIFICATIONS =====');
+    print('🔔 Random book notifications enabled via Firebase Cloud Messaging');
+    print('🔔 Backend will send notifications every 10 minutes');
+    print('🔔 ===== END ENABLE NOTIFICATIONS =====');
+    // TODO: Implement API call to enable notifications in backend
+  }
+
+  Future<void> disableRandomBookNotifications() async {
+    print('🔔 ===== DISABLING RANDOM BOOK NOTIFICATIONS =====');
+    print('🔔 Random book notifications disabled via Firebase Cloud Messaging');
+    print('🔔 Backend will stop sending notifications');
+    print('🔔 ===== END DISABLE NOTIFICATIONS =====');
+    // TODO: Implement API call to disable notifications in backend
+  }
+
+  Future<void> sendTestNotification() async {
+    print('🔔 ===== SENDING TEST NOTIFICATION =====');
+    print('🔔 Test notification sent via Firebase Cloud Messaging');
+    print('🔔 Backend will send a test notification immediately');
+    print('🔔 ===== END TEST NOTIFICATION =====');
+    // TODO: Implement API call to send test notification from backend
   }
 
   Future<bool> requestPermissions() async {
@@ -187,6 +317,14 @@ class FirebaseNotificationService implements NotificationServiceInterface {
 
   Future<void> cancelAllNotifications() async {
     print('🔔 Local notifications disabled - no notifications to cancel');
+  }
+
+  Future<void> showInstantBookReminder({required Book book, String? customMessage}) async {
+    print('🔔 Instant book reminder disabled - use Firebase Cloud Messaging instead');
+  }
+
+  Future<void> scheduleReadingProgressReminder({required Book book, required Duration interval}) async {
+    print('🔔 Reading progress reminder disabled - use Firebase Cloud Messaging instead');
   }
 
   String _createBookNotificationTitle(Book book) {

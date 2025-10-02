@@ -244,6 +244,14 @@ temp/
 firebase-debug.log
 firebase-debug.*.log
 
+# Google Cloud Services
+firebase-service-account.json
+firebase-adminsdk-*.json
+google-services.json
+GoogleService-Info.plist
+google-services.json
+google-services.plist
+
 # AWS
 .aws/
 

@@ -30,15 +30,27 @@ import 'package:teekoob/features/subscription/bloc/subscription_bloc.dart';
 import 'package:teekoob/core/bloc/notification_bloc.dart';
 
 void main() async {
+  print('🚀 ===== APP STARTUP =====');
   WidgetsFlutterBinding.ensureInitialized();
+  print('🚀 WidgetsFlutterBinding initialized');
   
   // Initialize Localization
+  print('🚀 Initializing Localization...');
   await LocalizationService.initialize();
+  print('🚀 ✅ Localization initialized');
   
-  // Initialize Firebase notification service (works when app is closed)
-  await FirebaseNotificationService().initialize();
+  // Initialize Firebase notification service (with error handling)
+  print('🚀 Initializing Firebase Notification Service...');
+  try {
+    await FirebaseNotificationService().initialize();
+    print('🚀 ✅ Firebase Notification Service initialized successfully');
+  } catch (e) {
+    print('🚀 ❌ Firebase initialization failed, app will continue without notifications: $e');
+  }
   
+  print('🚀 Starting TeekoobApp...');
   runApp(TeekoobApp());
+  print('🚀 ===== APP STARTUP COMPLETE =====');
 }
 
 class TeekoobApp extends StatelessWidget {

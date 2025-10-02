@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:teekoob/core/models/book_model.dart';
 import 'package:teekoob/core/bloc/notification_bloc.dart';
-import 'package:teekoob/core/services/notification_service.dart';
+import 'package:teekoob/core/services/notification_service_interface.dart';
 
 class BookReminderWidget extends StatefulWidget {
   final Book book;

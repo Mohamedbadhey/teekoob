@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:teekoob/core/bloc/notification_bloc.dart';
-import 'package:teekoob/core/services/simple_notification_service.dart';
+import 'package:teekoob/core/services/firebase_notification_service.dart';
 import 'package:teekoob/core/services/localization_service.dart';
 
 class NotificationSettingsPage extends StatefulWidget {
@@ -13,7 +13,7 @@ class NotificationSettingsPage extends StatefulWidget {
 
 class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
   bool _randomBookNotificationsEnabled = true;
-  final SimpleNotificationService _notificationService = SimpleNotificationService();
+  final FirebaseNotificationService _notificationService = FirebaseNotificationService();
 
   @override
   void initState() {
