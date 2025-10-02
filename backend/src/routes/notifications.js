@@ -191,10 +191,10 @@ router.post('/send-test', async (req, res) => {
 
     // Get user's preferred language
     const userResult = await db('users')
-      .select('preferred_language')
+      .select('language_preference')
       .where('id', userId)
       .first();
-    const userLanguage = userResult?.preferred_language || 'en';
+    const userLanguage = userResult?.language_preference || 'en';
     const isSomali = userLanguage === 'so';
 
     // Create notification content based on user language
@@ -261,8 +261,8 @@ async function sendRandomBookNotifications() {
     console.log('🔔 Starting random book notification process...');
     
     // Get all users who have random book notifications enabled
-    const result = await db('users')
-      .select('u.id', 'u.email', 'u.first_name', 'u.last_name', 'u.preferred_language',
+    const result = await db('users as u')
+      .select('u.id', 'u.email', 'u.first_name', 'u.last_name', 'u.language_preference',
               'nf.fcm_token', 'np.random_books_enabled', 'np.random_books_interval')
       .join('user_fcm_tokens as nf', 'u.id', 'nf.user_id')
       .join('notification_preferences as np', 'u.id', 'np.user_id')
@@ -313,7 +313,7 @@ async function sendRandomBookNotifications() {
     // Send notifications to all enabled users
     const promises = result.map(async (user) => {
       try {
-        const isSomali = user.preferred_language === 'so';
+        const isSomali = user.language_preference === 'so';
         
         // Create notification content based on user language
         let title, body;
