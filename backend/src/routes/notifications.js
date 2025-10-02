@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const admin = require('firebase-admin');
 const cron = require('node-cron');
-const { Pool } = require('pg');
+const db = require('../config/database');
 
 // Initialize Firebase Admin SDK
 if (!admin.apps.length) {
@@ -12,11 +12,7 @@ if (!admin.apps.length) {
   });
 }
 
-// Database connection
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-});
+// Database connection is handled by the main database config
 
 // Store for FCM tokens and notification preferences
 const userTokens = new Map();
@@ -43,10 +39,19 @@ router.post('/register-token', async (req, res) => {
     }
 
     // Store token in database
-    await pool.query(
-      'INSERT INTO user_fcm_tokens (user_id, fcm_token, platform, enabled, created_at) VALUES ($1, $2, $3, $4, NOW()) ON CONFLICT (user_id, fcm_token) DO UPDATE SET enabled = $4, updated_at = NOW()',
-      [userId, fcmToken, platform || 'mobile', enabled !== false]
-    );
+    await db('user_fcm_tokens')
+      .insert({
+        user_id: userId,
+        fcm_token: fcmToken,
+        platform: platform || 'mobile',
+        enabled: enabled !== false,
+        created_at: new Date()
+      })
+      .onConflict(['user_id', 'fcm_token'])
+      .merge({
+        enabled: enabled !== false,
+        updated_at: new Date()
+      });
 
     // Store in memory for quick access
     if (userId) {
@@ -72,10 +77,20 @@ router.post('/enable-random-books', async (req, res) => {
     }
 
     // Store preference in database
-    await pool.query(
-      'INSERT INTO notification_preferences (user_id, random_books_enabled, random_books_interval, platform, created_at) VALUES ($1, $2, $3, $4, NOW()) ON CONFLICT (user_id) DO UPDATE SET random_books_enabled = $2, random_books_interval = $3, updated_at = NOW()',
-      [userId, enabled, interval || 10, platform || 'mobile']
-    );
+    await db('notification_preferences')
+      .insert({
+        user_id: userId,
+        random_books_enabled: enabled,
+        random_books_interval: interval || 10,
+        platform: platform || 'mobile',
+        created_at: new Date()
+      })
+      .onConflict('user_id')
+      .merge({
+        random_books_enabled: enabled,
+        random_books_interval: interval || 10,
+        updated_at: new Date()
+      });
 
     // Store in memory
     notificationPreferences.set(userId, {
@@ -106,10 +121,12 @@ router.post('/disable-random-books', async (req, res) => {
     }
 
     // Update preference in database
-    await pool.query(
-      'UPDATE notification_preferences SET random_books_enabled = $1, updated_at = NOW() WHERE user_id = $2',
-      [false, userId]
-    );
+    await db('notification_preferences')
+      .where('user_id', userId)
+      .update({
+        random_books_enabled: false,
+        updated_at: new Date()
+      });
 
     // Update in memory
     const preferences = notificationPreferences.get(userId);
@@ -141,40 +158,43 @@ router.post('/send-test', async (req, res) => {
     }
 
     // Get a random book from database for test
-    const booksResult = await pool.query(`
-      SELECT id, title, title_somali, description, description_somali, 
-             cover_image_url, authors, authors_somali, genre, genre_somali,
-             is_featured, is_new_release, rating, review_count
-      FROM books 
-      WHERE (is_featured = true OR is_new_release = true OR rating >= 4.0)
-      ORDER BY RANDOM() 
-      LIMIT 1
-    `);
+    const booksResult = await db('books')
+      .select('id', 'title', 'title_somali', 'description', 'description_somali', 
+              'cover_image_url', 'authors', 'authors_somali', 'genre', 'genre_somali',
+              'is_featured', 'is_new_release', 'rating', 'review_count')
+      .where(function() {
+        this.where('is_featured', true)
+            .orWhere('is_new_release', true)
+            .orWhere('rating', '>=', 4.0);
+      })
+      .orderByRaw('RAND()')
+      .limit(1);
 
-    if (booksResult.rows.length === 0) {
+    if (booksResult.length === 0) {
       // Fallback to any book
-      const fallbackResult = await pool.query(`
-        SELECT id, title, title_somali, description, description_somali, 
-               cover_image_url, authors, authors_somali, genre, genre_somali,
-               is_featured, is_new_release, rating, review_count
-        FROM books 
-        ORDER BY RANDOM() 
-        LIMIT 1
-      `);
+      const fallbackResult = await db('books')
+        .select('id', 'title', 'title_somali', 'description', 'description_somali', 
+                'cover_image_url', 'authors', 'authors_somali', 'genre', 'genre_somali',
+                'is_featured', 'is_new_release', 'rating', 'review_count')
+        .orderByRaw('RAND()')
+        .limit(1);
       
-      if (fallbackResult.rows.length === 0) {
+      if (fallbackResult.length === 0) {
         return res.status(404).json({ error: 'No books available for test notification' });
       }
       
-      booksResult.rows = fallbackResult.rows;
+      booksResult.push(fallbackResult[0]);
     }
 
-    const testBook = booksResult.rows[0];
+    const testBook = booksResult[0];
     console.log(`🔔 Test notification using book: ${testBook.title}`);
 
     // Get user's preferred language
-    const userResult = await pool.query('SELECT preferred_language FROM users WHERE id = $1', [userId]);
-    const userLanguage = userResult.rows[0]?.preferred_language || 'en';
+    const userResult = await db('users')
+      .select('preferred_language')
+      .where('id', userId)
+      .first();
+    const userLanguage = userResult?.preferred_language || 'en';
     const isSomali = userLanguage === 'so';
 
     // Create notification content based on user language
@@ -241,58 +261,57 @@ async function sendRandomBookNotifications() {
     console.log('🔔 Starting random book notification process...');
     
     // Get all users who have random book notifications enabled
-    const result = await pool.query(`
-      SELECT u.id, u.email, u.first_name, u.last_name, u.preferred_language,
-             nf.fcm_token, np.random_books_enabled, np.random_books_interval
-      FROM users u
-      JOIN user_fcm_tokens nf ON u.id = nf.user_id
-      JOIN notification_preferences np ON u.id = np.user_id
-      WHERE nf.enabled = true AND np.random_books_enabled = true
-    `);
+    const result = await db('users')
+      .select('u.id', 'u.email', 'u.first_name', 'u.last_name', 'u.preferred_language',
+              'nf.fcm_token', 'np.random_books_enabled', 'np.random_books_interval')
+      .join('user_fcm_tokens as nf', 'u.id', 'nf.user_id')
+      .join('notification_preferences as np', 'u.id', 'np.user_id')
+      .where('nf.enabled', true)
+      .andWhere('np.random_books_enabled', true);
 
-    if (result.rows.length === 0) {
+    if (result.length === 0) {
       console.log('🔔 No users with random book notifications enabled');
       return;
     }
 
-    console.log(`🔔 Found ${result.rows.length} users with notifications enabled`);
+    console.log(`🔔 Found ${result.length} users with notifications enabled`);
 
     // Get random books from database - prioritize featured and new releases
-    const booksResult = await pool.query(`
-      SELECT id, title, title_somali, description, description_somali, 
-             cover_image_url, authors, authors_somali, genre, genre_somali,
-             is_featured, is_new_release, rating, review_count
-      FROM books 
-      WHERE (is_featured = true OR is_new_release = true OR rating >= 4.0)
-      ORDER BY RANDOM() 
-      LIMIT 20
-    `);
+    const booksResult = await db('books')
+      .select('id', 'title', 'title_somali', 'description', 'description_somali', 
+              'cover_image_url', 'authors', 'authors_somali', 'genre', 'genre_somali',
+              'is_featured', 'is_new_release', 'rating', 'review_count')
+      .where(function() {
+        this.where('is_featured', true)
+            .orWhere('is_new_release', true)
+            .orWhere('rating', '>=', 4.0);
+      })
+      .orderByRaw('RAND()')
+      .limit(20);
 
-    if (booksResult.rows.length === 0) {
+    if (booksResult.length === 0) {
       console.log('🔔 No featured books found, getting any random books...');
       // Fallback to any books if no featured books
-      const fallbackResult = await pool.query(`
-        SELECT id, title, title_somali, description, description_somali, 
-               cover_image_url, authors, authors_somali, genre, genre_somali,
-               is_featured, is_new_release, rating, review_count
-        FROM books 
-        ORDER BY RANDOM() 
-        LIMIT 10
-      `);
+      const fallbackResult = await db('books')
+        .select('id', 'title', 'title_somali', 'description', 'description_somali', 
+                'cover_image_url', 'authors', 'authors_somali', 'genre', 'genre_somali',
+                'is_featured', 'is_new_release', 'rating', 'review_count')
+        .orderByRaw('RAND()')
+        .limit(10);
       
-      if (fallbackResult.rows.length === 0) {
+      if (fallbackResult.length === 0) {
         console.log('🔔 No books available for notifications');
         return;
       }
       
-      booksResult.rows = fallbackResult.rows;
+      booksResult.push(...fallbackResult);
     }
 
-    const randomBook = booksResult.rows[Math.floor(Math.random() * booksResult.rows.length)];
+    const randomBook = booksResult[Math.floor(Math.random() * booksResult.length)];
     console.log(`🔔 Selected random book: ${randomBook.title} (ID: ${randomBook.id})`);
 
     // Send notifications to all enabled users
-    const promises = result.rows.map(async (user) => {
+    const promises = result.map(async (user) => {
       try {
         const isSomali = user.preferred_language === 'so';
         
@@ -343,10 +362,10 @@ async function sendRandomBookNotifications() {
     });
 
     await Promise.all(promises);
-    console.log(`🔔 Random book notifications sent to ${result.rows.length} users`);
+    console.log(`🔔 Random book notifications sent to ${result.length} users`);
     
     // Log successful notification
-    console.log(`✅ Successfully sent random book notification: "${randomBook.title}" to ${result.rows.length} users`);
+    console.log(`✅ Successfully sent random book notification: "${randomBook.title}" to ${result.length} users`);
     
   } catch (error) {
     console.error('❌ Error in sendRandomBookNotifications:', error);
@@ -362,12 +381,12 @@ router.get('/preferences', async (req, res) => {
       return res.status(401).json({ error: 'User not authenticated' });
     }
 
-    const result = await pool.query(
-      'SELECT * FROM notification_preferences WHERE user_id = $1',
-      [userId]
-    );
+    const result = await db('notification_preferences')
+      .select('*')
+      .where('user_id', userId)
+      .first();
 
-    if (result.rows.length === 0) {
+    if (!result) {
       return res.json({
         randomBooksEnabled: false,
         interval: 10,
@@ -375,7 +394,7 @@ router.get('/preferences', async (req, res) => {
       });
     }
 
-    res.json(result.rows[0]);
+    res.json(result);
   } catch (error) {
     console.error('❌ Error getting notification preferences:', error);
     res.status(500).json({ error: 'Failed to get notification preferences' });
@@ -392,10 +411,21 @@ router.put('/preferences', async (req, res) => {
       return res.status(401).json({ error: 'User not authenticated' });
     }
 
-    await pool.query(
-      'INSERT INTO notification_preferences (user_id, random_books_enabled, random_books_interval, platform, created_at) VALUES ($1, $2, $3, $4, NOW()) ON CONFLICT (user_id) DO UPDATE SET random_books_enabled = $2, random_books_interval = $3, platform = $4, updated_at = NOW()',
-      [userId, randomBooksEnabled, interval || 10, platform || 'mobile']
-    );
+    await db('notification_preferences')
+      .insert({
+        user_id: userId,
+        random_books_enabled: randomBooksEnabled,
+        random_books_interval: interval || 10,
+        platform: platform || 'mobile',
+        created_at: new Date()
+      })
+      .onConflict('user_id')
+      .merge({
+        random_books_enabled: randomBooksEnabled,
+        random_books_interval: interval || 10,
+        platform: platform || 'mobile',
+        updated_at: new Date()
+      });
 
     // Update in memory
     notificationPreferences.set(userId, {
