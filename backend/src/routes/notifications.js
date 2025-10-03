@@ -349,13 +349,13 @@ async function sendRandomBookNotifications() {
           title = '📚 Buug Xiiso Leh!';
           const bookTitle = randomBook.title_somali || randomBook.title;
           const description = randomBook.description_somali || randomBook.description || 'Buug xiiso leh oo ka mid ah kuwa bogga hore!';
-          const author = randomBook.authors_somali ? JSON.parse(randomBook.authors_somali)[0] : 'Qoraaga';
+          const author = randomBook.authors_somali ? (typeof randomBook.authors_somali === 'string' && randomBook.authors_somali.startsWith('[') ? JSON.parse(randomBook.authors_somali)[0] : randomBook.authors_somali) : 'Qoraaga';
           body = `${bookTitle}\n\n${author}\n\n${description}`;
         } else {
           title = '📚 Featured Book Alert!';
           const bookTitle = randomBook.title;
           const description = randomBook.description || 'Discover this amazing book from our homepage collections!';
-          const author = randomBook.authors ? JSON.parse(randomBook.authors)[0] : 'Author';
+          const author = randomBook.authors ? (typeof randomBook.authors === 'string' && randomBook.authors.startsWith('[') ? JSON.parse(randomBook.authors)[0] : randomBook.authors) : 'Author';
           body = `${bookTitle}\n\n${author}\n\n${description}`;
         }
 
