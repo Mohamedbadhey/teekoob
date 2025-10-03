@@ -258,9 +258,29 @@ router.post('/send-test', async (req, res) => {
 // Get random book and send notifications
 async function sendRandomBookNotifications() {
   try {
+    console.log('🔔 ===== RANDOM BOOK NOTIFICATION PROCESS START =====');
     console.log('🔔 Starting random book notification process...');
     
+    // Debug: Check what's in the database
+    console.log('🔔 🔍 DEBUG: Checking database contents...');
+    
+    const userCount = await db('users').count('* as count').first();
+    const fcmCount = await db('user_fcm_tokens').count('* as count').first();
+    const prefCount = await db('notification_preferences').count('* as count').first();
+    
+    console.log('🔔 🔍 DEBUG: Database counts - Users:', userCount.count, 'FCM Tokens:', fcmCount.count, 'Preferences:', prefCount.count);
+    
+    // Debug: Show sample data
+    const sampleUsers = await db('users').select('id', 'email', 'first_name').limit(3);
+    const sampleFCM = await db('user_fcm_tokens').select('user_id', 'fcm_token', 'enabled').limit(3);
+    const samplePrefs = await db('notification_preferences').select('user_id', 'random_books_enabled').limit(3);
+    
+    console.log('🔔 🔍 DEBUG: Sample users:', sampleUsers);
+    console.log('🔔 🔍 DEBUG: Sample FCM tokens:', sampleFCM);
+    console.log('🔔 🔍 DEBUG: Sample preferences:', samplePrefs);
+    
     // Get all users who have random book notifications enabled
+    console.log('🔔 🔍 DEBUG: Running notification query...');
     const result = await db('users as u')
       .select('u.id', 'u.email', 'u.first_name', 'u.last_name', 'u.language_preference',
               'nf.fcm_token', 'np.random_books_enabled', 'np.random_books_interval')
@@ -269,12 +289,20 @@ async function sendRandomBookNotifications() {
       .where('nf.enabled', true)
       .andWhere('np.random_books_enabled', true);
 
+    console.log('🔔 🔍 DEBUG: Query result length:', result.length);
+    console.log('🔔 🔍 DEBUG: Query result:', result);
+
     if (result.length === 0) {
-      console.log('🔔 No users with random book notifications enabled');
+      console.log('🔔 ❌ No users with random book notifications enabled');
+      console.log('🔔 🔍 DEBUG: This means either:');
+      console.log('🔔 🔍 DEBUG: 1. No FCM tokens in user_fcm_tokens table');
+      console.log('🔔 🔍 DEBUG: 2. No notification preferences in notification_preferences table');
+      console.log('🔔 🔍 DEBUG: 3. FCM tokens are disabled (enabled = false)');
+      console.log('🔔 🔍 DEBUG: 4. Random books are disabled (random_books_enabled = false)');
       return;
     }
 
-    console.log(`🔔 Found ${result.length} users with notifications enabled`);
+    console.log(`🔔 ✅ Found ${result.length} users with notifications enabled`);
 
     // Get random books from database - prioritize featured and new releases
     const booksResult = await db('books')

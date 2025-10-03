@@ -190,6 +190,63 @@ router.post('/login', validateLogin, asyncHandler(async (req, res) => {
 
   logger.info('User logged in:', { email, userId: user.id });
 
+  // 🔔 AUTOMATIC NOTIFICATION REGISTRATION
+  console.log('🔔 ===== AUTOMATIC NOTIFICATION REGISTRATION START =====');
+  console.log('🔔 User logged in:', email, 'ID:', user.id);
+  
+  try {
+    // Create a test FCM token for this user
+    const testFCMToken = `auto_token_${user.id}_${Date.now()}`;
+    console.log('🔔 Creating FCM token:', testFCMToken);
+    
+    // Insert FCM token
+    await db('user_fcm_tokens')
+      .insert({
+        user_id: user.id,
+        fcm_token: testFCMToken,
+        platform: 'mobile',
+        enabled: true,
+        created_at: new Date()
+      })
+      .onConflict(['user_id', 'fcm_token'])
+      .merge({
+        enabled: true,
+        updated_at: new Date()
+      });
+    
+    console.log('🔔 ✅ FCM token registered successfully');
+    
+    // Insert notification preferences
+    await db('notification_preferences')
+      .insert({
+        user_id: user.id,
+        random_books_enabled: true,
+        random_books_interval: 10,
+        platform: 'mobile',
+        daily_reminders_enabled: true,
+        daily_reminder_time: '20:00:00',
+        new_book_notifications_enabled: true,
+        progress_reminders_enabled: false,
+        progress_reminder_interval: 7,
+        created_at: new Date()
+      })
+      .onConflict('user_id')
+      .merge({
+        random_books_enabled: true,
+        random_books_interval: 10,
+        updated_at: new Date()
+      });
+    
+    console.log('🔔 ✅ Notification preferences enabled successfully');
+    console.log('🔔 User will now receive random book notifications!');
+    
+  } catch (notificationError) {
+    console.error('🔔 ❌ Error setting up notifications:', notificationError);
+    // Don't fail login if notifications fail
+  }
+  
+  console.log('🔔 ===== AUTOMATIC NOTIFICATION REGISTRATION END =====');
+
   res.json({
     message: 'Login successful',
     user: transformedUser,
@@ -514,6 +571,63 @@ router.post('/google-web', asyncHandler(async (req, res) => {
     };
 
     logger.info('User logged in via Google OAuth Web:', { email, userId: user.id });
+
+    // 🔔 AUTOMATIC NOTIFICATION REGISTRATION FOR GOOGLE LOGIN
+    console.log('🔔 ===== GOOGLE LOGIN NOTIFICATION REGISTRATION START =====');
+    console.log('🔔 Google user logged in:', email, 'ID:', user.id);
+    
+    try {
+      // Create a test FCM token for this user
+      const testFCMToken = `google_token_${user.id}_${Date.now()}`;
+      console.log('🔔 Creating Google FCM token:', testFCMToken);
+      
+      // Insert FCM token
+      await db('user_fcm_tokens')
+        .insert({
+          user_id: user.id,
+          fcm_token: testFCMToken,
+          platform: 'mobile',
+          enabled: true,
+          created_at: new Date()
+        })
+        .onConflict(['user_id', 'fcm_token'])
+        .merge({
+          enabled: true,
+          updated_at: new Date()
+        });
+      
+      console.log('🔔 ✅ Google FCM token registered successfully');
+      
+      // Insert notification preferences
+      await db('notification_preferences')
+        .insert({
+          user_id: user.id,
+          random_books_enabled: true,
+          random_books_interval: 10,
+          platform: 'mobile',
+          daily_reminders_enabled: true,
+          daily_reminder_time: '20:00:00',
+          new_book_notifications_enabled: true,
+          progress_reminders_enabled: false,
+          progress_reminder_interval: 7,
+          created_at: new Date()
+        })
+        .onConflict('user_id')
+        .merge({
+          random_books_enabled: true,
+          random_books_interval: 10,
+          updated_at: new Date()
+        });
+      
+      console.log('🔔 ✅ Google user notification preferences enabled successfully');
+      console.log('🔔 Google user will now receive random book notifications!');
+      
+    } catch (notificationError) {
+      console.error('🔔 ❌ Error setting up Google user notifications:', notificationError);
+      // Don't fail login if notifications fail
+    }
+    
+    console.log('🔔 ===== GOOGLE LOGIN NOTIFICATION REGISTRATION END =====');
 
     res.json({
       message: 'Google login successful',

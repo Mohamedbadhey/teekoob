@@ -269,16 +269,59 @@ try {
   console.log('✅ Admin routes registered');
   
   // Test endpoints for notifications (no authentication required)
+  app.get('/api/v1/notifications/test-db', async (req, res) => {
+    try {
+      console.log('🔔 Testing database connection...');
+      await db.raw('SELECT 1');
+      
+      const userCount = await db('users').count('* as count').first();
+      const bookCount = await db('books').count('* as count').first();
+      const fcmCount = await db('user_fcm_tokens').count('* as count').first();
+      const prefCount = await db('notification_preferences').count('* as count').first();
+      
+      res.json({
+        success: true,
+        message: 'Database connection successful',
+        data: {
+          users: userCount.count,
+          books: bookCount.count,
+          fcmTokens: fcmCount.count,
+          notificationPreferences: prefCount.count
+        }
+      });
+    } catch (error) {
+      console.error('❌ Database test failed:', error);
+      res.status(500).json({ 
+        error: 'Database connection failed',
+        details: error.message 
+      });
+    }
+  });
+
   app.post('/api/v1/notifications/test-setup', async (req, res) => {
     try {
       console.log('🔔 Setting up test notification data...');
       
-      // Get the first user from the database
-      const user = await db('users').select('id', 'email', 'first_name', 'last_name', 'language_preference').first();
+      // First, test database connection
+      console.log('🔔 Testing database connection...');
+      await db.raw('SELECT 1');
+      console.log('🔔 ✅ Database connection successful');
       
-      if (!user) {
-        return res.status(404).json({ error: 'No users found in database' });
+      // Get the first user from the database
+      console.log('🔔 Querying users table...');
+      const users = await db('users').select('id', 'email', 'first_name', 'last_name', 'language_preference').limit(5);
+      console.log('🔔 Found users:', users.length);
+      
+      if (users.length === 0) {
+        console.log('🔔 ❌ No users found in database');
+        return res.status(404).json({ 
+          error: 'No users found in database',
+          message: 'Please create a user account first'
+        });
       }
+      
+      const user = users[0];
+      console.log('🔔 Using user:', user.email);
       
       console.log('🔔 Found user:', user.email);
       
