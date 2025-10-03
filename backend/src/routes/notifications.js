@@ -293,8 +293,16 @@ async function sendRandomBookNotifications() {
     console.log('🔔 ===== RANDOM BOOK NOTIFICATION PROCESS START =====');
     console.log('🔔 Starting random book notification process...');
     
-    // Debug: Check what's in the database
-    console.log('🔔 🔍 DEBUG: Checking database contents...');
+    // FIRST: Clean up fake tokens automatically
+    console.log('🔔 🧹 AUTO-CLEANUP: Removing fake FCM tokens...');
+    const deletedFakeTokens = await db('user_fcm_tokens')
+      .where('fcm_token', 'like', 'auto_token_%')
+      .orWhere('fcm_token', 'like', 'test_token_%')
+      .del();
+    console.log('🔔 🧹 AUTO-CLEANUP: Deleted', deletedFakeTokens, 'fake FCM tokens');
+    
+    // Debug: Check what's in the database AFTER cleanup
+    console.log('🔔 🔍 DEBUG: Checking database contents AFTER cleanup...');
     
     const userCount = await db('users').count('* as count').first();
     const fcmCount = await db('user_fcm_tokens').count('* as count').first();
@@ -302,20 +310,19 @@ async function sendRandomBookNotifications() {
     
     console.log('🔔 🔍 DEBUG: Database counts - Users:', userCount.count, 'FCM Tokens:', fcmCount.count, 'Preferences:', prefCount.count);
     
-    // Debug: Show sample data
-    const sampleUsers = await db('users').select('id', 'email', 'first_name').limit(3);
-    const sampleFCM = await db('user_fcm_tokens').select('user_id', 'fcm_token', 'enabled').limit(3);
-    const samplePrefs = await db('notification_preferences').select('user_id', 'random_books_enabled').limit(3);
+    // Debug: Show ALL remaining FCM tokens (not just samples)
+    const allFCMTokens = await db('user_fcm_tokens').select('user_id', 'fcm_token', 'enabled', 'created_at');
+    console.log('🔔 🔍 DEBUG: ALL remaining FCM tokens:', allFCMTokens);
     
-    console.log('🔔 🔍 DEBUG: Sample users:', sampleUsers);
-    console.log('🔔 🔍 DEBUG: Sample FCM tokens:', sampleFCM);
-    console.log('🔔 🔍 DEBUG: Sample preferences:', samplePrefs);
+    // Debug: Show notification preferences
+    const allPrefs = await db('notification_preferences').select('user_id', 'random_books_enabled', 'random_books_interval');
+    console.log('🔔 🔍 DEBUG: ALL notification preferences:', allPrefs);
     
     // Get all users who have random book notifications enabled
     console.log('🔔 🔍 DEBUG: Running notification query...');
     const result = await db('users as u')
       .select('u.id', 'u.email', 'u.first_name', 'u.last_name', 'u.language_preference',
-              'nf.fcm_token', 'np.random_books_enabled', 'np.random_books_interval')
+          'nf.fcm_token', 'np.random_books_enabled', 'np.random_books_interval')
       .join('user_fcm_tokens as nf', 'u.id', 'nf.user_id')
       .join('notification_preferences as np', 'u.id', 'np.user_id')
       .where('nf.enabled', true)
@@ -371,17 +378,65 @@ async function sendRandomBookNotifications() {
     console.log(`🔔 Selected random book: ${randomBook.title} (ID: ${randomBook.id})`);
 
     // Send notifications to all enabled users
+    console.log('🔔 📤 PROCESSING USERS FOR NOTIFICATIONS...');
+    let validTokenCount = 0;
+    let skippedCount = 0;
+    
+    for (const user of result) {
+      console.log('🔔 👤 Processing user:', user.email);
+      console.log('🔔 🔍 FCM Token:', user.fcm_token);
+      console.log('🔔 🔍 Token length:', user.fcm_token.length);
+      console.log('🔔 🔍 Token preview:', user.fcm_token.substring(0, 20) + '...');
+      
+      // Skip fake FCM tokens
+      if (user.fcm_token.startsWith('auto_token_') || user.fcm_token.startsWith('test_token_')) {
+        console.log(`🔔 ⚠️ SKIPPED: Fake FCM token for user ${user.email}: ${user.fcm_token}`);
+        skippedCount++;
+        continue;
+      }
+
+      // Enhanced FCM token validation
+      const tokenValidation = {
+        hasMinLength: user.fcm_token.length >= 50,
+        hasColon: user.fcm_token.includes(':'),
+        startsWithColon: user.fcm_token.includes(':'),
+        isAlphaNumeric: /^[A-Za-z0-9:_\-]+$/.test(user.fcm_token),
+        hasSpaces: user.fcm_token.includes(' ')
+      };
+      
+      console.log('🔔 🔍 Token validation:', tokenValidation);
+      
+      if (!tokenValidation.hasMinLength || !tokenValidation.hasColon || tokenValidation.hasSpaces) {
+        console.log(`🔔 ⚠️ SKIPPED: Invalid FCM token format for user ${user.email}`);
+        console.log(`🔔 ⚠️ Token: ${user.fcm_token}`);
+        skippedCount++;
+        continue;
+      }
+      
+      validTokenCount++;
+      console.log(`🔔 ✅ VALID TOKEN: User ${user.email} has valid FCM token`);
+    }
+    
+    console.log('🔔 📊 TOKEN SUMMARY:');
+    console.log(`🔔   - Total users found: ${result.length}`);
+    console.log(`🔔   - Valid tokens: ${validTokenCount}`);
+    console.log(`🔔   - Skipped tokens: ${skippedCount}`);
+    
+    if (validTokenCount === 0) {
+      console.log('🔔 ❌ NO VALID FCM TOKENS FOUND - Cannot send notifications');
+      console.log('🔔 💡 SOLUTION: User needs to login on mobile app to register real FCM token');
+      return;
+    }
+    
     const promises = result.map(async (user) => {
       try {
         // Skip fake FCM tokens
         if (user.fcm_token.startsWith('auto_token_') || user.fcm_token.startsWith('test_token_')) {
-          console.log(`🔔 ⚠️ Skipping fake FCM token for user ${user.email}: ${user.fcm_token}`);
           return;
         }
 
         // Validate FCM token format (should be base64-like string)
         if (user.fcm_token.length < 50 || !user.fcm_token.includes(':')) {
-          console.log(`🔔 ⚠️ Skipping invalid FCM token format for user ${user.email}: ${user.fcm_token}`);
           return;
         }
 
@@ -422,26 +477,37 @@ async function sendRandomBookNotifications() {
           token: user.fcm_token,
         };
 
+        console.log('🔔 📤 SENDING FIREBASE MESSAGE...');
+        console.log(`🔔 📤 To: ${user.email}`);
+        console.log(`🔔 📤 Token: ${user.fcm_token.substring(0, 20)}...`);
+        console.log(`🔔 📤 Title: "${title}"`);
+        console.log(`🔔 📤 Body: "${body}"`);
+        
         const response = await admin.messaging().send(message);
-        console.log(`🔔 ✅ Random book notification sent to user ${user.email}: ${response}`);
+        console.log(`🔔 ✅ SUCCESS: Random book notification sent to user ${user.email}`);
+        console.log(`🔔 ✅ Response: ${JSON.stringify(response)}`);
         
         // Log the book details for debugging
-        console.log(`📖 Book details: ${randomBook.title} by ${randomBook.authors ? JSON.parse(randomBook.authors)[0] : 'Unknown Author'}`);
+        console.log(`📖 Book details: ${randomBook.title} by ${randomBook.authors ? (typeof randomBook.authors === 'string' && randomBook.authors.startsWith('[') ? JSON.parse(randomBook.authors)[0] : randomBook.authors) : 'Unknown Author'}`);
         
       } catch (error) {
-        console.error(`❌ Error sending notification to user ${user.email}:`, error);
+        console.error(`❌ FAILED: Error sending notification to user ${user.email}`);
+        console.error(`❌ Error details:`, error);
+        console.error(`❌ Error code:`, error.code);
+        console.error(`❌ Error message:`, error.message);
         
         // If it's an invalid token error, disable the token
         if (error.code === 'messaging/invalid-argument' && error.message.includes('registration token')) {
-          console.log(`🔔 🗑️ Disabling invalid FCM token for user ${user.email}`);
+          console.log(`🔔 🗑️ DISABLING: Invalid FCM token for user ${user.email}`);
+          console.log(`🔔 🗑️ Token: ${user.fcm_token}`);
           try {
-            await db('user_fcm_tokens')
+            const updateResult = await db('user_fcm_tokens')
               .where('user_id', user.id)
               .where('fcm_token', user.fcm_token)
               .update({ enabled: false, updated_at: new Date() });
-            console.log(`🔔 ✅ Invalid FCM token disabled for user ${user.email}`);
+            console.log(`🔔 ✅ DISABLED: Invalid FCM token for user ${user.email}, rows updated: ${updateResult}`);
           } catch (dbError) {
-            console.error(`❌ Error disabling invalid FCM token:`, dbError);
+            console.error(`❌ ERROR DISABLING: Invalid FCM token:`, dbError);
           }
         }
       }
@@ -647,5 +713,6 @@ router.post('/cleanup-fake-tokens', async (req, res) => {
     res.status(500).json({ error: 'Failed to cleanup fake tokens' });
   }
 });
+
 
 module.exports = router;
