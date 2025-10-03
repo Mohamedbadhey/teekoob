@@ -373,6 +373,18 @@ async function sendRandomBookNotifications() {
     // Send notifications to all enabled users
     const promises = result.map(async (user) => {
       try {
+        // Skip fake FCM tokens
+        if (user.fcm_token.startsWith('auto_token_') || user.fcm_token.startsWith('test_token_')) {
+          console.log(`🔔 ⚠️ Skipping fake FCM token for user ${user.email}: ${user.fcm_token}`);
+          return;
+        }
+
+        // Validate FCM token format (should be base64-like string)
+        if (user.fcm_token.length < 50 || !user.fcm_token.includes(':')) {
+          console.log(`🔔 ⚠️ Skipping invalid FCM token format for user ${user.email}: ${user.fcm_token}`);
+          return;
+        }
+
         const isSomali = user.language_preference === 'so';
         
         // Create notification content based on user language
@@ -411,13 +423,27 @@ async function sendRandomBookNotifications() {
         };
 
         const response = await admin.messaging().send(message);
-        console.log(`🔔 Random book notification sent to user ${user.email}: ${response}`);
+        console.log(`🔔 ✅ Random book notification sent to user ${user.email}: ${response}`);
         
         // Log the book details for debugging
         console.log(`📖 Book details: ${randomBook.title} by ${randomBook.authors ? JSON.parse(randomBook.authors)[0] : 'Unknown Author'}`);
         
       } catch (error) {
         console.error(`❌ Error sending notification to user ${user.email}:`, error);
+        
+        // If it's an invalid token error, disable the token
+        if (error.code === 'messaging/invalid-argument' && error.message.includes('registration token')) {
+          console.log(`🔔 🗑️ Disabling invalid FCM token for user ${user.email}`);
+          try {
+            await db('user_fcm_tokens')
+              .where('user_id', user.id)
+              .where('fcm_token', user.fcm_token)
+              .update({ enabled: false, updated_at: new Date() });
+            console.log(`🔔 ✅ Invalid FCM token disabled for user ${user.email}`);
+          } catch (dbError) {
+            console.error(`❌ Error disabling invalid FCM token:`, dbError);
+          }
+        }
       }
     });
 
@@ -595,6 +621,30 @@ router.post('/test-notification', async (req, res) => {
   } catch (error) {
     console.error('❌ Error triggering notifications:', error);
     res.status(500).json({ error: 'Failed to trigger notifications' });
+  }
+});
+
+// Cleanup endpoint to remove fake FCM tokens
+router.post('/cleanup-fake-tokens', async (req, res) => {
+  try {
+    console.log('🔔 Cleaning up fake FCM tokens...');
+    
+    // Delete fake tokens
+    const deletedCount = await db('user_fcm_tokens')
+      .where('fcm_token', 'like', 'auto_token_%')
+      .orWhere('fcm_token', 'like', 'test_token_%')
+      .del();
+    
+    console.log(`🔔 ✅ Deleted ${deletedCount} fake FCM tokens`);
+    
+    res.json({
+      success: true,
+      message: `Cleaned up ${deletedCount} fake FCM tokens`,
+      deletedCount: deletedCount
+    });
+  } catch (error) {
+    console.error('❌ Error cleaning up fake tokens:', error);
+    res.status(500).json({ error: 'Failed to cleanup fake tokens' });
   }
 });
 
