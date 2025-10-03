@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:http/http.dart' as http;
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:teekoob/firebase_options.dart';
 import 'package:teekoob/core/services/notification_service_interface.dart';
 import 'package:teekoob/core/models/book_model.dart';
@@ -200,25 +201,30 @@ class FirebaseNotificationService implements NotificationServiceInterface {
       // Get the backend URL from environment or use default
       const String backendUrl = 'https://teekoob-production.up.railway.app';
       
-      // For now, we'll use the test setup endpoint that doesn't require authentication
-      // This will create a test FCM token entry for the user
-      print('🔔 Using test setup endpoint for FCM token registration...');
+      // Get auth token from secure storage
+      String? authToken = await _getAuthToken();
+      
+      if (authToken == null) {
+        print('🔔 ⚠️ No auth token found, FCM token will be registered after login');
+        return;
+      }
+      
+      // Use the authenticated register-token endpoint
+      print('🔔 Using authenticated register-token endpoint...');
       
       final response = await _makeApiCall(
-        '$backendUrl/api/v1/notifications/test-setup',
+        '$backendUrl/api/v1/notifications/register-token',
         'POST',
         {
           'fcmToken': token,
           'platform': 'mobile',
           'enabled': true,
         },
+        authToken: authToken,
       );
       
       if (response['success'] == true) {
         print('🔔 ✅ FCM token registered with backend successfully');
-        print('🔔 User: ${response['data']['user']['email']}');
-        print('🔔 FCM Token: ${response['data']['fcmToken']}');
-        print('🔔 Random books enabled: ${response['data']['preferences']['randomBooksEnabled']}');
       } else {
         print('🔔 ❌ Backend registration failed: ${response['error']}');
       }
@@ -230,13 +236,19 @@ class FirebaseNotificationService implements NotificationServiceInterface {
 
   Future<String?> _getAuthToken() async {
     try {
-      // Try to get token from shared preferences
-      // This is a simplified approach - in a real app you'd use proper auth storage
-      print('🔔 Getting auth token from storage...');
+      print('🔔 Getting auth token from secure storage...');
       
-      // For now, return null to skip authentication
-      // TODO: Implement proper auth token retrieval
-      return null;
+      const storage = FlutterSecureStorage();
+      final token = await storage.read(key: 'auth_token');
+      
+      if (token != null) {
+        print('🔔 ✅ Auth token found');
+        print('🔔 Token preview: ${token.substring(0, 20)}...');
+        return token;
+      } else {
+        print('🔔 ⚠️ No auth token found in secure storage');
+        return null;
+      }
     } catch (e) {
       print('🔔 ❌ Error getting auth token: $e');
       return null;

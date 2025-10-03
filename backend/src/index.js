@@ -6,6 +6,7 @@ const compression = require('compression');
 const rateLimit = require('express-rate-limit');
 require('dotenv').config();
 const path = require('path');
+const db = require('./config/database');
 
 console.log('🚀 Starting Teekoob Backend...');
 console.log('🔍 Environment variables loaded:');
@@ -298,100 +299,6 @@ try {
     }
   });
 
-  app.post('/api/v1/notifications/test-setup', async (req, res) => {
-    try {
-      console.log('🔔 Setting up test notification data...');
-      
-      // First, test database connection
-      console.log('🔔 Testing database connection...');
-      await db.raw('SELECT 1');
-      console.log('🔔 ✅ Database connection successful');
-      
-      // Get the first user from the database
-      console.log('🔔 Querying users table...');
-      const users = await db('users').select('id', 'email', 'first_name', 'last_name', 'language_preference').limit(5);
-      console.log('🔔 Found users:', users.length);
-      
-      if (users.length === 0) {
-        console.log('🔔 ❌ No users found in database');
-        return res.status(404).json({ 
-          error: 'No users found in database',
-          message: 'Please create a user account first'
-        });
-      }
-      
-      const user = users[0];
-      console.log('🔔 Using user:', user.email);
-      
-      console.log('🔔 Found user:', user.email);
-      
-      // Create a test FCM token
-      const testFCMToken = `test_token_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      
-      // Insert FCM token
-      await db('user_fcm_tokens')
-        .insert({
-          user_id: user.id,
-          fcm_token: testFCMToken,
-          platform: 'mobile',
-          enabled: true,
-          created_at: new Date()
-        })
-        .onConflict(['user_id', 'fcm_token'])
-        .merge({
-          enabled: true,
-          updated_at: new Date()
-        });
-      
-      // Insert notification preferences
-      await db('notification_preferences')
-        .insert({
-          user_id: user.id,
-          random_books_enabled: true,
-          random_books_interval: 10,
-          platform: 'mobile',
-          daily_reminders_enabled: true,
-          daily_reminder_time: '20:00:00',
-          new_book_notifications_enabled: true,
-          progress_reminders_enabled: false,
-          progress_reminder_interval: 7,
-          created_at: new Date()
-        })
-        .onConflict('user_id')
-        .merge({
-          random_books_enabled: true,
-          random_books_interval: 10,
-          updated_at: new Date()
-        });
-      
-      console.log('🔔 ✅ Test notification data created successfully');
-      console.log('🔔 User:', user.email);
-      console.log('🔔 FCM Token:', testFCMToken);
-      console.log('🔔 Random books enabled: true');
-      
-      res.json({
-        success: true,
-        message: 'Test notification data created successfully',
-        data: {
-          user: {
-            id: user.id,
-            email: user.email,
-            name: `${user.first_name} ${user.last_name}`,
-            language: user.language_preference
-          },
-          fcmToken: testFCMToken,
-          preferences: {
-            randomBooksEnabled: true,
-            interval: 10
-          }
-        }
-      });
-      
-    } catch (error) {
-      console.error('❌ Error setting up test notification data:', error);
-      res.status(500).json({ error: 'Failed to setup test notification data' });
-    }
-  });
 
   app.post('/api/v1/notifications/test-notification', async (req, res) => {
     try {

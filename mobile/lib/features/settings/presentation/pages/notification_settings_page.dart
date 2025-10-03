@@ -26,34 +26,42 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
 
   Future<void> _initializeNotifications() async {
     try {
-      setState(() {
-        _isLoading = true;
-        _hasError = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = true;
+          _hasError = false;
+        });
+      }
 
       // Initialize notifications and load pending notifications
       context.read<NotificationBloc>().add(const InitializeNotifications());
       context.read<NotificationBloc>().add(const LoadPendingNotifications());
       await _loadRandomBookNotificationStatus();
 
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     } catch (e) {
-      setState(() {
-        _isLoading = false;
-        _hasError = true;
-        _errorMessage = e.toString();
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _hasError = true;
+          _errorMessage = e.toString();
+        });
+      }
     }
   }
 
   Future<void> _loadRandomBookNotificationStatus() async {
     // Check if random book notifications are currently enabled
     // This would typically be stored in user preferences
-    setState(() {
-      _randomBookNotificationsEnabled = true; // Default to enabled
-    });
+    if (mounted) {
+      setState(() {
+        _randomBookNotificationsEnabled = true; // Default to enabled
+      });
+    }
   }
 
   @override
@@ -266,45 +274,55 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
               )),
               value: _randomBookNotificationsEnabled,
               onChanged: (value) async {
-                setState(() {
-                  _randomBookNotificationsEnabled = value;
-                });
+                if (mounted) {
+                  setState(() {
+                    _randomBookNotificationsEnabled = value;
+                  });
+                }
                 
                 try {
                   if (value) {
                     await _notificationService.enableRandomBookNotifications();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(LocalizationService.getLocalizedText(
-                          englishText: 'Random book notifications enabled!',
-                          somaliText: 'Ogeysiisyooyinka buugag kala duwan ayaa la furay!',
-                        )),
-                        backgroundColor: Colors.green,
-                      ),
-                    );
+                    if (mounted && context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(LocalizationService.getLocalizedText(
+                            englishText: 'Random book notifications enabled!',
+                            somaliText: 'Ogeysiisyooyinka buugag kala duwan ayaa la furay!',
+                          )),
+                          backgroundColor: Colors.green,
+                        ),
+                      );
+                    }
                   } else {
                     await _notificationService.disableRandomBookNotifications();
+                    if (mounted && context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(LocalizationService.getLocalizedText(
+                            englishText: 'Random book notifications disabled',
+                            somaliText: 'Ogeysiisyooyinka buugag kala duwan ayaa la xidhay',
+                          )),
+                          backgroundColor: Colors.orange,
+                        ),
+                      );
+                    }
+                  }
+                } catch (e) {
+                  if (mounted && context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text(LocalizationService.getLocalizedText(
-                          englishText: 'Random book notifications disabled',
-                          somaliText: 'Ogeysiisyooyinka buugag kala duwan ayaa la xidhay',
-                        )),
-                        backgroundColor: Colors.orange,
+                        content: Text('Error: ${e.toString()}'),
+                        backgroundColor: Colors.red,
                       ),
                     );
                   }
-                } catch (e) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Error: ${e.toString()}'),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
                   // Revert the switch state
-                  setState(() {
-                    _randomBookNotificationsEnabled = !value;
-                  });
+                  if (mounted) {
+                    setState(() {
+                      _randomBookNotificationsEnabled = !value;
+                    });
+                  }
                 }
               },
             ),

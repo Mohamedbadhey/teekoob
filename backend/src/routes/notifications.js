@@ -442,26 +442,41 @@ async function sendRandomBookNotifications() {
 
         const isSomali = user.language_preference === 'so';
         
-        // Create notification content based on user language
-        let title, body;
+        // Extract author for reuse
+        const author = randomBook.authors ? (typeof randomBook.authors === 'string' && randomBook.authors.startsWith('[') ? JSON.parse(randomBook.authors)[0] : randomBook.authors) : 'Author';
+        
+        // Create notification content based on user language with better formatting
+        let title, body, subtitle;
         if (isSomali) {
           title = '📚 Buug Xiiso Leh!';
           const bookTitle = randomBook.title_somali || randomBook.title;
+          const authSomali = randomBook.authors_somali ? (typeof randomBook.authors_somali === 'string' && randomBook.authors_somali.startsWith('[') ? JSON.parse(randomBook.authors_somali)[0] : randomBook.authors_somali) : 'Qoraaga';
           const description = randomBook.description_somali || randomBook.description || 'Buug xiiso leh oo ka mid ah kuwa bogga hore!';
-          const author = randomBook.authors_somali ? (typeof randomBook.authors_somali === 'string' && randomBook.authors_somali.startsWith('[') ? JSON.parse(randomBook.authors_somali)[0] : randomBook.authors_somali) : 'Qoraaga';
-          body = `${bookTitle}\n\n${author}\n\n${description}`;
+          
+          // Truncate description for notification display (max 120 chars)
+          const shortDescription = description.length > 120 ? description.substring(0, 120) + '...' : description;
+          
+          subtitle = `👤 ${authSomali}`;
+          body = `${bookTitle} • ${shortDescription}`;
         } else {
           title = '📚 Featured Book Alert!';
           const bookTitle = randomBook.title;
           const description = randomBook.description || 'Discover this amazing book from our homepage collections!';
-          const author = randomBook.authors ? (typeof randomBook.authors === 'string' && randomBook.authors.startsWith('[') ? JSON.parse(randomBook.authors)[0] : randomBook.authors) : 'Author';
-          body = `${bookTitle}\n\n${author}\n\n${description}`;
+          
+          // Truncate description for notification display (max 120 chars)
+          const shortDescription = description.length > 120 ? description.substring(0, 120) + '...' : description;
+          
+          subtitle = `👤 ${author}`;
+          body = `${bookTitle} • ${shortDescription}`;
         }
 
+        // Enhanced notification with better formatting
         const message = {
           notification: {
             title: title,
             body: body,
+            // Add image for rich notifications
+            image: randomBook.cover_image_url || '',
           },
           data: {
             bookId: randomBook.id.toString(),
@@ -469,19 +484,61 @@ async function sendRandomBookNotifications() {
             platform: 'mobile',
             bookTitle: randomBook.title,
             bookTitleSomali: randomBook.title_somali || randomBook.title,
+            author: randomBook.authors ? (typeof randomBook.authors === 'string' && randomBook.authors.startsWith('[') ? JSON.parse(randomBook.authors)[0] : randomBook.authors) : 'Author',
+            description: randomBook.description || '',
+            descriptionSomali: randomBook.description_somali || '',
             coverImage: randomBook.cover_image_url || '',
             isFeatured: randomBook.is_featured ? 'true' : 'false',
             isNewRelease: randomBook.is_new_release ? 'true' : 'false',
             rating: randomBook.rating ? randomBook.rating.toString() : '0',
           },
+          // Enable rich notifications for Android
+          android: {
+            notification: {
+              title: title,
+              body: body,
+              icon: 'ic_notification',
+              color: '#FF6B35', // Teekoob orange color
+              image: randomBook.cover_image_url || '',
+              channelId: 'teekoob_book_notifications',
+              priority: 'high',
+              visibility: 'public',
+              // Add expandable content
+              style: 'Inbox',
+              summary: `New book recommendation: ${randomBook.title}`,
+            },
+            priority: 'high',
+          },
+          // Enable rich notifications for iOS
+          apns: {
+            payload: {
+              aps: {
+                category: 'BOOK_NOTIFICATION',
+                'mutable-content': 1,
+                alert: {
+                  title: title,
+                  body: body,
+                  'title-loc-key': 'random_book_title',
+                  'loc-key': 'random_book_body',
+                  'loc-args': [randomBook.title, author],
+                },
+                sound: 'default',
+                badge: 1,
+                'content-available': 1,
+              },
+            },
+          },
           token: user.fcm_token,
         };
 
-        console.log('🔔 📤 SENDING FIREBASE MESSAGE...');
+        console.log('🔔 📤 SENDING ENHANCED FIREBASE MESSAGE...');
         console.log(`🔔 📤 To: ${user.email}`);
         console.log(`🔔 📤 Token: ${user.fcm_token.substring(0, 20)}...`);
         console.log(`🔔 📤 Title: "${title}"`);
+        console.log(`🔔 📤 Subtitle: "${subtitle}"`);
         console.log(`🔔 📤 Body: "${body}"`);
+        console.log(`🔔 📤 Book: "${randomBook.title}" by "${author}"`);
+        console.log(`🔔 📤 Cover Image: ${randomBook.cover_image_url || 'No image'}`);
         
         const response = await admin.messaging().send(message);
         console.log(`🔔 ✅ SUCCESS: Random book notification sent to user ${user.email}`);
