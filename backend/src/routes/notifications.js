@@ -307,7 +307,7 @@ async function sendRandomBookNotifications() {
     // Get random books from database - prioritize featured and new releases
     const booksResult = await db('books')
       .select('id', 'title', 'title_somali', 'description', 'description_somali', 
-              'cover_image_url', 'authors', 'authors_somali', 'genre', 'genre_somali',
+              'cover_image_url', 'authors', 'authors_somali',
               'is_featured', 'is_new_release', 'rating', 'review_count')
       .where(function() {
         this.where('is_featured', true)
@@ -322,7 +322,7 @@ async function sendRandomBookNotifications() {
       // Fallback to any books if no featured books
       const fallbackResult = await db('books')
         .select('id', 'title', 'title_somali', 'description', 'description_somali', 
-                'cover_image_url', 'authors', 'authors_somali', 'genre', 'genre_somali',
+                'cover_image_url', 'authors', 'authors_somali',
                 'is_featured', 'is_new_release', 'rating', 'review_count')
         .orderByRaw('RAND()')
         .limit(10);
