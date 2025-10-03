@@ -550,10 +550,18 @@ async function sendRandomBookNotifications() {
         console.error(`❌ Error code:`, error.code);
         console.error(`❌ Error message:`, error.message);
         
-        // If it's an invalid token error, disable the token
-        if (error.code === 'messaging/invalid-argument' && error.message.includes('registration token')) {
-          console.log(`🔔 🗑️ DISABLING: Invalid FCM token for user ${user.email}`);
+        // Handle various token invalidation errors
+        const shouldDisableToken = (
+          error.code === 'messaging/invalid-argument' && error.message.includes('registration token') ||
+          error.code === 'messaging/registration-token-not-registered' ||
+          error.code === 'messaging/invalid-registration-token' ||
+          error.message.includes('Requested entity was not found')
+        );
+        
+        if (shouldDisableToken) {
+          console.log(`🔔 🗑️ DISABLING: Invalid/expired FCM token for user ${user.email}`);
           console.log(`🔔 🗑️ Token: ${user.fcm_token}`);
+          console.log(`🔔 🗑️ Reason: ${error.code} - ${error.message}`);
           try {
             const updateResult = await db('user_fcm_tokens')
               .where('user_id', user.id)
@@ -563,6 +571,8 @@ async function sendRandomBookNotifications() {
           } catch (dbError) {
             console.error(`❌ ERROR DISABLING: Invalid FCM token:`, dbError);
           }
+        } else {
+          console.log(`🔔 💡 OTHER ERROR: Not a token issue, probably temporary network/server error`);
         }
       }
     });
