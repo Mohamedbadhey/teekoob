@@ -260,7 +260,14 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
     try {
       emit(const NotificationLoading());
       
-      await _notificationService.initialize();
+      // Initialize with timeout to prevent hanging
+      await _notificationService.initialize().timeout(
+        const Duration(seconds: 10),
+        onTimeout: () {
+          throw Exception('Notification initialization timeout');
+        },
+      );
+      
       final bool hasPermission = await _notificationService.areNotificationsEnabled();
       final List<dynamic> pendingNotifications = 
           await _notificationService.getPendingNotifications();

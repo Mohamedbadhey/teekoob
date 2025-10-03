@@ -13,15 +13,39 @@ class NotificationSettingsPage extends StatefulWidget {
 
 class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
   bool _randomBookNotificationsEnabled = true;
+  bool _isLoading = true;
+  bool _hasError = false;
+  String _errorMessage = '';
   final FirebaseNotificationService _notificationService = FirebaseNotificationService();
 
   @override
   void initState() {
     super.initState();
-    // Initialize notifications and load pending notifications
-    context.read<NotificationBloc>().add(const InitializeNotifications());
-    context.read<NotificationBloc>().add(const LoadPendingNotifications());
-    _loadRandomBookNotificationStatus();
+    _initializeNotifications();
+  }
+
+  Future<void> _initializeNotifications() async {
+    try {
+      setState(() {
+        _isLoading = true;
+        _hasError = false;
+      });
+
+      // Initialize notifications and load pending notifications
+      context.read<NotificationBloc>().add(const InitializeNotifications());
+      context.read<NotificationBloc>().add(const LoadPendingNotifications());
+      await _loadRandomBookNotificationStatus();
+
+      setState(() {
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+        _hasError = true;
+        _errorMessage = e.toString();
+      });
+    }
   }
 
   Future<void> _loadRandomBookNotificationStatus() async {
@@ -39,60 +63,119 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
         title: const Text('Notification Settings'),
         backgroundColor: const Color(0xFF0466c8),
         foregroundColor: Colors.white,
+        actions: [
+          if (_hasError)
+            IconButton(
+              icon: const Icon(Icons.refresh),
+              onPressed: _initializeNotifications,
+              tooltip: 'Retry',
+            ),
+        ],
       ),
-      body: BlocConsumer<NotificationBloc, NotificationState>(
-        listener: (context, state) {
-          if (state is NotificationError) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message),
-                backgroundColor: Colors.red,
+      body: _buildBody(),
+    );
+  }
+
+  Widget _buildBody() {
+    if (_isLoading) {
+      return const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(height: 16),
+            Text('Loading notification settings...'),
+          ],
+        ),
+      );
+    }
+
+    if (_hasError) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              Icons.error_outline,
+              size: 64,
+              color: Colors.red,
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Failed to load notification settings',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
               ),
-            );
-          } else if (state is NotificationPermissionGranted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Notification permissions granted!'),
-                backgroundColor: Colors.green,
-              ),
-            );
-          } else if (state is NotificationPermissionDenied) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Notification permissions denied. Please enable in device settings.'),
-                backgroundColor: Colors.orange,
-              ),
-            );
-          }
-        },
-        builder: (context, state) {
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Permission Status Card
-                _buildPermissionStatusCard(state),
-                
-                const SizedBox(height: 24),
-                
-                // Notification Settings
-                _buildNotificationSettingsCard(),
-                
-                const SizedBox(height: 24),
-                
-                // Pending Notifications
-                _buildPendingNotificationsCard(state),
-                
-                const SizedBox(height: 24),
-                
-                // Quick Actions
-                _buildQuickActionsCard(),
-              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              _errorMessage,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.grey),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: _initializeNotifications,
+              child: const Text('Retry'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return BlocConsumer<NotificationBloc, NotificationState>(
+      listener: (context, state) {
+        if (state is NotificationError) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(state.message),
+              backgroundColor: Colors.red,
             ),
           );
-        },
-      ),
+        } else if (state is NotificationPermissionGranted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Notification permissions granted!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        } else if (state is NotificationPermissionDenied) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Notification permissions denied. Please enable in device settings.'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+      },
+      builder: (context, state) {
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Permission Status Card
+              _buildPermissionStatusCard(state),
+              
+              const SizedBox(height: 24),
+              
+              // Notification Settings
+              _buildNotificationSettingsCard(),
+              
+              const SizedBox(height: 24),
+              
+              // Pending Notifications
+              _buildPendingNotificationsCard(state),
+              
+              const SizedBox(height: 24),
+              
+              // Quick Actions
+              _buildQuickActionsCard(),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -187,29 +270,42 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
                   _randomBookNotificationsEnabled = value;
                 });
                 
-                    if (value) {
-                      await _notificationService.enableRandomBookNotifications();
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(LocalizationService.getLocalizedText(
-                            englishText: 'Random book notifications enabled!',
-                            somaliText: 'Ogeysiisyooyinka buugag kala duwan ayaa la furay!',
-                          )),
-                          backgroundColor: Colors.green,
-                        ),
-                      );
-                    } else {
-                      await _notificationService.disableRandomBookNotifications();
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(LocalizationService.getLocalizedText(
-                            englishText: 'Random book notifications disabled',
-                            somaliText: 'Ogeysiisyooyinka buugag kala duwan ayaa la xidhay',
-                          )),
-                          backgroundColor: Colors.orange,
-                        ),
-                      );
-                    }
+                try {
+                  if (value) {
+                    await _notificationService.enableRandomBookNotifications();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(LocalizationService.getLocalizedText(
+                          englishText: 'Random book notifications enabled!',
+                          somaliText: 'Ogeysiisyooyinka buugag kala duwan ayaa la furay!',
+                        )),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                  } else {
+                    await _notificationService.disableRandomBookNotifications();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(LocalizationService.getLocalizedText(
+                          englishText: 'Random book notifications disabled',
+                          somaliText: 'Ogeysiisyooyinka buugag kala duwan ayaa la xidhay',
+                        )),
+                        backgroundColor: Colors.orange,
+                      ),
+                    );
+                  }
+                } catch (e) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Error: ${e.toString()}'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                  // Revert the switch state
+                  setState(() {
+                    _randomBookNotificationsEnabled = !value;
+                  });
+                }
               },
             ),
             
@@ -226,16 +322,25 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
               )),
               trailing: const Icon(Icons.arrow_forward_ios),
               onTap: () async {
-                await _notificationService.sendTestNotification();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(LocalizationService.getLocalizedText(
-                      englishText: 'Test notification sent!',
-                      somaliText: 'Ogeysiiska tijaabadeed ayaa la diray!',
-                    )),
-                    backgroundColor: Colors.blue,
-                  ),
-                );
+                try {
+                  await _notificationService.sendTestNotification();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(LocalizationService.getLocalizedText(
+                        englishText: 'Test notification sent!',
+                        somaliText: 'Ogeysiiska tijaabadeed ayaa la diray!',
+                      )),
+                      backgroundColor: Colors.blue,
+                    ),
+                  );
+                } catch (e) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Error sending test notification: ${e.toString()}'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
               },
             ),
             

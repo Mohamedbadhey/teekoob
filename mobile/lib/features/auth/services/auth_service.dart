@@ -1,6 +1,7 @@
 
 import 'package:teekoob/core/models/user_model.dart';
 import 'package:teekoob/core/services/network_service.dart';
+import 'package:teekoob/core/services/firebase_notification_service.dart';
 import 'package:teekoob/core/config/app_config.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -9,9 +10,28 @@ import 'package:dio/dio.dart';
 
 class AuthService {
   final NetworkService _networkService;
+  FirebaseNotificationService? _notificationService;
 
   AuthService() : _networkService = NetworkService() {
     _networkService.initialize();
+  }
+
+  /// Get notification service instance (lazy initialization)
+  FirebaseNotificationService get _notificationServiceInstance {
+    _notificationService ??= FirebaseNotificationService();
+    return _notificationService!;
+  }
+
+  /// Register user for notifications after successful login
+  Future<void> _registerUserForNotifications() async {
+    try {
+      print('🔔 Registering user for notifications after login...');
+      await _notificationServiceInstance.enableRandomBookNotifications();
+      print('🔔 ✅ User registered for notifications successfully');
+    } catch (e) {
+      print('🔔 ❌ Failed to register user for notifications: $e');
+      // Don't throw error - login should succeed even if notifications fail
+    }
   }
 
   // Google Sign-In
@@ -48,6 +68,9 @@ class AuthService {
         await _secureStorage.write(key: _tokenKey, value: token);
         await _secureStorage.write(key: _userEmailKey, value: user.email);
         _networkService.setAuthToken(token);
+
+        // Register user for notifications
+        await _registerUserForNotifications();
 
         return user;
       } else {
@@ -203,6 +226,9 @@ class AuthService {
             await _secureStorage.write(key: _tokenKey, value: token);
             await _secureStorage.write(key: _userEmailKey, value: userData['email'] as String?);
             
+            // Register user for notifications
+            await _registerUserForNotifications();
+            
             print('🎉 Google Sign-In completed successfully!');
             return User.fromJson(userData);
           } else {
@@ -250,6 +276,9 @@ class AuthService {
         _networkService.setAuthToken(token);
         await _secureStorage.write(key: _tokenKey, value: token);
         await _secureStorage.write(key: _userEmailKey, value: userData['email'] as String?);
+        
+        // Register user for notifications
+        await _registerUserForNotifications();
         
         print('🎉 Google Sign-In completed successfully!');
         return User.fromJson(userData);
@@ -345,6 +374,10 @@ class AuthService {
         await _secureStorage.write(key: _tokenKey, value: token);
         await _secureStorage.write(key: _userEmailKey, value: user.email);
         _networkService.setAuthToken(token);
+        
+        // Register user for notifications
+        await _registerUserForNotifications();
+        
         return user;
       } else {
         throw Exception('Registration failed: ${response.statusMessage}');

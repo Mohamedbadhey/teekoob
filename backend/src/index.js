@@ -268,6 +268,155 @@ try {
   app.use('/api/v1/admin', authenticateToken, requireAdmin, adminRoutes);
   console.log('✅ Admin routes registered');
   
+  // Test endpoints for notifications (no authentication required)
+  app.post('/api/v1/notifications/test-setup', async (req, res) => {
+    try {
+      console.log('🔔 Setting up test notification data...');
+      
+      // Get the first user from the database
+      const user = await db('users').select('id', 'email', 'first_name', 'last_name', 'language_preference').first();
+      
+      if (!user) {
+        return res.status(404).json({ error: 'No users found in database' });
+      }
+      
+      console.log('🔔 Found user:', user.email);
+      
+      // Create a test FCM token
+      const testFCMToken = `test_token_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      
+      // Insert FCM token
+      await db('user_fcm_tokens')
+        .insert({
+          user_id: user.id,
+          fcm_token: testFCMToken,
+          platform: 'mobile',
+          enabled: true,
+          created_at: new Date()
+        })
+        .onConflict(['user_id', 'fcm_token'])
+        .merge({
+          enabled: true,
+          updated_at: new Date()
+        });
+      
+      // Insert notification preferences
+      await db('notification_preferences')
+        .insert({
+          user_id: user.id,
+          random_books_enabled: true,
+          random_books_interval: 10,
+          platform: 'mobile',
+          daily_reminders_enabled: true,
+          daily_reminder_time: '20:00:00',
+          new_book_notifications_enabled: true,
+          progress_reminders_enabled: false,
+          progress_reminder_interval: 7,
+          created_at: new Date()
+        })
+        .onConflict('user_id')
+        .merge({
+          random_books_enabled: true,
+          random_books_interval: 10,
+          updated_at: new Date()
+        });
+      
+      console.log('🔔 ✅ Test notification data created successfully');
+      console.log('🔔 User:', user.email);
+      console.log('🔔 FCM Token:', testFCMToken);
+      console.log('🔔 Random books enabled: true');
+      
+      res.json({
+        success: true,
+        message: 'Test notification data created successfully',
+        data: {
+          user: {
+            id: user.id,
+            email: user.email,
+            name: `${user.first_name} ${user.last_name}`,
+            language: user.language_preference
+          },
+          fcmToken: testFCMToken,
+          preferences: {
+            randomBooksEnabled: true,
+            interval: 10
+          }
+        }
+      });
+      
+    } catch (error) {
+      console.error('❌ Error setting up test notification data:', error);
+      res.status(500).json({ error: 'Failed to setup test notification data' });
+    }
+  });
+
+  app.post('/api/v1/notifications/test-notification', async (req, res) => {
+    try {
+      console.log('🔔 Manually triggering random book notifications...');
+      
+      // Call the sendRandomBookNotifications function directly
+      const notificationRoutes = require('./routes/notifications');
+      // We'll need to access the function from the routes file
+      // For now, let's just trigger the cron job manually
+      console.log('🔔 Triggering notification process...');
+      
+      // Get all users who have random book notifications enabled
+      const result = await db('users as u')
+        .select('u.id', 'u.email', 'u.first_name', 'u.last_name', 'u.language_preference',
+                'nf.fcm_token', 'np.random_books_enabled', 'np.random_books_interval')
+        .join('user_fcm_tokens as nf', 'u.id', 'nf.user_id')
+        .join('notification_preferences as np', 'u.id', 'np.user_id')
+        .where('nf.enabled', true)
+        .andWhere('np.random_books_enabled', true);
+
+      if (result.length === 0) {
+        console.log('🔔 No users with random book notifications enabled');
+        return res.json({
+          success: false,
+          message: 'No users with random book notifications enabled'
+        });
+      }
+
+      console.log(`🔔 Found ${result.length} users with notifications enabled`);
+      
+      // Get random books
+      const books = await db('books')
+        .select('*')
+        .where('is_featured', true)
+        .orWhere('is_new_release', true)
+        .orderByRaw('RAND()')
+        .limit(3);
+
+      if (books.length === 0) {
+        console.log('🔔 No books available for notifications');
+        return res.json({
+          success: false,
+          message: 'No books available for notifications'
+        });
+      }
+
+      console.log(`🔔 Found ${books.length} books for notifications`);
+      
+      // Send notifications (simulate for now)
+      console.log('🔔 Simulating notification sending...');
+      for (const user of result) {
+        console.log(`🔔 Would send notification to: ${user.email}`);
+        console.log(`🔔 FCM Token: ${user.fcm_token}`);
+        console.log(`🔔 Language: ${user.language_preference}`);
+      }
+      
+      console.log('🔔 ✅ Notification process completed');
+      
+      res.json({
+        success: true,
+        message: 'Random book notifications triggered successfully'
+      });
+    } catch (error) {
+      console.error('❌ Error triggering notifications:', error);
+      res.status(500).json({ error: 'Failed to trigger notifications' });
+    }
+  });
+
   app.use('/api/v1/notifications', authenticateToken, notificationRoutes);
   console.log('✅ Notification routes registered');
   

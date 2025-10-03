@@ -11,6 +11,7 @@ import 'package:flutter/foundation.dart';
 
 // Firebase notification service
 import 'package:teekoob/core/services/firebase_notification_service.dart';
+import 'package:teekoob/core/services/fallback_notification_service.dart';
 import 'package:teekoob/core/services/notification_service_interface.dart';
 
 import 'package:teekoob/features/auth/services/auth_service.dart';
@@ -31,26 +32,49 @@ import 'package:teekoob/core/bloc/notification_bloc.dart';
 
 void main() async {
   print('🚀 ===== APP STARTUP =====');
-  WidgetsFlutterBinding.ensureInitialized();
-  print('🚀 WidgetsFlutterBinding initialized');
   
-  // Initialize Localization
-  print('🚀 Initializing Localization...');
-  await LocalizationService.initialize();
-  print('🚀 ✅ Localization initialized');
-  
-  // Initialize Firebase notification service (with error handling)
-  print('🚀 Initializing Firebase Notification Service...');
+  try {
+    WidgetsFlutterBinding.ensureInitialized();
+    print('🚀 WidgetsFlutterBinding initialized');
+    
+    // Initialize Localization
+    print('🚀 Initializing Localization...');
+    await LocalizationService.initialize();
+    print('🚀 ✅ Localization initialized');
+    
+    print('🚀 Starting TeekoobApp...');
+    runApp(TeekoobApp());
+    
+    // Initialize Firebase notification service in background (non-blocking)
+    print('🚀 Initializing Firebase Notification Service in background...');
+    _initializeFirebaseInBackground();
+    
+    print('🚀 ===== APP STARTUP COMPLETE =====');
+  } catch (e) {
+    print('🚀 ❌ Critical startup error: $e');
+    print('🚀 Starting app anyway...');
+    runApp(TeekoobApp());
+  }
+}
+
+/// Initialize Firebase in background without blocking app startup
+void _initializeFirebaseInBackground() async {
   try {
     await FirebaseNotificationService().initialize();
     print('🚀 ✅ Firebase Notification Service initialized successfully');
   } catch (e) {
     print('🚀 ❌ Firebase initialization failed, app will continue without notifications: $e');
   }
-  
-  print('🚀 Starting TeekoobApp...');
-  runApp(TeekoobApp());
-  print('🚀 ===== APP STARTUP COMPLETE =====');
+}
+
+/// Create notification service with fallback
+NotificationServiceInterface _createNotificationService() {
+  try {
+    return FirebaseNotificationService();
+  } catch (e) {
+    print('🚀 ⚠️ Using fallback notification service due to Firebase error: $e');
+    return FallbackNotificationService();
+  }
 }
 
 class TeekoobApp extends StatelessWidget {
@@ -82,7 +106,7 @@ class TeekoobApp extends StatelessWidget {
               create: (context) => SubscriptionService(),
             ),
             RepositoryProvider<NotificationServiceInterface>(
-              create: (context) => FirebaseNotificationService(),
+              create: (context) => _createNotificationService(),
             ),
           ],
                 child: MultiBlocProvider(

@@ -43,11 +43,19 @@ class FirebaseNotificationService implements NotificationServiceInterface {
   factory FirebaseNotificationService() => _instance;
   FirebaseNotificationService._internal();
 
-  final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
+  FirebaseMessaging? _firebaseMessaging;
   final BooksService _booksService = BooksService();
+
+  /// Get FirebaseMessaging instance (lazy initialization)
+  FirebaseMessaging get _firebaseMessagingInstance {
+    _firebaseMessaging ??= FirebaseMessaging.instance;
+    return _firebaseMessaging!;
+  }
 
   bool _isInitialized = false;
   String? _fcmToken;
+  int _retryCount = 0;
+  static const int _maxRetries = 3;
 
   /// Initialize Firebase and FCM
   Future<void> initialize() async {
@@ -55,12 +63,19 @@ class FirebaseNotificationService implements NotificationServiceInterface {
 
     print('🔔 ===== FIREBASE INITIALIZATION START =====');
     print('🔔 Platform: ${kIsWeb ? "Web" : "Mobile"}');
+    print('🔔 Retry attempt: ${_retryCount + 1}/$_maxRetries');
 
     try {
-      // Initialize Firebase with error handling
+      // Initialize Firebase with timeout and error handling
       print('🔔 Initializing Firebase Core...');
       await Firebase.initializeApp(
         options: DefaultFirebaseOptions.currentPlatform,
+      ).timeout(
+        const Duration(seconds: 10),
+        onTimeout: () {
+          print('🔔 ⏰ Firebase initialization timed out after 10 seconds');
+          throw Exception('Firebase initialization timeout');
+        },
       );
       print('🔔 ✅ Firebase Core initialized successfully');
 
@@ -71,13 +86,25 @@ class FirebaseNotificationService implements NotificationServiceInterface {
         print('🔔 ✅ Background message handler set up');
       }
 
-      // Request permissions
+      // Request permissions with timeout
       print('🔔 Requesting notification permissions...');
-      await _requestPermissions();
+      await _requestPermissions().timeout(
+        const Duration(seconds: 5),
+        onTimeout: () {
+          print('🔔 ⏰ Permission request timed out');
+          throw Exception('Permission request timeout');
+        },
+      );
 
-      // Get FCM token
+      // Get FCM token with timeout
       print('🔔 Getting FCM token...');
-      await _getFCMToken();
+      await _getFCMToken().timeout(
+        const Duration(seconds: 5),
+        onTimeout: () {
+          print('🔔 ⏰ FCM token retrieval timed out');
+          throw Exception('FCM token timeout');
+        },
+      );
 
       // Set up message listeners
       print('🔔 Setting up message listeners...');
@@ -89,7 +116,16 @@ class FirebaseNotificationService implements NotificationServiceInterface {
     } catch (e) {
       print('🔔 ❌ Error initializing Firebase Notification Service: $e');
       print('🔔 Stack trace: ${StackTrace.current}');
-      // Don't throw error - let app continue without notifications
+      
+      _retryCount++;
+      if (_retryCount < _maxRetries) {
+        print('🔔 🔄 Retrying Firebase initialization in 2 seconds...');
+        await Future.delayed(const Duration(seconds: 2));
+        return initialize(); // Retry
+      } else {
+        print('🔔 ⚠️ Max retries reached. App will continue without Firebase notifications');
+        _isInitialized = false; // Reset so it can be retried later
+      }
     }
   }
 
@@ -103,7 +139,7 @@ class FirebaseNotificationService implements NotificationServiceInterface {
 
       // Request FCM permissions
       print('🔔 Requesting FCM permissions...');
-      NotificationSettings settings = await _firebaseMessaging.requestPermission(
+      NotificationSettings settings = await _firebaseMessagingInstance.requestPermission(
         alert: true,
         announcement: false,
         badge: true,
@@ -136,7 +172,7 @@ class FirebaseNotificationService implements NotificationServiceInterface {
       }
       
       print('🔔 Requesting FCM token from Firebase...');
-      _fcmToken = await _firebaseMessaging.getToken();
+      _fcmToken = await _firebaseMessagingInstance.getToken();
       
       if (_fcmToken != null) {
         print('🔔 ✅ FCM Token received successfully');
@@ -157,9 +193,16 @@ class FirebaseNotificationService implements NotificationServiceInterface {
 
   Future<void> _registerTokenWithBackend(String token) async {
     try {
-      // TODO: Implement API call to register FCM token with backend
-      // This should call your backend's /notifications/register-token endpoint
       print('🔔 Registering FCM token with backend: $token');
+      
+      // TODO: Replace with actual API call when backend is ready
+      // For now, we'll simulate the registration
+      print('🔔 ✅ FCM token registered with backend (simulated)');
+      
+      // Automatically enable random book notifications for the user
+      print('🔔 Automatically enabling random book notifications...');
+      await enableRandomBookNotifications();
+      
     } catch (e) {
       print('❌ Error registering FCM token with backend: $e');
     }
@@ -251,7 +294,7 @@ class FirebaseNotificationService implements NotificationServiceInterface {
     try {
       if (kIsWeb) return false;
       
-      final settings = await _firebaseMessaging.getNotificationSettings();
+      final settings = await _firebaseMessagingInstance.getNotificationSettings();
       return settings.authorizationStatus == AuthorizationStatus.authorized;
     } catch (e) {
       print('❌ Error checking notification status: $e');
@@ -261,6 +304,14 @@ class FirebaseNotificationService implements NotificationServiceInterface {
 
   // Firebase Cloud Messaging methods
   String? getFCMToken() => _fcmToken;
+
+  /// Manually retry Firebase initialization
+  Future<void> retryInitialization() async {
+    print('🔔 🔄 Manual retry requested');
+    _retryCount = 0;
+    _isInitialized = false;
+    await initialize();
+  }
 
   Future<void> enableRandomBookNotifications() async {
     print('🔔 ===== ENABLING RANDOM BOOK NOTIFICATIONS =====');
