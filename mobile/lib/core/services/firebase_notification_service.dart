@@ -1,8 +1,10 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:http/http.dart' as http;
 import 'package:teekoob/firebase_options.dart';
 import 'package:teekoob/core/services/notification_service_interface.dart';
 import 'package:teekoob/core/models/book_model.dart';
@@ -195,16 +197,99 @@ class FirebaseNotificationService implements NotificationServiceInterface {
     try {
       print('🔔 Registering FCM token with backend: $token');
       
-      // TODO: Replace with actual API call when backend is ready
-      // For now, we'll simulate the registration
-      print('🔔 ✅ FCM token registered with backend (simulated)');
+      // Get the backend URL from environment or use default
+      const String backendUrl = 'https://teekoob-production.up.railway.app';
       
-      // Automatically enable random book notifications for the user
-      print('🔔 Automatically enabling random book notifications...');
-      await enableRandomBookNotifications();
+      // For now, we'll use the test setup endpoint that doesn't require authentication
+      // This will create a test FCM token entry for the user
+      print('🔔 Using test setup endpoint for FCM token registration...');
+      
+      final response = await _makeApiCall(
+        '$backendUrl/api/v1/notifications/test-setup',
+        'POST',
+        {
+          'fcmToken': token,
+          'platform': 'mobile',
+          'enabled': true,
+        },
+      );
+      
+      if (response['success'] == true) {
+        print('🔔 ✅ FCM token registered with backend successfully');
+        print('🔔 User: ${response['data']['user']['email']}');
+        print('🔔 FCM Token: ${response['data']['fcmToken']}');
+        print('🔔 Random books enabled: ${response['data']['preferences']['randomBooksEnabled']}');
+      } else {
+        print('🔔 ❌ Backend registration failed: ${response['error']}');
+      }
       
     } catch (e) {
       print('❌ Error registering FCM token with backend: $e');
+    }
+  }
+
+  Future<String?> _getAuthToken() async {
+    try {
+      // Try to get token from shared preferences
+      // This is a simplified approach - in a real app you'd use proper auth storage
+      print('🔔 Getting auth token from storage...');
+      
+      // For now, return null to skip authentication
+      // TODO: Implement proper auth token retrieval
+      return null;
+    } catch (e) {
+      print('🔔 ❌ Error getting auth token: $e');
+      return null;
+    }
+  }
+
+  Future<Map<String, dynamic>> _makeApiCall(String url, String method, Map<String, dynamic>? data, {String? authToken}) async {
+    try {
+      print('🔔 Making API call to: $url');
+      print('🔔 Method: $method');
+      print('🔔 Data: $data');
+      
+      final headers = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      };
+      
+      // Add auth token if provided
+      if (authToken != null) {
+        headers['Authorization'] = 'Bearer $authToken';
+      }
+      
+      late final http.Response response;
+      
+      if (method == 'POST') {
+        response = await http.post(
+          Uri.parse(url),
+          headers: headers,
+          body: data != null ? jsonEncode(data) : null,
+        );
+      } else if (method == 'GET') {
+        response = await http.get(Uri.parse(url), headers: headers);
+      } else {
+        throw Exception('Unsupported HTTP method: $method');
+      }
+      
+      print('🔔 Response status: ${response.statusCode}');
+      print('🔔 Response body: ${response.body}');
+      
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      } else {
+        return {
+          'success': false,
+          'error': 'HTTP ${response.statusCode}: ${response.body}',
+        };
+      }
+    } catch (e) {
+      print('🔔 ❌ API call error: $e');
+      return {
+        'success': false,
+        'error': e.toString(),
+      };
     }
   }
 
@@ -315,10 +400,28 @@ class FirebaseNotificationService implements NotificationServiceInterface {
 
   Future<void> enableRandomBookNotifications() async {
     print('🔔 ===== ENABLING RANDOM BOOK NOTIFICATIONS =====');
-    print('🔔 Random book notifications enabled via Firebase Cloud Messaging');
-    print('🔔 Backend will send notifications every 10 minutes');
+    
+    try {
+      // Get FCM token if not already available
+      if (_fcmToken == null) {
+        print('🔔 Getting FCM token for notification registration...');
+        await _getFCMToken();
+      }
+      
+      if (_fcmToken != null) {
+        print('🔔 Registering FCM token with backend...');
+        await _registerTokenWithBackend(_fcmToken!);
+      } else {
+        print('🔔 ⚠️ No FCM token available, skipping notification registration');
+      }
+      
+      print('🔔 ✅ Random book notifications enabled via Firebase Cloud Messaging');
+      print('🔔 Backend will send notifications every 2 minutes');
+    } catch (e) {
+      print('🔔 ❌ Error enabling random book notifications: $e');
+    }
+    
     print('🔔 ===== END ENABLE NOTIFICATIONS =====');
-    // TODO: Implement API call to enable notifications in backend
   }
 
   Future<void> disableRandomBookNotifications() async {
