@@ -503,9 +503,6 @@ async function sendRandomBookNotifications() {
               channelId: 'teekoob_book_notifications',
               priority: 'high',
               visibility: 'public',
-              // Add expandable content
-              style: 'Inbox',
-              summary: `New book recommendation: ${randomBook.title}`,
             },
             priority: 'high',
           },
