@@ -11,6 +11,8 @@ import LoginPage from './pages/Auth/LoginPage'
 import DashboardPage from './pages/Dashboard/DashboardPage'
 import BooksPage from './pages/Books/BooksPage'
 import BookFormPage from './pages/Books/BookFormPage'
+import PodcastsPage from './pages/Podcasts/PodcastsPage'
+import PodcastEpisodesPage from './pages/Podcasts/PodcastEpisodesPage'
 import UserManagementPage from './pages/Users/UserManagementPage'
 import UserDetailPage from './pages/Users/UserDetailPage'
 import CategoriesPage from './pages/Categories/CategoriesPage'
@@ -112,6 +114,10 @@ function App() {
         <Route path="books" element={<BooksPage />} />
         <Route path="books/new" element={<BookFormPage />} />
         <Route path="books/:id/edit" element={<BookFormPage />} />
+        <Route path="podcasts" element={<PodcastsPage />} />
+        <Route path="podcasts/new" element={<PodcastsPage />} />
+        <Route path="podcasts/:id/edit" element={<PodcastsPage />} />
+        <Route path="podcasts/:podcastId/episodes" element={<PodcastEpisodesPage />} />
         <Route path="categories" element={<CategoriesPage />} />
         <Route path="moderation" element={<ContentModerationPage />} />
         

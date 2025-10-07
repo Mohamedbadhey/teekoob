@@ -928,6 +928,1002 @@ router.put('/books/bulk', asyncHandler(async (req, res) => {
   }
 }));
 
+// ===== PODCAST MANAGEMENT =====
+
+// Get all podcasts
+router.get('/podcasts', asyncHandler(async (req, res) => {
+  const { page = 1, limit = 20, search, category, language, featured } = req.query;
+  
+  const offset = (page - 1) * limit;
+  
+  let query = db('podcasts');
+  
+  // Apply filters
+  if (search) {
+    query = query.where(function() {
+      this.where('title', 'like', `%${search}%`)
+        .orWhere('title_somali', 'like', `%${search}%`)
+        .orWhere('description', 'like', `%${search}%`)
+        .orWhere('description_somali', 'like', `%${search}%`)
+        .orWhere('host', 'like', `%${search}%`)
+        .orWhere('host_somali', 'like', `%${search}%`);
+    });
+  }
+  
+  if (category && category !== 'all') {
+    query = query.whereExists(function() {
+      this.select('*')
+        .from('podcast_categories')
+        .whereRaw('podcast_categories.podcast_id = podcasts.id')
+        .where('podcast_categories.category_id', category);
+    });
+  }
+  
+  if (language && language !== 'all') {
+    query = query.where('language', language);
+  }
+  
+  if (featured && featured !== 'all') {
+    query = query.where('is_featured', featured === 'true');
+  }
+  
+  // Get total count
+  let countQuery = db('podcasts');
+  
+  // Apply the same filters to the count query
+  if (search) {
+    countQuery = countQuery.where(function() {
+      this.where('title', 'like', `%${search}%`)
+        .orWhere('title_somali', 'like', `%${search}%`)
+        .orWhere('description', 'like', `%${search}%`)
+        .orWhere('description_somali', 'like', `%${search}%`)
+        .orWhere('host', 'like', `%${search}%`)
+        .orWhere('host_somali', 'like', `%${search}%`);
+    });
+  }
+  if (category && category !== 'all') {
+    countQuery = countQuery.whereExists(function() {
+      this.select('*')
+        .from('podcast_categories')
+        .whereRaw('podcast_categories.podcast_id = podcasts.id')
+        .where('podcast_categories.category_id', category);
+    });
+  }
+  if (language && language !== 'all') {
+    countQuery = countQuery.where('language', language);
+  }
+  if (featured && featured !== 'all') {
+    countQuery = countQuery.where('is_featured', featured === 'true');
+  }
+  
+  const totalCount = await countQuery.count('* as count').first();
+  
+  // Get podcasts
+  const podcasts = await query
+    .select('*')
+    .orderBy('created_at', 'desc')
+    .limit(parseInt(limit))
+    .offset(offset);
+
+  // Get categories for each podcast
+  const podcastsWithCategories = await Promise.all(
+    podcasts.map(async (podcast) => {
+      // Get categories for this podcast from the podcast_categories table
+      const categories = await db('podcast_categories')
+        .join('categories', 'podcast_categories.category_id', 'categories.id')
+        .where('podcast_categories.podcast_id', podcast.id)
+        .where('categories.is_active', true)
+        .select('categories.id', 'categories.name', 'categories.name_somali')
+        .orderBy('categories.sort_order', 'asc');
+
+      return {
+        ...podcast,
+        categories: categories.map(cat => cat.id),
+        categoryNames: categories.map(cat => cat.name),
+        categoryNamesSomali: categories.map(cat => cat.name_somali)
+      };
+    })
+  );
+  
+  // Process podcasts to ensure proper data types and full URLs
+  const baseUrl = process.env.RAILWAY_PUBLIC_DOMAIN 
+    ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`
+    : `${req.protocol}://${req.get('host')}`;
+    
+  console.log('🔍 Base URL for podcast file serving:', baseUrl);
+    
+  const processedPodcasts = podcastsWithCategories.map((podcast, index) => {
+    return {
+      ...podcast,
+      host: podcast.host || '',
+      host_somali: podcast.host_somali || '',
+      is_featured: Boolean(podcast.is_featured),
+      is_new_release: Boolean(podcast.is_new_release),
+      is_premium: Boolean(podcast.is_premium),
+      is_free: Boolean(podcast.is_free),
+      rating: podcast.rating ? parseFloat(podcast.rating) : 0,
+      review_count: podcast.review_count ? parseInt(podcast.review_count) : 0,
+      total_episodes: podcast.total_episodes ? parseInt(podcast.total_episodes) : 0,
+      // Preserve categories from podcast_categories relationship
+      categories: podcast.categories || [],
+      categoryNames: podcast.categoryNames || [],
+      categoryNamesSomali: podcast.categoryNamesSomali || [],
+      // Convert relative URLs to full URLs
+      cover_image_url: podcast.cover_image_url && podcast.cover_image_url.startsWith('/uploads/') 
+        ? `${baseUrl}${podcast.cover_image_url}` 
+        : podcast.cover_image_url
+    };
+  });
+  
+  res.json({
+    podcasts: processedPodcasts,
+    pagination: {
+      page: parseInt(page),
+      limit: parseInt(limit),
+      total: parseInt(totalCount.count),
+      totalPages: Math.ceil(parseInt(totalCount.count) / parseInt(limit))
+    }
+  });
+}));
+
+// Get single podcast
+router.get('/podcasts/:id', asyncHandler(async (req, res) => {
+  try {
+    const { id } = req.params;
+    console.log('🔍 Admin: Fetching podcast with ID:', id);
+    
+    const podcast = await db('podcasts')
+      .select('*')
+      .where('id', id)
+      .first();
+    
+    if (!podcast) {
+      console.log('❌ Admin: Podcast not found with ID:', id);
+      return res.status(404).json({ 
+        error: 'Podcast not found',
+        code: 'PODCAST_NOT_FOUND',
+        requestedId: id
+      });
+    }
+    
+    // Get categories for this podcast from the podcast_categories table
+    const categories = await db('podcast_categories')
+      .join('categories', 'podcast_categories.category_id', 'categories.id')
+      .where('podcast_categories.podcast_id', id)
+      .where('categories.is_active', true)
+      .select('categories.id', 'categories.name', 'categories.name_somali')
+      .orderBy('categories.sort_order', 'asc');
+    
+    // Convert relative URLs to full URLs
+    const baseUrl = process.env.RAILWAY_PUBLIC_DOMAIN 
+      ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`
+      : `${req.protocol}://${req.get('host')}`;
+      
+    console.log('🔍 Single podcast - Base URL:', baseUrl);
+    
+    const processedPodcast = {
+      ...podcast,
+      // Include categories from podcast_categories relationship
+      categories: categories.map(cat => cat.id),
+      categoryNames: categories.map(cat => cat.name),
+      categoryNamesSomali: categories.map(cat => cat.name_somali),
+      cover_image_url: podcast.cover_image_url && podcast.cover_image_url.startsWith('/uploads/') 
+        ? `${baseUrl}${podcast.cover_image_url}` 
+        : podcast.cover_image_url
+    };
+    
+    res.json(processedPodcast);
+  } catch (error) {
+    console.error('💥 Admin: Error fetching podcast:', error);
+    res.status(500).json({
+      error: 'Internal server error while fetching podcast',
+      code: 'INTERNAL_ERROR',
+      details: error.message
+    });
+  }
+}));
+
+// Create new podcast
+router.post('/podcasts', upload.fields([
+  { name: 'coverImage', maxCount: 1 }
+]), asyncHandler(async (req, res) => {
+  const {
+    title,
+    title_somali,
+    description,
+    description_somali,
+    host,
+    host_somali,
+    language,
+    rss_feed_url,
+    website_url,
+    is_featured,
+    is_new_release,
+    is_premium,
+    is_free
+  } = req.body;
+
+  // Extract categories from request body (multiple categories support)
+  let categories = [];
+  
+  // Check if categories is sent as an array
+  if (req.body.categories && Array.isArray(req.body.categories)) {
+    categories = req.body.categories;
+  } else {
+    // Fallback: check for categories[0], categories[1], etc.
+    Object.keys(req.body).forEach(key => {
+      if (key.startsWith('categories[') && key.endsWith(']')) {
+        categories.push(req.body[key]);
+      }
+    });
+  }
+    
+  // Validate required fields
+  if (!title || !language || !host || categories.length === 0) {
+    return res.status(400).json({ 
+      error: 'Missing required fields',
+      code: 'MISSING_FIELDS',
+      missing: {
+        title: !title,
+        language: !language,
+        host: !host,
+        categories: categories.length === 0
+      }
+    });
+  }
+  
+  try {
+    // Process uploaded files
+    const fileUrls = {};
+    if (req.files) {
+      Object.keys(req.files).forEach(fieldName => {
+        const file = req.files[fieldName][0];
+        const baseUrl = process.env.RAILWAY_PUBLIC_DOMAIN 
+          ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`
+          : `${req.protocol}://${req.get('host')}`;
+        fileUrls[fieldName] = `${baseUrl}/uploads/${file.filename}`;
+      });
+    }
+    
+    // Create podcast record
+    const podcastData = {
+      id: crypto.randomUUID(),
+      title,
+      title_somali: title_somali || null,
+      description,
+      description_somali: description_somali || null,
+      host,
+      host_somali: host_somali || null,
+      language,
+      cover_image_url: fileUrls.coverImage || null,
+      rss_feed_url: rss_feed_url || null,
+      website_url: website_url || null,
+      total_episodes: 0,
+      is_featured: is_featured === 'true' || is_featured === true,
+      is_new_release: is_new_release === 'true' || is_new_release === true,
+      is_premium: is_premium === 'true' || is_premium === true,
+      is_free: is_free === 'true' || is_free === true,
+      rating: 0,
+      review_count: 0,
+      created_at: new Date(),
+      updated_at: new Date()
+    };
+    
+    // Clean up any empty strings that could cause database issues
+    Object.keys(podcastData).forEach(key => {
+      if (podcastData[key] === '') {
+        podcastData[key] = null;
+      }
+    });
+    
+    const result = await db('podcasts').insert(podcastData);
+    const podcastId = result[0];
+    
+    // Create category relationships
+    if (categories.length > 0) {
+      // Verify that all categories exist in the categories table
+      const existingCategories = await db('categories')
+        .whereIn('id', categories)
+        .where('is_active', true)
+        .select('id', 'name');
+      
+      if (existingCategories.length !== categories.length) {
+        const missingCategories = categories.filter(catId => 
+          !existingCategories.find(existing => existing.id === catId)
+        );
+        
+        // Delete the podcast that was just created since categories are invalid
+        await db('podcasts').where('id', podcastId).del();
+        
+        return res.status(400).json({
+          error: 'Invalid categories selected',
+          code: 'INVALID_CATEGORIES',
+          details: `The following categories do not exist or are inactive: ${missingCategories.join(', ')}`,
+          missingCategories: missingCategories
+        });
+      }
+      
+      const categoryRelations = categories.map(categoryId => ({
+        id: crypto.randomUUID(),
+        podcast_id: podcastId,
+        category_id: categoryId,
+        created_at: new Date()
+      }));
+      
+      console.log(`📝 Creating new podcast with ${categoryRelations.length} category relationships:`, categoryRelations);
+      await db('podcast_categories').insert(categoryRelations);
+      console.log(`✅ Successfully created ${categoryRelations.length} category relationships for new podcast ${podcastId}`);
+      
+      logger.info('Category relationships created:', { podcastId, categories });
+    }
+    
+    logger.info('Podcast created:', { podcastId, title });
+    
+    res.status(201).json({
+      message: 'Podcast created successfully',
+      podcastId
+    });
+    
+  } catch (error) {
+    logger.error('Podcast creation failed:', error);
+    res.status(500).json({ 
+      error: 'Failed to create podcast',
+      code: 'PODCAST_CREATION_FAILED',
+      details: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+  }
+}));
+
+// Update podcast
+router.put('/podcasts/:id', upload.fields([
+  { name: 'coverImage', maxCount: 1 }
+]), asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const updateData = req.body;
+  
+  // Extract categories from request body (multiple categories support)
+  let categories = [];
+  
+  // Check if categories is sent as an array
+  if (req.body.categories && Array.isArray(req.body.categories)) {
+    categories = req.body.categories;
+  } else {
+    // Fallback: check for categories[0], categories[1], etc.
+    Object.keys(req.body).forEach(key => {
+      if (key.startsWith('categories[') && key.endsWith(']')) {
+        categories.push(req.body[key]);
+      }
+    });
+  }
+  
+  // Check if podcast exists
+  const existingPodcast = await db('podcasts').where('id', id).first();
+  if (!existingPodcast) {
+    return res.status(404).json({ 
+      error: 'Podcast not found',
+      code: 'PODCAST_NOT_FOUND'
+    });
+  }
+  
+  try {
+    // Process uploaded files
+    if (req.files) {
+      Object.keys(req.files).forEach(fieldName => {
+        const file = req.files[fieldName][0];
+        const fieldMap = {
+          coverImage: 'cover_image_url'
+        };
+        
+        if (fieldMap[fieldName]) {
+          const baseUrl = process.env.RAILWAY_PUBLIC_DOMAIN 
+            ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`
+            : `${req.protocol}://${req.get('host')}`;
+          updateData[fieldMap[fieldName]] = `${baseUrl}/uploads/${file.filename}`;
+        }
+      });
+    }
+    
+    // Process boolean fields
+    if (updateData.is_featured !== undefined) {
+      updateData.is_featured = updateData.is_featured === 'true' || updateData.is_featured === true;
+    }
+    
+    if (updateData.is_new_release !== undefined) {
+      updateData.is_new_release = updateData.is_new_release === 'true' || updateData.is_new_release === true;
+    }
+    
+    if (updateData.is_premium !== undefined) {
+      updateData.is_premium = updateData.is_premium === 'true' || updateData.is_premium === true;
+    }
+    
+    if (updateData.is_free !== undefined) {
+      updateData.is_free = updateData.is_free === 'true' || updateData.is_free === true;
+    }
+    
+    // Process numeric fields
+    if (updateData.total_episodes !== undefined) {
+      updateData.total_episodes = parseInt(updateData.total_episodes) || 0;
+    }
+    
+    if (updateData.rating !== undefined) {
+      updateData.rating = parseFloat(updateData.rating) || 0;
+    }
+    
+    // Remove fields that are not columns in the podcasts table
+    const { categories: _, selectedCategories: __, ...podcastUpdateData } = updateData;
+    
+    // Update podcast
+    await db('podcasts')
+      .where('id', id)
+      .update({
+        ...podcastUpdateData,
+        updated_at: new Date()
+      });
+
+    // Update category relationships if categories are provided
+    if (categories.length >= 0) { // Allow empty array to clear categories
+      // Remove existing category relationships
+      const deletedCount = await db('podcast_categories').where('podcast_id', id).del();
+      console.log(`🗑️ Deleted ${deletedCount} existing category relationships for podcast ${id}`);
+      
+      // Add new category relationships
+      if (categories.length > 0) {
+        console.log(`➕ Processing ${categories.length} categories for podcast ${id}:`, categories);
+        
+        // Verify that all categories exist in the categories table
+        const existingCategories = await db('categories')
+          .whereIn('id', categories)
+          .where('is_active', true)
+          .select('id', 'name');
+        
+        console.log(`🔍 Found ${existingCategories.length} valid categories:`, existingCategories.map(c => ({ id: c.id, name: c.name })));
+        
+        if (existingCategories.length !== categories.length) {
+          const missingCategories = categories.filter(catId => 
+            !existingCategories.find(existing => existing.id === catId)
+          );
+          
+          console.log(`❌ Missing categories:`, missingCategories);
+          
+          // Return error if categories don't exist
+          return res.status(400).json({
+            error: 'Invalid categories selected',
+            code: 'INVALID_CATEGORIES',
+            details: `The following categories do not exist or are inactive: ${missingCategories.join(', ')}`,
+            missingCategories: missingCategories
+          });
+        }
+        
+        const categoryRelations = categories.map(categoryId => ({
+          id: crypto.randomUUID(),
+          podcast_id: id,
+          category_id: categoryId,
+          created_at: new Date()
+        }));
+        
+        console.log(`📝 Inserting ${categoryRelations.length} category relationships:`, categoryRelations);
+        await db('podcast_categories').insert(categoryRelations);
+        console.log(`✅ Successfully inserted ${categoryRelations.length} category relationships`);
+        
+        logger.info('Category relationships updated:', { podcastId: id, categories });
+      } else {
+        console.log(`ℹ️ No categories to assign - podcast ${id} will have no categories`);
+      }
+    }
+    
+    logger.info('Podcast updated:', { podcastId: id });
+    
+    res.json({
+      message: 'Podcast updated successfully',
+      podcastId: id
+    });
+    
+  } catch (error) {
+    logger.error('Podcast update failed:', error);
+    res.status(500).json({ 
+      error: 'Failed to update podcast',
+      code: 'PODCAST_UPDATE_FAILED',
+      details: error.message
+    });
+  }
+}));
+
+// Update podcast status
+router.put('/podcasts/:id/status', asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { isFeatured, isNewRelease, isPremium } = req.body;
+  
+  const updateData = {};
+  if (isFeatured !== undefined) updateData.is_featured = isFeatured;
+  if (isNewRelease !== undefined) updateData.is_new_release = isNewRelease;
+  if (isPremium !== undefined) updateData.is_premium = isPremium;
+  
+  if (Object.keys(updateData).length === 0) {
+    return res.status(400).json({ 
+      error: 'No fields to update',
+      code: 'NO_FIELDS'
+    });
+  }
+  
+  updateData.updated_at = new Date();
+  
+  await db('podcasts')
+    .where('id', id)
+    .update(updateData);
+  
+  logger.info('Podcast status updated:', { podcastId: id, updateData });
+  
+  res.json({
+    message: 'Podcast status updated successfully'
+  });
+}));
+
+// Delete podcast
+router.delete('/podcasts/:id', asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  
+  // Check if podcast exists
+  const podcast = await db('podcasts').where('id', id).first();
+  if (!podcast) {
+    return res.status(404).json({ 
+      error: 'Podcast not found',
+      code: 'PODCAST_NOT_FOUND'
+    });
+  }
+  
+  // Hard delete the podcast (cascade will handle podcast_parts and podcast_categories)
+  await db('podcasts')
+    .where('id', id)
+    .del();
+  
+  logger.info('Podcast deleted:', { podcastId: id, title: podcast.title });
+  
+  res.json({
+    message: 'Podcast deleted successfully'
+  });
+}));
+
+// Get podcast statistics
+router.get('/podcasts/stats', asyncHandler(async (req, res) => {
+  try {
+    // Total podcasts
+    const totalPodcasts = await db('podcasts')
+      .count('* as count')
+      .first();
+    
+    // Featured podcasts
+    const featuredPodcasts = await db('podcasts')
+      .where('is_featured', true)
+      .count('* as count')
+      .first();
+    
+    // New releases
+    const newReleases = await db('podcasts')
+      .where('is_new_release', true)
+      .count('* as count')
+      .first();
+    
+    // Premium podcasts
+    const premiumPodcasts = await db('podcasts')
+      .where('is_premium', true)
+      .count('* as count')
+      .first();
+    
+    // Total episodes
+    const totalEpisodes = await db('podcast_parts')
+      .count('* as count')
+      .first();
+    
+    // Podcasts by language
+    const podcastsByLanguage = await db('podcasts')
+      .select('language')
+      .count('* as count')
+      .groupBy('language');
+    
+    const languageStats = {};
+    podcastsByLanguage.forEach(item => {
+      languageStats[item.language] = parseInt(item.count);
+    });
+    
+    // Average rating
+    const avgRating = await db('podcasts')
+      .whereNotNull('rating')
+      .avg('rating as average')
+      .first();
+    
+    res.json({
+      totalPodcasts: totalPodcasts.count,
+      featuredPodcasts: featuredPodcasts.count,
+      newReleases: newReleases.count,
+      premiumPodcasts: premiumPodcasts.count,
+      totalEpisodes: totalEpisodes.count,
+      averageRating: parseFloat(avgRating.average || 0).toFixed(2),
+      podcastsByLanguage: languageStats
+    });
+    
+  } catch (error) {
+    logger.error('Error fetching podcast statistics:', error);
+    res.status(500).json({ 
+      error: 'Failed to fetch podcast statistics',
+      code: 'STATS_ERROR'
+    });
+  }
+}));
+
+// Bulk update podcasts
+router.put('/podcasts/bulk', asyncHandler(async (req, res) => {
+  const { podcastIds, action, updates } = req.body;
+  
+  if (!podcastIds || !Array.isArray(podcastIds) || podcastIds.length === 0) {
+    return res.status(400).json({ 
+      error: 'Invalid podcast IDs',
+      code: 'INVALID_PODCAST_IDS'
+    });
+  }
+  
+  if (!action) {
+    return res.status(400).json({ 
+      error: 'Action is required',
+      code: 'MISSING_ACTION'
+    });
+  }
+  
+  try {
+    let updateData = {};
+    
+    switch (action) {
+      case 'feature':
+        updateData = { is_featured: true };
+        break;
+      case 'unfeature':
+        updateData = { is_featured: false };
+        break;
+      case 'markNew':
+        updateData = { is_new_release: true };
+        break;
+      case 'markPremium':
+        updateData = { is_premium: true };
+        break;
+      case 'delete':
+        // For delete action, we'll do a hard delete instead of update
+        const deleteResult = await db('podcasts')
+          .whereIn('id', podcastIds)
+          .del();
+        
+        logger.info('Bulk podcast delete:', { action, podcastIds, deletedRows: deleteResult });
+        
+        return res.json({
+          message: 'Bulk delete completed successfully',
+          affectedRows: deleteResult,
+          action
+        });
+      default:
+        if (updates && typeof updates === 'object') {
+          updateData = updates;
+        } else {
+          return res.status(400).json({ 
+            error: 'Invalid action or updates',
+            code: 'INVALID_ACTION'
+          });
+        }
+    }
+    
+    updateData.updated_at = new Date();
+    
+    const result = await db('podcasts')
+      .whereIn('id', podcastIds)
+      .update(updateData);
+    
+    logger.info('Bulk podcast update:', { action, podcastIds, affectedRows: result });
+    
+    res.json({
+      message: 'Bulk operation completed successfully',
+      affectedRows: result,
+      action
+    });
+    
+  } catch (error) {
+    logger.error('Error in bulk podcast update:', error);
+    res.status(500).json({ 
+      error: 'Failed to perform bulk operation',
+      code: 'BULK_UPDATE_ERROR'
+    });
+  }
+}));
+
+// ===== PODCAST EPISODES/PARTS MANAGEMENT =====
+
+// Get podcast episodes
+router.get('/podcasts/:id/episodes', asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { page = 1, limit = 20, season } = req.query;
+  const offset = (page - 1) * limit;
+  
+  let query = db('podcast_parts')
+    .where('podcast_id', id)
+    .select('*');
+
+  // Apply season filter if provided
+  if (season && season !== 'all') {
+    query = query.where('season_number', season);
+  }
+
+  // Get total count
+  let countQuery = db('podcast_parts').where('podcast_id', id);
+  if (season && season !== 'all') {
+    countQuery = countQuery.where('season_number', season);
+  }
+  const totalCount = await countQuery.count('* as count').first();
+
+  // Get episodes
+  const episodes = await query
+    .orderBy('episode_number', 'desc')
+    .limit(parseInt(limit))
+    .offset(offset);
+
+  // Process episodes
+  const processedEpisodes = episodes.map(episode => ({
+    ...episode,
+    is_featured: Boolean(episode.is_featured),
+    is_premium: Boolean(episode.is_premium),
+    is_free: Boolean(episode.is_free),
+    rating: episode.rating ? parseFloat(episode.rating) : 0,
+    play_count: episode.play_count ? parseInt(episode.play_count) : 0,
+    download_count: episode.download_count ? parseInt(episode.download_count) : 0,
+    duration: episode.duration ? parseInt(episode.duration) : null
+  }));
+
+  res.json({
+    episodes: processedEpisodes,
+    pagination: {
+      page: parseInt(page),
+      limit: parseInt(limit),
+      total: parseInt(totalCount.count),
+      totalPages: Math.ceil(parseInt(totalCount.count) / parseInt(limit))
+    }
+  });
+}));
+
+// Create podcast episode
+router.post('/podcasts/:id/episodes', upload.fields([
+  { name: 'audioFile', maxCount: 1 }
+]), asyncHandler(async (req, res) => {
+  const { id: podcastId } = req.params;
+  const {
+    title,
+    title_somali,
+    description,
+    description_somali,
+    episode_number,
+    season_number = 1,
+    duration,
+    transcript_content,
+    show_notes,
+    chapters,
+    is_featured,
+    is_premium,
+    is_free,
+    published_at
+  } = req.body;
+
+  // Validate required fields
+  if (!title || !episode_number) {
+    return res.status(400).json({ 
+      error: 'Missing required fields',
+      code: 'MISSING_FIELDS',
+      missing: {
+        title: !title,
+        episode_number: !episode_number
+      }
+    });
+  }
+  
+  try {
+    // Process uploaded files
+    const fileUrls = {};
+    if (req.files) {
+      Object.keys(req.files).forEach(fieldName => {
+        const file = req.files[fieldName][0];
+        const baseUrl = process.env.RAILWAY_PUBLIC_DOMAIN 
+          ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`
+          : `${req.protocol}://${req.get('host')}`;
+        fileUrls[fieldName] = `${baseUrl}/uploads/${file.filename}`;
+      });
+    }
+    
+    // Create episode record
+    const episodeData = {
+      id: crypto.randomUUID(),
+      podcast_id: podcastId,
+      title,
+      title_somali: title_somali || null,
+      description,
+      description_somali: description_somali || null,
+      episode_number: parseInt(episode_number),
+      season_number: parseInt(season_number),
+      duration: duration ? parseInt(duration) : null,
+      audio_url: fileUrls.audioFile || null,
+      transcript_content: transcript_content || null,
+      show_notes: show_notes ? JSON.parse(show_notes) : null,
+      chapters: chapters ? JSON.parse(chapters) : null,
+      is_featured: is_featured === 'true' || is_featured === true,
+      is_premium: is_premium === 'true' || is_premium === true,
+      is_free: is_free === 'true' || is_free === true,
+      published_at: published_at ? new Date(published_at) : new Date(),
+      rating: 0,
+      play_count: 0,
+      download_count: 0,
+      created_at: new Date(),
+      updated_at: new Date()
+    };
+    
+    const result = await db('podcast_parts').insert(episodeData);
+    const episodeId = result[0];
+    
+    // Update podcast total episodes count
+    await db('podcasts')
+      .where('id', podcastId)
+      .increment('total_episodes', 1);
+    
+    logger.info('Podcast episode created:', { episodeId, podcastId, title });
+    
+    res.status(201).json({
+      message: 'Podcast episode created successfully',
+      episodeId
+    });
+    
+  } catch (error) {
+    logger.error('Podcast episode creation failed:', error);
+    res.status(500).json({ 
+      error: 'Failed to create podcast episode',
+      code: 'EPISODE_CREATION_FAILED',
+      details: error.message
+    });
+  }
+}));
+
+// Update podcast episode
+router.put('/podcasts/:podcastId/episodes/:episodeId', upload.fields([
+  { name: 'audioFile', maxCount: 1 }
+]), asyncHandler(async (req, res) => {
+  const { podcastId, episodeId } = req.params;
+  const updateData = req.body;
+  
+  // Check if episode exists
+  const existingEpisode = await db('podcast_parts')
+    .where('id', episodeId)
+    .where('podcast_id', podcastId)
+    .first();
+    
+  if (!existingEpisode) {
+    return res.status(404).json({ 
+      error: 'Podcast episode not found',
+      code: 'EPISODE_NOT_FOUND'
+    });
+  }
+  
+  try {
+    // Process uploaded files
+    if (req.files) {
+      Object.keys(req.files).forEach(fieldName => {
+        const file = req.files[fieldName][0];
+        const fieldMap = {
+          audioFile: 'audio_url'
+        };
+        
+        if (fieldMap[fieldName]) {
+          const baseUrl = process.env.RAILWAY_PUBLIC_DOMAIN 
+            ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`
+            : `${req.protocol}://${req.get('host')}`;
+          updateData[fieldMap[fieldName]] = `${baseUrl}/uploads/${file.filename}`;
+        }
+      });
+    }
+    
+    // Process boolean fields
+    if (updateData.is_featured !== undefined) {
+      updateData.is_featured = updateData.is_featured === 'true' || updateData.is_featured === true;
+    }
+    
+    if (updateData.is_premium !== undefined) {
+      updateData.is_premium = updateData.is_premium === 'true' || updateData.is_premium === true;
+    }
+    
+    if (updateData.is_free !== undefined) {
+      updateData.is_free = updateData.is_free === 'true' || updateData.is_free === true;
+    }
+    
+    // Process numeric fields
+    if (updateData.episode_number !== undefined) {
+      updateData.episode_number = parseInt(updateData.episode_number);
+    }
+    
+    if (updateData.season_number !== undefined) {
+      updateData.season_number = parseInt(updateData.season_number);
+    }
+    
+    if (updateData.duration !== undefined) {
+      updateData.duration = parseInt(updateData.duration) || null;
+    }
+    
+    if (updateData.rating !== undefined) {
+      updateData.rating = parseFloat(updateData.rating) || 0;
+    }
+    
+    // Process JSON fields
+    if (updateData.show_notes) {
+      updateData.show_notes = JSON.parse(updateData.show_notes);
+    }
+    
+    if (updateData.chapters) {
+      updateData.chapters = JSON.parse(updateData.chapters);
+    }
+    
+    // Process date fields
+    if (updateData.published_at) {
+      updateData.published_at = new Date(updateData.published_at);
+    }
+    
+    // Update episode
+    await db('podcast_parts')
+      .where('id', episodeId)
+      .update({
+        ...updateData,
+        updated_at: new Date()
+      });
+    
+    logger.info('Podcast episode updated:', { episodeId, podcastId });
+    
+    res.json({
+      message: 'Podcast episode updated successfully',
+      episodeId
+    });
+    
+  } catch (error) {
+    logger.error('Podcast episode update failed:', error);
+    res.status(500).json({ 
+      error: 'Failed to update podcast episode',
+      code: 'EPISODE_UPDATE_FAILED',
+      details: error.message
+    });
+  }
+}));
+
+// Delete podcast episode
+router.delete('/podcasts/:podcastId/episodes/:episodeId', asyncHandler(async (req, res) => {
+  const { podcastId, episodeId } = req.params;
+  
+  // Check if episode exists
+  const episode = await db('podcast_parts')
+    .where('id', episodeId)
+    .where('podcast_id', podcastId)
+    .first();
+    
+  if (!episode) {
+    return res.status(404).json({ 
+      error: 'Podcast episode not found',
+      code: 'EPISODE_NOT_FOUND'
+    });
+  }
+  
+  // Delete episode
+  await db('podcast_parts')
+    .where('id', episodeId)
+    .del();
+  
+  // Update podcast total episodes count
+  await db('podcasts')
+    .where('id', podcastId)
+    .decrement('total_episodes', 1);
+  
+  logger.info('Podcast episode deleted:', { episodeId, podcastId, title: episode.title });
+  
+  res.json({
+    message: 'Podcast episode deleted successfully'
+  });
+}));
+
 // ===== USER MANAGEMENT =====
 
 // Create new user (admin only)

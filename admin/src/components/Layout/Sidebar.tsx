@@ -31,7 +31,10 @@ import {
   TrendingUp as TrendingIcon,
   Assessment as AssessmentIcon,
   SystemUpdate as SystemIcon,
-  AdminPanelSettings as AdminIcon
+  AdminPanelSettings as AdminIcon,
+  Podcast as PodcastIcon,
+  Headphones as HeadphonesIcon,
+  Add as AddPodcastIcon
 } from '@mui/icons-material';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
@@ -87,6 +90,8 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onClose }) => {
       items: [
         { title: 'All Books', path: '/admin/books', icon: <BookIcon /> },
         { title: 'Add New Book', path: '/admin/books/new', icon: <AddBookIcon /> },
+        { title: 'All Podcasts', path: '/admin/podcasts', icon: <PodcastIcon /> },
+        { title: 'Add New Podcast', path: '/admin/podcasts/new', icon: <AddPodcastIcon /> },
         { title: 'Categories', path: '/admin/categories', icon: <CategoryIcon /> },
         { title: 'Content Moderation', path: '/admin/moderation', icon: <ShieldIcon /> }
       ]

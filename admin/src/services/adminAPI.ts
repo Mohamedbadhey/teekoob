@@ -576,6 +576,193 @@ export const restoreSystemBackup = async (backupId: string) => {
   return response.data
 }
 
+// ===== PODCAST MANAGEMENT =====
+
+export const getPodcasts = async (params?: {
+  page?: number
+  limit?: number
+  search?: string
+  category?: string
+  language?: string
+  featured?: boolean
+}) => {
+  try {
+    const response = await api.get('/admin/podcasts', { params })
+    
+    const transformedPodcasts = response.data.podcasts?.map((podcast: any) => ({
+      id: podcast.id,
+      title: podcast.title,
+      title_somali: podcast.title_somali,
+      description: podcast.description,
+      description_somali: podcast.description_somali,
+      host: podcast.host,
+      host_somali: podcast.host_somali,
+      language: podcast.language,
+      cover_image_url: podcast.cover_image_url,
+      rss_feed_url: podcast.rss_feed_url,
+      website_url: podcast.website_url,
+      total_episodes: podcast.total_episodes,
+      rating: podcast.rating,
+      review_count: podcast.review_count,
+      is_featured: podcast.is_featured,
+      is_new_release: podcast.is_new_release,
+      is_premium: podcast.is_premium,
+      is_free: podcast.is_free,
+      categories: podcast.categories || [],
+      categoryNames: podcast.categoryNames || [],
+      categoryNamesSomali: podcast.categoryNamesSomali || [],
+      metadata: podcast.metadata,
+      created_at: podcast.created_at,
+      updated_at: podcast.updated_at
+    })) || []
+    
+    return {
+      podcasts: transformedPodcasts,
+      pagination: response.data.pagination || {
+        page: 1,
+        limit: 20,
+        total: 0,
+        totalPages: 0
+      }
+    }
+  } catch (error) {
+    console.error('Error fetching podcasts:', error)
+    throw error
+  }
+}
+
+export const getPodcast = async (id: string) => {
+  try {
+    const response = await api.get(`/admin/podcasts/${id}`)
+    return response.data
+  } catch (error) {
+    console.error('Error fetching podcast:', error)
+    throw error
+  }
+}
+
+export const createPodcast = async (podcastData: FormData) => {
+  try {
+    const response = await api.post('/admin/podcasts', podcastData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    })
+    return response.data
+  } catch (error) {
+    console.error('Error creating podcast:', error)
+    throw error
+  }
+}
+
+export const updatePodcast = async (id: string, podcastData: FormData) => {
+  try {
+    const response = await api.put(`/admin/podcasts/${id}`, podcastData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    })
+    return response.data
+  } catch (error) {
+    console.error('Error updating podcast:', error)
+    throw error
+  }
+}
+
+export const deletePodcast = async (id: string) => {
+  try {
+    const response = await api.delete(`/admin/podcasts/${id}`)
+    return response.data
+  } catch (error) {
+    console.error('Error deleting podcast:', error)
+    throw error
+  }
+}
+
+export const updatePodcastStatus = async (id: string, statusData: any) => {
+  try {
+    const response = await api.put(`/admin/podcasts/${id}/status`, statusData)
+    return response.data
+  } catch (error) {
+    console.error('Error updating podcast status:', error)
+    throw error
+  }
+}
+
+export const bulkUpdatePodcasts = async (data: { podcastIds: string[]; action: string; updates?: any }) => {
+  try {
+    const response = await api.put('/admin/podcasts/bulk', data)
+    return response.data
+  } catch (error) {
+    console.error('Error bulk updating podcasts:', error)
+    throw error
+  }
+}
+
+export const getPodcastStats = async () => {
+  try {
+    const response = await api.get('/admin/podcasts/stats')
+    return response.data
+  } catch (error) {
+    console.error('Error fetching podcast stats:', error)
+    throw error
+  }
+}
+
+// ===== PODCAST EPISODES MANAGEMENT =====
+
+export const getPodcastEpisodes = async (podcastId: string, params?: {
+  page?: number
+  limit?: number
+  season?: string
+}) => {
+  try {
+    const response = await api.get(`/admin/podcasts/${podcastId}/episodes`, { params })
+    return response.data
+  } catch (error) {
+    console.error('Error fetching podcast episodes:', error)
+    throw error
+  }
+}
+
+export const createPodcastEpisode = async (podcastId: string, episodeData: FormData) => {
+  try {
+    const response = await api.post(`/admin/podcasts/${podcastId}/episodes`, episodeData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    })
+    return response.data
+  } catch (error) {
+    console.error('Error creating podcast episode:', error)
+    throw error
+  }
+}
+
+export const updatePodcastEpisode = async (podcastId: string, episodeId: string, episodeData: FormData) => {
+  try {
+    const response = await api.put(`/admin/podcasts/${podcastId}/episodes/${episodeId}`, episodeData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    })
+    return response.data
+  } catch (error) {
+    console.error('Error updating podcast episode:', error)
+    throw error
+  }
+}
+
+export const deletePodcastEpisode = async (podcastId: string, episodeId: string) => {
+  try {
+    const response = await api.delete(`/admin/podcasts/${podcastId}/episodes/${episodeId}`)
+    return response.data
+  } catch (error) {
+    console.error('Error deleting podcast episode:', error)
+    throw error
+  }
+}
+
 // ===== CATEGORY MANAGEMENT =====
 
 export const getCategories = async () => {
