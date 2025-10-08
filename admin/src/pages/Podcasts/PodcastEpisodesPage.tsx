@@ -55,7 +55,7 @@ import {
   FilterList as FilterIcon,
   Refresh as RefreshIcon,
   Search as SearchIcon,
-  Podcast as PodcastIcon,
+  Radio as PodcastIcon,
   AudioFile as AudioIcon,
   Language as LanguageIcon,
   Category as CategoryIcon,

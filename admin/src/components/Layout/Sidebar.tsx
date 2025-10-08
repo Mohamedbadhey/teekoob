@@ -32,7 +32,7 @@ import {
   Assessment as AssessmentIcon,
   SystemUpdate as SystemIcon,
   AdminPanelSettings as AdminIcon,
-  Podcast as PodcastIcon,
+  Radio as PodcastIcon,
   Headphones as HeadphonesIcon,
   Add as AddPodcastIcon
 } from '@mui/icons-material';
