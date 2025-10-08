@@ -333,6 +333,359 @@ router.get('/:id/episodes', asyncHandler(async (req, res) => {
   }
 }));
 
+// Get featured podcasts
+router.get('/featured/list', asyncHandler(async (req, res) => {
+  try {
+    const { limit = 10 } = req.query;
+    console.log('🔍 Featured podcasts endpoint called with limit:', limit);
+
+    const podcasts = await db('podcasts')
+      .where('is_featured', true)
+      .select(
+        'id', 'title', 'title_somali', 'description', 'description_somali',
+        'host', 'host_somali', 'language', 'cover_image_url', 'rss_feed_url',
+        'website_url', 'total_episodes', 'rating', 'review_count',
+        'is_featured', 'is_new_release', 'is_premium', 'is_free',
+        'metadata', 'created_at', 'updated_at'
+      )
+      .orderBy('created_at', 'desc')
+      .limit(parseInt(limit));
+
+    console.log('⭐ Retrieved featured podcasts:', podcasts.length);
+
+    // Process podcasts to include categories
+    const processedPodcasts = await Promise.all(podcasts.map(async (podcast) => {
+      const categories = await db('podcast_categories')
+        .join('categories', 'podcast_categories.category_id', 'categories.id')
+        .where('podcast_categories.podcast_id', podcast.id)
+        .where('categories.is_active', true)
+        .select('categories.id', 'categories.name', 'categories.name_somali')
+        .orderBy('categories.sort_order', 'asc');
+
+      return {
+        id: podcast.id,
+        title: podcast.title,
+        titleSomali: podcast.title_somali,
+        description: podcast.description,
+        descriptionSomali: podcast.description_somali,
+        host: podcast.host || '',
+        hostSomali: podcast.host_somali || '',
+        language: podcast.language,
+        coverImageUrl: podcast.cover_image_url,
+        rssFeedUrl: podcast.rss_feed_url,
+        websiteUrl: podcast.website_url,
+        totalEpisodes: podcast.total_episodes,
+        rating: podcast.rating,
+        reviewCount: podcast.review_count,
+        isFeatured: Boolean(podcast.is_featured),
+        isNewRelease: Boolean(podcast.is_new_release),
+        isPremium: Boolean(podcast.is_premium),
+        isFree: Boolean(podcast.is_free),
+        metadata: podcast.metadata,
+        createdAt: podcast.created_at,
+        updatedAt: podcast.updated_at,
+        categories: categories.map(cat => cat.id),
+        categoryNames: categories.map(cat => cat.name),
+        categoryNamesSomali: categories.map(cat => cat.name_somali),
+      };
+    }));
+
+    res.json({
+      success: true,
+      featuredPodcasts: processedPodcasts
+    });
+  } catch (error) {
+    console.error('💥 Error fetching featured podcasts:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch featured podcasts',
+      details: error.message
+    });
+  }
+}));
+
+// Get new release podcasts
+router.get('/new-releases/list', asyncHandler(async (req, res) => {
+  try {
+    const { limit = 10 } = req.query;
+    console.log('🔍 New release podcasts endpoint called with limit:', limit);
+
+    const podcasts = await db('podcasts')
+      .where('is_new_release', true)
+      .select(
+        'id', 'title', 'title_somali', 'description', 'description_somali',
+        'host', 'host_somali', 'language', 'cover_image_url', 'rss_feed_url',
+        'website_url', 'total_episodes', 'rating', 'review_count',
+        'is_featured', 'is_new_release', 'is_premium', 'is_free',
+        'metadata', 'created_at', 'updated_at'
+      )
+      .orderBy('created_at', 'desc')
+      .limit(parseInt(limit));
+
+    console.log('🆕 Retrieved new release podcasts:', podcasts.length);
+
+    // Process podcasts to include categories
+    const processedPodcasts = await Promise.all(podcasts.map(async (podcast) => {
+      const categories = await db('podcast_categories')
+        .join('categories', 'podcast_categories.category_id', 'categories.id')
+        .where('podcast_categories.podcast_id', podcast.id)
+        .where('categories.is_active', true)
+        .select('categories.id', 'categories.name', 'categories.name_somali')
+        .orderBy('categories.sort_order', 'asc');
+
+      return {
+        id: podcast.id,
+        title: podcast.title,
+        titleSomali: podcast.title_somali,
+        description: podcast.description,
+        descriptionSomali: podcast.description_somali,
+        host: podcast.host || '',
+        hostSomali: podcast.host_somali || '',
+        language: podcast.language,
+        coverImageUrl: podcast.cover_image_url,
+        rssFeedUrl: podcast.rss_feed_url,
+        websiteUrl: podcast.website_url,
+        totalEpisodes: podcast.total_episodes,
+        rating: podcast.rating,
+        reviewCount: podcast.review_count,
+        isFeatured: Boolean(podcast.is_featured),
+        isNewRelease: Boolean(podcast.is_new_release),
+        isPremium: Boolean(podcast.is_premium),
+        isFree: Boolean(podcast.is_free),
+        metadata: podcast.metadata,
+        createdAt: podcast.created_at,
+        updatedAt: podcast.updated_at,
+        categories: categories.map(cat => cat.id),
+        categoryNames: categories.map(cat => cat.name),
+        categoryNamesSomali: categories.map(cat => cat.name_somali),
+      };
+    }));
+
+    res.json({
+      success: true,
+      newReleasePodcasts: processedPodcasts
+    });
+  } catch (error) {
+    console.error('💥 Error fetching new release podcasts:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch new release podcasts',
+      details: error.message
+    });
+  }
+}));
+
+// Get recent podcasts
+router.get('/recent/list', asyncHandler(async (req, res) => {
+  try {
+    const { limit = 10 } = req.query;
+    console.log('🔍 Recent podcasts endpoint called with limit:', limit);
+
+    const podcasts = await db('podcasts')
+      .select(
+        'id', 'title', 'title_somali', 'description', 'description_somali',
+        'host', 'host_somali', 'language', 'cover_image_url', 'rss_feed_url',
+        'website_url', 'total_episodes', 'rating', 'review_count',
+        'is_featured', 'is_new_release', 'is_premium', 'is_free',
+        'metadata', 'created_at', 'updated_at'
+      )
+      .orderBy('created_at', 'desc')
+      .limit(parseInt(limit));
+
+    console.log('📅 Retrieved recent podcasts:', podcasts.length);
+
+    // Process podcasts to include categories
+    const processedPodcasts = await Promise.all(podcasts.map(async (podcast) => {
+      const categories = await db('podcast_categories')
+        .join('categories', 'podcast_categories.category_id', 'categories.id')
+        .where('podcast_categories.podcast_id', podcast.id)
+        .where('categories.is_active', true)
+        .select('categories.id', 'categories.name', 'categories.name_somali')
+        .orderBy('categories.sort_order', 'asc');
+
+      return {
+        id: podcast.id,
+        title: podcast.title,
+        titleSomali: podcast.title_somali,
+        description: podcast.description,
+        descriptionSomali: podcast.description_somali,
+        host: podcast.host || '',
+        hostSomali: podcast.host_somali || '',
+        language: podcast.language,
+        coverImageUrl: podcast.cover_image_url,
+        rssFeedUrl: podcast.rss_feed_url,
+        websiteUrl: podcast.website_url,
+        totalEpisodes: podcast.total_episodes,
+        rating: podcast.rating,
+        reviewCount: podcast.review_count,
+        isFeatured: Boolean(podcast.is_featured),
+        isNewRelease: Boolean(podcast.is_new_release),
+        isPremium: Boolean(podcast.is_premium),
+        isFree: Boolean(podcast.is_free),
+        metadata: podcast.metadata,
+        createdAt: podcast.created_at,
+        updatedAt: podcast.updated_at,
+        categories: categories.map(cat => cat.id),
+        categoryNames: categories.map(cat => cat.name),
+        categoryNamesSomali: categories.map(cat => cat.name_somali),
+      };
+    }));
+
+    res.json({
+      success: true,
+      recentPodcasts: processedPodcasts
+    });
+  } catch (error) {
+    console.error('💥 Error fetching recent podcasts:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch recent podcasts',
+      details: error.message
+    });
+  }
+}));
+
+// Get free podcasts
+router.get('/free/list', asyncHandler(async (req, res) => {
+  try {
+    const { limit = 10 } = req.query;
+    console.log('🔍 Free podcasts endpoint called with limit:', limit);
+
+    const podcasts = await db('podcasts')
+      .where('is_free', true)
+      .select(
+        'id', 'title', 'title_somali', 'description', 'description_somali',
+        'host', 'host_somali', 'language', 'cover_image_url', 'rss_feed_url',
+        'website_url', 'total_episodes', 'rating', 'review_count',
+        'is_featured', 'is_new_release', 'is_premium', 'is_free',
+        'metadata', 'created_at', 'updated_at'
+      )
+      .orderBy('created_at', 'desc')
+      .limit(parseInt(limit));
+
+    console.log('🆓 Retrieved free podcasts:', podcasts.length);
+
+    // Process podcasts to include categories
+    const processedPodcasts = await Promise.all(podcasts.map(async (podcast) => {
+      const categories = await db('podcast_categories')
+        .join('categories', 'podcast_categories.category_id', 'categories.id')
+        .where('podcast_categories.podcast_id', podcast.id)
+        .where('categories.is_active', true)
+        .select('categories.id', 'categories.name', 'categories.name_somali')
+        .orderBy('categories.sort_order', 'asc');
+
+      return {
+        id: podcast.id,
+        title: podcast.title,
+        titleSomali: podcast.title_somali,
+        description: podcast.description,
+        descriptionSomali: podcast.description_somali,
+        host: podcast.host || '',
+        hostSomali: podcast.host_somali || '',
+        language: podcast.language,
+        coverImageUrl: podcast.cover_image_url,
+        rssFeedUrl: podcast.rss_feed_url,
+        websiteUrl: podcast.website_url,
+        totalEpisodes: podcast.total_episodes,
+        rating: podcast.rating,
+        reviewCount: podcast.review_count,
+        isFeatured: Boolean(podcast.is_featured),
+        isNewRelease: Boolean(podcast.is_new_release),
+        isPremium: Boolean(podcast.is_premium),
+        isFree: Boolean(podcast.is_free),
+        metadata: podcast.metadata,
+        createdAt: podcast.created_at,
+        updatedAt: podcast.updated_at,
+        categories: categories.map(cat => cat.id),
+        categoryNames: categories.map(cat => cat.name),
+        categoryNamesSomali: categories.map(cat => cat.name_somali),
+      };
+    }));
+
+    res.json({
+      success: true,
+      freePodcasts: processedPodcasts
+    });
+  } catch (error) {
+    console.error('💥 Error fetching free podcasts:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch free podcasts',
+      details: error.message
+    });
+  }
+}));
+
+// Get random podcasts (for recommendations)
+router.get('/random/list', asyncHandler(async (req, res) => {
+  try {
+    const { limit = 10 } = req.query;
+    console.log('🔍 Random podcasts endpoint called with limit:', limit);
+
+    const podcasts = await db('podcasts')
+      .select(
+        'id', 'title', 'title_somali', 'description', 'description_somali',
+        'host', 'host_somali', 'language', 'cover_image_url', 'rss_feed_url',
+        'website_url', 'total_episodes', 'rating', 'review_count',
+        'is_featured', 'is_new_release', 'is_premium', 'is_free',
+        'metadata', 'created_at', 'updated_at'
+      )
+      .orderByRaw('RAND()')
+      .limit(parseInt(limit));
+
+    console.log('🎲 Retrieved random podcasts:', podcasts.length);
+
+    // Process podcasts to include categories
+    const processedPodcasts = await Promise.all(podcasts.map(async (podcast) => {
+      const categories = await db('podcast_categories')
+        .join('categories', 'podcast_categories.category_id', 'categories.id')
+        .where('podcast_categories.podcast_id', podcast.id)
+        .where('categories.is_active', true)
+        .select('categories.id', 'categories.name', 'categories.name_somali')
+        .orderBy('categories.sort_order', 'asc');
+
+      return {
+        id: podcast.id,
+        title: podcast.title,
+        titleSomali: podcast.title_somali,
+        description: podcast.description,
+        descriptionSomali: podcast.description_somali,
+        host: podcast.host || '',
+        hostSomali: podcast.host_somali || '',
+        language: podcast.language,
+        coverImageUrl: podcast.cover_image_url,
+        rssFeedUrl: podcast.rss_feed_url,
+        websiteUrl: podcast.website_url,
+        totalEpisodes: podcast.total_episodes,
+        rating: podcast.rating,
+        reviewCount: podcast.review_count,
+        isFeatured: Boolean(podcast.is_featured),
+        isNewRelease: Boolean(podcast.is_new_release),
+        isPremium: Boolean(podcast.is_premium),
+        isFree: Boolean(podcast.is_free),
+        metadata: podcast.metadata,
+        createdAt: podcast.created_at,
+        updatedAt: podcast.updated_at,
+        categories: categories.map(cat => cat.id),
+        categoryNames: categories.map(cat => cat.name),
+        categoryNamesSomali: categories.map(cat => cat.name_somali),
+      };
+    }));
+
+    res.json({
+      success: true,
+      randomPodcasts: processedPodcasts
+    });
+  } catch (error) {
+    console.error('💥 Error fetching random podcasts:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch random podcasts',
+      details: error.message
+    });
+  }
+}));
+
 // Get podcast statistics
 router.get('/stats', asyncHandler(async (req, res) => {
   try {

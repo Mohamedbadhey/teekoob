@@ -56,6 +56,9 @@ try {
   const notificationRoutes = require('./routes/notifications');
   console.log('✅ Notification routes loaded');
   
+  const podcastRoutes = require('./routes/podcasts');
+  console.log('✅ Podcast routes loaded');
+  
   console.log('📦 Loading middleware...');
   const { errorHandler } = require('./middleware/errorHandler');
   console.log('✅ Error handler loaded');
@@ -226,6 +229,7 @@ try {
         health: '/health',
         auth: '/api/v1/auth',
         books: '/api/v1/books',
+        podcasts: '/api/v1/podcasts',
         library: '/api/v1/library',
         payments: '/api/v1/payments',
         admin: '/api/v1/admin'
@@ -369,6 +373,9 @@ try {
 
   app.use('/api/v1/notifications', authenticateToken, notificationRoutes);
   console.log('✅ Notification routes registered');
+  
+  app.use('/api/v1/podcasts', podcastRoutes);
+  console.log('✅ Podcast routes registered');
   
   // 404 handler
   app.use('*', (req, res) => {
