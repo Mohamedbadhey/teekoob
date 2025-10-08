@@ -436,6 +436,11 @@ const PodcastsPage: React.FC = () => {
           onClick={() => handleViewPodcast(params.row)}
         />,
         <GridActionsCellItem
+          icon={<HeadphonesIcon />}
+          label="Manage Episodes"
+          onClick={() => handleManageEpisodes(params.row)}
+        />,
+        <GridActionsCellItem
           icon={<EditIcon />}
           label="Edit Podcast"
           onClick={() => handleEditPodcast(params.row)}
@@ -1058,6 +1063,10 @@ const PodcastsPage: React.FC = () => {
     setSelectedPodcast(podcast);
     setShowPodcastDialog(true);
     setActiveStep(0);
+  };
+
+  const handleManageEpisodes = (podcast: Podcast) => {
+    navigate(`/admin/podcasts/${podcast.id}/episodes`);
   };
 
   const handleEditPodcast = async (podcast: Podcast) => {

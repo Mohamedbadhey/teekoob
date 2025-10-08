@@ -166,6 +166,94 @@ class LocalizationService {
       somaliText: 'Guriga',
     );
   }
+
+  // Get localized podcast text
+  static String get getPodcastsText {
+    return getLocalizedText(
+      englishText: 'Podcasts',
+      somaliText: 'Podcastada',
+    );
+  }
+
+  // Get localized featured podcasts text
+  static String get getFeaturedPodcastsText {
+    return getLocalizedText(
+      englishText: 'Featured Podcasts',
+      somaliText: 'Podcastada La Dooran',
+    );
+  }
+
+  // Get localized new release podcasts text
+  static String get getNewReleasePodcastsText {
+    return getLocalizedText(
+      englishText: 'New Release Podcasts',
+      somaliText: 'Podcastada Cusub',
+    );
+  }
+
+  // Get localized recent podcasts text
+  static String get getRecentPodcastsText {
+    return getLocalizedText(
+      englishText: 'Recent Podcasts',
+      somaliText: 'Podcastada Dhowaan',
+    );
+  }
+
+  // Get localized free podcasts text
+  static String get getFreePodcastsText {
+    return getLocalizedText(
+      englishText: 'Free Podcasts',
+      somaliText: 'Podcastada Bilaashka',
+    );
+  }
+
+  // Get localized recommended podcasts text
+  static String get getRecommendedPodcastsText {
+    return getLocalizedText(
+      englishText: 'Recommended Podcasts',
+      somaliText: 'Podcastada La Soo Jeediyay',
+    );
+  }
+
+  // Get localized no featured podcasts text
+  static String get getNoFeaturedPodcastsAvailableText {
+    return getLocalizedText(
+      englishText: 'No featured podcasts available',
+      somaliText: 'Ma jiraan podcastada la dooran',
+    );
+  }
+
+  // Get localized no new release podcasts text
+  static String get getNoNewReleasePodcastsAvailableText {
+    return getLocalizedText(
+      englishText: 'No new release podcasts available',
+      somaliText: 'Ma jiraan podcastada cusub',
+    );
+  }
+
+  // Get localized no recent podcasts text
+  static String get getNoRecentPodcastsAvailableText {
+    return getLocalizedText(
+      englishText: 'No recent podcasts available',
+      somaliText: 'Ma jiraan podcastada dhowaan',
+    );
+  }
+
+  // Get localized no free podcasts text
+  static String get getNoFreePodcastsAvailableText {
+    return getLocalizedText(
+      englishText: 'No free podcasts available',
+      somaliText: 'Ma jiraan podcastada bilaashka',
+    );
+  }
+
+  // Get localized no recommended podcasts text
+  static String get getNoRecommendedPodcastsAvailableText {
+    return getLocalizedText(
+      englishText: 'No recommended podcasts available',
+      somaliText: 'Ma jiraan podcastada la soo jeediyay',
+    );
+  }
   
   // Get localized books text
   static String get getBooksText {

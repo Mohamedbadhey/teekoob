@@ -8,6 +8,9 @@ import 'package:teekoob/features/books/presentation/widgets/shimmer_book_card.da
 import 'package:teekoob/core/models/book_model.dart';
 import 'package:teekoob/core/models/category_model.dart';
 import 'package:teekoob/features/library/bloc/library_bloc.dart';
+import 'package:teekoob/features/podcasts/bloc/podcasts_bloc.dart';
+import 'package:teekoob/features/podcasts/presentation/widgets/podcast_card.dart';
+import 'package:teekoob/core/models/podcast_model.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -38,6 +41,25 @@ class _HomePageState extends State<HomePage> {
   List<Book> _originalFreeBooks = [];
   List<Book> _originalRandomBooks = [];
 
+  // Podcast state variables
+  List<Podcast> _featuredPodcasts = [];
+  List<Podcast> _newReleasePodcasts = [];
+  List<Podcast> _recentPodcasts = [];
+  List<Podcast> _freePodcasts = [];
+  List<Podcast> _randomPodcasts = [];
+  bool _isLoadingFeaturedPodcasts = false;
+  bool _isLoadingNewReleasePodcasts = false;
+  bool _isLoadingRecentPodcasts = false;
+  bool _isLoadingFreePodcasts = false;
+  bool _isLoadingRandomPodcasts = false;
+  
+  // Store original unfiltered podcast lists
+  List<Podcast> _originalFeaturedPodcasts = [];
+  List<Podcast> _originalNewReleasePodcasts = [];
+  List<Podcast> _originalRecentPodcasts = [];
+  List<Podcast> _originalFreePodcasts = [];
+  List<Podcast> _originalRandomPodcasts = [];
+
   @override
   void initState() {
     super.initState();
@@ -54,6 +76,13 @@ class _HomePageState extends State<HomePage> {
       _isLoadingFreeBooks = true;
       _isLoadingRandomBooks = true;
       _isLoadingCategories = true;
+      
+      // Podcast loading states
+      _isLoadingFeaturedPodcasts = true;
+      _isLoadingNewReleasePodcasts = true;
+      _isLoadingRecentPodcasts = true;
+      _isLoadingFreePodcasts = true;
+      _isLoadingRandomPodcasts = true;
     });
     
     // Load featured books (for featured section)
@@ -73,6 +102,13 @@ class _HomePageState extends State<HomePage> {
     
     // Load categories
     context.read<BooksBloc>().add(const LoadCategories());
+    
+    // Load podcasts
+    context.read<PodcastsBloc>().add(const LoadFeaturedPodcasts(limit: 6));
+    context.read<PodcastsBloc>().add(const LoadNewReleasePodcasts(limit: 10));
+    context.read<PodcastsBloc>().add(const LoadRecentPodcasts(limit: 6));
+    context.read<PodcastsBloc>().add(const LoadFreePodcasts(limit: 6));
+    context.read<PodcastsBloc>().add(const LoadRandomPodcasts(limit: 5));
   }
 
   void _loadLibraryData() {
@@ -147,60 +183,108 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocListener<BooksBloc, BooksState>(
-      listener: (context, state) {
-        if (state is FeaturedBooksLoaded) {
-          setState(() {
-            _featuredBooks = state.books;
-            _originalFeaturedBooks = List.from(state.books); // Store original
-            _isLoadingFeatured = false;
-          });
-          print('🏠 HomePage: Featured books loaded: ${state.books.length}');
-          print('📚 HomePage: Featured book titles: ${state.books.map((b) => b.title).toList()}');
-        } else if (state is NewReleasesLoaded) {
-          setState(() {
-            _newReleases = state.books;
-            _originalNewReleases = List.from(state.books); // Store original
-            _isLoadingNewReleases = false;
-          });
-          print('🏠 HomePage: New releases loaded: ${state.books.length}');
-          print('📚 HomePage: New release titles: ${state.books.map((b) => b.title).toList()}');
-        } else if (state is RecentBooksLoaded) {
-          setState(() {
-            _recentBooks = state.books;
-            _originalRecentBooks = List.from(state.books); // Store original
-            _isLoadingRecentBooks = false;
-          });
-          print('🏠 HomePage: Recent books loaded: ${state.books.length}');
-          print('📚 HomePage: Recent book titles: ${state.books.map((b) => b.title).toList()}');
-        } else if (state is FreeBooksLoaded) {
-          setState(() {
-            _freeBooks = state.books;
-            _originalFreeBooks = List.from(state.books); // Store original
-            _isLoadingFreeBooks = false;
-          });
-          print('🏠 HomePage: Free books loaded: ${state.books.length}');
-          print('📚 HomePage: Free book titles: ${state.books.map((b) => b.title).toList()}');
-        } else if (state is RandomBooksLoaded) {
-          print('🏠 HomePage: RandomBooksLoaded state received with ${state.books.length} books');
-          print('📚 HomePage: Book titles: ${state.books.map((b) => b.title).toList()}');
-          setState(() {
-            _randomBooks = state.books;
-            _originalRandomBooks = List.from(state.books); // Store original
-            _isLoadingRandomBooks = false;
-          });
-          print('✅ HomePage: Updated _randomBooks state with ${_randomBooks.length} books');
-          print('📖 HomePage: Final _randomBooks titles: ${_randomBooks.map((b) => b.title).toList()}');
-        } else if (state is CategoriesLoaded) {
-          setState(() {
-            _categories = state.categories;
-            _isLoadingCategories = false;
-          });
-          print('🏠 HomePage: Categories loaded: ${state.categories.length}');
-        } else if (state is BooksError) {
-          print('🏠 HomePage: Books error: ${state.message}');
-        }
-      },
+    return MultiBlocListener(
+      listeners: [
+        // Books Bloc Listener
+        BlocListener<BooksBloc, BooksState>(
+          listener: (context, state) {
+            if (state is FeaturedBooksLoaded) {
+              setState(() {
+                _featuredBooks = state.books;
+                _originalFeaturedBooks = List.from(state.books); // Store original
+                _isLoadingFeatured = false;
+              });
+              print('🏠 HomePage: Featured books loaded: ${state.books.length}');
+              print('📚 HomePage: Featured book titles: ${state.books.map((b) => b.title).toList()}');
+            } else if (state is NewReleasesLoaded) {
+              setState(() {
+                _newReleases = state.books;
+                _originalNewReleases = List.from(state.books); // Store original
+                _isLoadingNewReleases = false;
+              });
+              print('🏠 HomePage: New releases loaded: ${state.books.length}');
+              print('📚 HomePage: New release titles: ${state.books.map((b) => b.title).toList()}');
+            } else if (state is RecentBooksLoaded) {
+              setState(() {
+                _recentBooks = state.books;
+                _originalRecentBooks = List.from(state.books); // Store original
+                _isLoadingRecentBooks = false;
+              });
+              print('🏠 HomePage: Recent books loaded: ${state.books.length}');
+              print('📚 HomePage: Recent book titles: ${state.books.map((b) => b.title).toList()}');
+            } else if (state is FreeBooksLoaded) {
+              setState(() {
+                _freeBooks = state.books;
+                _originalFreeBooks = List.from(state.books); // Store original
+                _isLoadingFreeBooks = false;
+              });
+              print('🏠 HomePage: Free books loaded: ${state.books.length}');
+              print('📚 HomePage: Free book titles: ${state.books.map((b) => b.title).toList()}');
+            } else if (state is RandomBooksLoaded) {
+              print('🏠 HomePage: RandomBooksLoaded state received with ${state.books.length} books');
+              print('📚 HomePage: Book titles: ${state.books.map((b) => b.title).toList()}');
+              setState(() {
+                _randomBooks = state.books;
+                _originalRandomBooks = List.from(state.books); // Store original
+                _isLoadingRandomBooks = false;
+              });
+              print('✅ HomePage: Updated _randomBooks state with ${_randomBooks.length} books');
+              print('📖 HomePage: Final _randomBooks titles: ${_randomBooks.map((b) => b.title).toList()}');
+            } else if (state is CategoriesLoaded) {
+              setState(() {
+                _categories = state.categories;
+                _isLoadingCategories = false;
+              });
+              print('🏠 HomePage: Categories loaded: ${state.categories.length}');
+            } else if (state is BooksError) {
+              print('🏠 HomePage: Books error: ${state.message}');
+            }
+          },
+        ),
+        // Podcasts Bloc Listener
+        BlocListener<PodcastsBloc, PodcastsState>(
+          listener: (context, state) {
+            if (state is FeaturedPodcastsLoaded) {
+              setState(() {
+                _featuredPodcasts = state.podcasts;
+                _originalFeaturedPodcasts = List.from(state.podcasts);
+                _isLoadingFeaturedPodcasts = false;
+              });
+              print('🏠 HomePage: Featured podcasts loaded: ${state.podcasts.length}');
+            } else if (state is NewReleasePodcastsLoaded) {
+              setState(() {
+                _newReleasePodcasts = state.podcasts;
+                _originalNewReleasePodcasts = List.from(state.podcasts);
+                _isLoadingNewReleasePodcasts = false;
+              });
+              print('🏠 HomePage: New release podcasts loaded: ${state.podcasts.length}');
+            } else if (state is RecentPodcastsLoaded) {
+              setState(() {
+                _recentPodcasts = state.podcasts;
+                _originalRecentPodcasts = List.from(state.podcasts);
+                _isLoadingRecentPodcasts = false;
+              });
+              print('🏠 HomePage: Recent podcasts loaded: ${state.podcasts.length}');
+            } else if (state is FreePodcastsLoaded) {
+              setState(() {
+                _freePodcasts = state.podcasts;
+                _originalFreePodcasts = List.from(state.podcasts);
+                _isLoadingFreePodcasts = false;
+              });
+              print('🏠 HomePage: Free podcasts loaded: ${state.podcasts.length}');
+            } else if (state is RandomPodcastsLoaded) {
+              setState(() {
+                _randomPodcasts = state.podcasts;
+                _originalRandomPodcasts = List.from(state.podcasts);
+                _isLoadingRandomPodcasts = false;
+              });
+              print('🏠 HomePage: Random podcasts loaded: ${state.podcasts.length}');
+            } else if (state is PodcastsError) {
+              print('🏠 HomePage: Podcasts error: ${state.message}');
+            }
+          },
+        ),
+      ],
       child: Scaffold(
         backgroundColor: Theme.of(context).colorScheme.background,
         body: SafeArea(
@@ -214,13 +298,23 @@ class _HomePageState extends State<HomePage> {
                     children: [
                       _buildFeaturedBookSection(),
                       const SizedBox(height: 32),
+                      _buildFeaturedPodcastsSection(),
+                      const SizedBox(height: 32),
                       _buildFreeBooksSection(),
+                      const SizedBox(height: 32),
+                      _buildFreePodcastsSection(),
                       const SizedBox(height: 32),
                       _buildRecentBooksSection(),
                       const SizedBox(height: 32),
+                      _buildRecentPodcastsSection(),
+                      const SizedBox(height: 32),
                       _buildNewReleasesSection(),
                       const SizedBox(height: 32),
+                      _buildNewReleasePodcastsSection(),
+                      const SizedBox(height: 32),
                       _buildRecommendedBooksSection(),
+                      const SizedBox(height: 32),
+                      _buildRecommendedPodcastsSection(),
                       const SizedBox(height: 32),
                     ],
                   ),
@@ -806,6 +900,289 @@ class _HomePageState extends State<HomePage> {
 
   void _navigateToBookDetail(Book book) {
     context.go('/book/${book.id}');
+  }
+
+  void _navigateToPodcastDetail(Podcast podcast) {
+    context.go('/podcast/${podcast.id}');
+  }
+
+  // Podcast Section Builders
+  Widget _buildFeaturedPodcastsSection() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Section Title
+          Text(
+            LocalizationService.getFeaturedPodcastsText,
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Theme.of(context).colorScheme.onSurface,
+            ),
+          ),
+          const SizedBox(height: 16),
+          
+          // Featured Podcast Card
+          if (_isLoadingFeaturedPodcasts) ...[
+            SizedBox(
+              width: double.infinity,
+              child: ShimmerPodcastCard(
+                width: double.infinity,
+                height: _getResponsiveHorizontalCardHeight(),
+              ),
+            ),
+          ] else if (_featuredPodcasts.isNotEmpty) ...[
+            SizedBox(
+              width: double.infinity,
+              child: PodcastCard(
+                podcast: _featuredPodcasts.first,
+                onTap: () => _navigateToPodcastDetail(_featuredPodcasts.first),
+                showLibraryActions: false,
+                isInLibrary: false,
+                isFavorite: false,
+                userId: 'current_user',
+                enableAnimations: true,
+              ),
+            ),
+          ] else ...[
+            _buildEmptyPodcastState(LocalizationService.getNoFeaturedPodcastsAvailableText),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFreePodcastsSection() {
+    print('Building Free Podcasts Section - _freePodcasts: ${_freePodcasts.length}, _isLoadingFreePodcasts: $_isLoadingFreePodcasts');
+    
+    if (_isLoadingFreePodcasts)
+      return _buildLoadingPodcastHorizontalScroll();
+    else if (_freePodcasts.isNotEmpty)
+      return _buildPodcastsHorizontalScroll(_freePodcasts, LocalizationService.getFreePodcastsText);
+    else
+      return _buildEmptyPodcastState(LocalizationService.getNoFreePodcastsAvailableText);
+  }
+
+  Widget _buildRecentPodcastsSection() {
+    print('Building Recent Podcasts Section - _recentPodcasts: ${_recentPodcasts.length}, _isLoadingRecentPodcasts: $_isLoadingRecentPodcasts');
+    
+    if (_isLoadingRecentPodcasts)
+      return _buildLoadingPodcastHorizontalScroll();
+    else if (_recentPodcasts.isNotEmpty)
+      return _buildPodcastsHorizontalScroll(_recentPodcasts, LocalizationService.getRecentPodcastsText);
+    else
+      return _buildEmptyPodcastState(LocalizationService.getNoRecentPodcastsAvailableText);
+  }
+
+  Widget _buildNewReleasePodcastsSection() {
+    print('Building New Release Podcasts Section - _newReleasePodcasts: ${_newReleasePodcasts.length}, _isLoadingNewReleasePodcasts: $_isLoadingNewReleasePodcasts');
+    
+    if (_isLoadingNewReleasePodcasts)
+      return _buildLoadingPodcastHorizontalScroll();
+    else if (_newReleasePodcasts.isNotEmpty)
+      return _buildPodcastsHorizontalScroll(_newReleasePodcasts, LocalizationService.getNewReleasePodcastsText);
+    else
+      return _buildEmptyPodcastState(LocalizationService.getNoNewReleasePodcastsAvailableText);
+  }
+
+  Widget _buildRecommendedPodcastsSection() {
+    print('🏗️ Building Recommended Podcasts Section');
+    print('📊 _randomPodcasts count: ${_randomPodcasts.length}');
+    print('📚 _randomPodcasts titles: ${_randomPodcasts.map((p) => p.title).toList()}');
+    print('⏳ _isLoadingRandomPodcasts: $_isLoadingRandomPodcasts');
+    
+    if (_isLoadingRandomPodcasts)
+      return _buildLoadingPodcastHorizontalScroll();
+    else if (_randomPodcasts.isNotEmpty)
+      return _buildPodcastsHorizontalScroll(_randomPodcasts, LocalizationService.getRecommendedPodcastsText);
+    else
+      return _buildEmptyPodcastState(LocalizationService.getNoRecommendedPodcastsAvailableText);
+  }
+
+  Widget _buildPodcastsHorizontalScroll(List<Podcast> podcasts, String sectionTitle) {
+    print('🔄 _buildPodcastsHorizontalScroll: Building horizontal scroll with ${podcasts.length} podcasts');
+    print('📖 _buildPodcastsHorizontalScroll: Podcast titles: ${podcasts.map((p) => p.title).toList()}');
+    
+    if (podcasts.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Section header with view all button
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                sectionTitle,
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+              ),
+              TextButton(
+                onPressed: () {
+                  if (sectionTitle == LocalizationService.getRecentPodcastsText) {
+                    context.go('/all-podcasts/recent/${LocalizationService.getRecentPodcastsText}');
+                  } else if (sectionTitle == LocalizationService.getNewReleasePodcastsText) {
+                    context.go('/all-podcasts/new-releases/${LocalizationService.getNewReleasePodcastsText}');
+                  } else if (sectionTitle == LocalizationService.getRecommendedPodcastsText) {
+                    context.go('/all-podcasts/recommended/${LocalizationService.getRecommendedPodcastsText}');
+                  } else if (sectionTitle == LocalizationService.getFreePodcastsText) {
+                    context.go('/all-podcasts/free/${LocalizationService.getFreePodcastsText}');
+                  }
+                },
+                child: Text(
+                  LocalizationService.getViewAllText,
+                  style: TextStyle(
+                    color: Theme.of(context).primaryColor,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        
+        // Horizontal scrollable podcasts
+        SizedBox(
+          height: _getResponsiveHorizontalCardHeight() + 20,
+          child: ListView.builder(
+            padding: const EdgeInsets.only(left: 20),
+            scrollDirection: Axis.horizontal,
+            itemCount: podcasts.length,
+            itemBuilder: (context, index) {
+              final podcast = podcasts[index];
+              print('🎨 _buildPodcastsHorizontalScroll: Building item $index for podcast: ${podcast.title}');
+              
+              return PodcastCard(
+                podcast: podcast,
+                onTap: () => _navigateToPodcastDetail(podcast),
+                showLibraryActions: false,
+                isInLibrary: false,
+                isFavorite: false,
+                userId: 'current_user',
+                width: _getResponsiveHorizontalCardWidth(),
+                enableAnimations: true,
+              );
+            },
+          ),
+        ),
+        
+        const SizedBox(height: 24),
+      ],
+    );
+  }
+
+  Widget _buildLoadingPodcastHorizontalScroll() {
+    return SizedBox(
+      height: _getResponsiveHorizontalScrollHeight(),
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.only(left: 20),
+        itemCount: 5,
+        itemBuilder: (context, index) {
+          return Container(
+            margin: EdgeInsets.only(right: index < 4 ? 16 : 0),
+            child: ShimmerPodcastCard(
+              width: _getResponsiveHorizontalCardWidth(),
+              height: _getResponsiveHorizontalCardHeight(),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildEmptyPodcastState(String message) {
+    String sectionTitle = LocalizationService.getRecentPodcastsText;
+    String route = '/all-podcasts/recent/${LocalizationService.getRecentPodcastsText}';
+    
+    if (message.contains('new release') || message.contains('cusub')) {
+      sectionTitle = LocalizationService.getNewReleasePodcastsText;
+      route = '/all-podcasts/new-releases/${LocalizationService.getNewReleasePodcastsText}';
+    } else if (message.contains('recommended') || message.contains('la soo jeediyay')) {
+      sectionTitle = LocalizationService.getRecommendedPodcastsText;
+      route = '/all-podcasts/recommended/${LocalizationService.getRecommendedPodcastsText}';
+    } else if (message.contains('free') || message.contains('bilaashka')) {
+      sectionTitle = LocalizationService.getFreePodcastsText;
+      route = '/all-podcasts/free/${LocalizationService.getFreePodcastsText}';
+    }
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Section header
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                sectionTitle,
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+              ),
+              TextButton(
+                onPressed: () {
+                  context.go(route);
+                },
+                child: Text(
+                  LocalizationService.getViewAllText,
+                  style: TextStyle(
+                    color: Theme.of(context).primaryColor,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        
+        // Empty state container
+        Container(
+          height: _getResponsiveHorizontalCardHeight() + 20,
+          margin: const EdgeInsets.symmetric(horizontal: 20),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Theme.of(context).colorScheme.outline),
+          ),
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.radio,
+                  size: 48,
+                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  message,
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+        ),
+        
+        const SizedBox(height: 24),
+      ],
+    );
   }
 
   // Responsive helper methods for horizontal scroll sections

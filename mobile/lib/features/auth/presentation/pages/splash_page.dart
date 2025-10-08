@@ -95,11 +95,28 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
 
     if (!mounted) return;
 
-    // Check auth status and route
+    // Check auth status and route with timeout
     final authBloc = context.read<AuthBloc>();
-    await Future.microtask(() async {
-      authBloc.add(const CheckAuthStatus());
-    });
+    
+    // Add a timeout to prevent infinite loading
+    try {
+      await Future.any([
+        Future.microtask(() async {
+          authBloc.add(const CheckAuthStatus());
+        }),
+        Future.delayed(const Duration(seconds: 20), () {
+          print('⏰ Splash screen timeout - forcing navigation to login');
+          if (mounted) {
+            context.go('/login');
+          }
+        }),
+      ]);
+    } catch (e) {
+      print('❌ Splash screen error: $e');
+      if (mounted) {
+        context.go('/login');
+      }
+    }
   }
 
   @override
@@ -120,7 +137,12 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
             context.go('/home');
           } else if (state is Unauthenticated || state is AuthInitial) {
             context.go('/login');
+          } else if (state is AuthError) {
+            print('❌ Auth error in splash: ${state.message}');
+            // On auth error, proceed to login screen
+            context.go('/login');
           }
+          // Note: AuthLoading state is handled by the loading indicator
         },
         child: SafeArea(
           child: Center(

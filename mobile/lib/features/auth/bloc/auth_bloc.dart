@@ -200,19 +200,44 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     try {
       emit(const AuthLoading());
       
-      final isAuthenticated = await _authService.isAuthenticated();
-      if (isAuthenticated) {
-        final user = await _authService.getCurrentUser();
-        if (user != null) {
-          emit(Authenticated(user));
+      // Add timeout to prevent infinite loading
+      final result = await Future.any([
+        _checkAuthStatusInternal(),
+        Future.delayed(const Duration(seconds: 15), () => 'timeout'),
+      ]);
+      
+      if (result == 'timeout') {
+        print('⏰ Auth check timed out after 15 seconds - proceeding to login');
+        emit(const Unauthenticated());
+        return;
+      }
+      
+      if (result is bool) {
+        if (result) {
+          final user = await _authService.getCurrentUser();
+          if (user != null) {
+            emit(Authenticated(user));
+          } else {
+            emit(const Unauthenticated());
+          }
         } else {
           emit(const Unauthenticated());
         }
-      } else {
-        emit(const Unauthenticated());
       }
     } catch (e) {
-      emit(AuthError('Failed to check auth status: $e'));
+      print('❌ Auth check error: $e');
+      // On error, proceed to login screen instead of staying stuck
+      emit(const Unauthenticated());
+    }
+  }
+
+  Future<bool> _checkAuthStatusInternal() async {
+    try {
+      final isAuthenticated = await _authService.isAuthenticated();
+      return isAuthenticated;
+    } catch (e) {
+      print('❌ Error in _checkAuthStatusInternal: $e');
+      return false;
     }
   }
 

@@ -404,10 +404,15 @@ class AuthService {
 
   // Check if user is authenticated
   Future<bool> isAuthenticated() async {
-    final token = await _secureStorage.read(key: _tokenKey);
-    if (token == null) return false;
-    _networkService.setAuthToken(token);
-    return true;
+    try {
+      final token = await _secureStorage.read(key: _tokenKey);
+      if (token == null) return false;
+      _networkService.setAuthToken(token);
+      return true;
+    } catch (e) {
+      print('❌ Error checking authentication: $e');
+      return false;
+    }
   }
 
   // Get current user
@@ -416,11 +421,24 @@ class AuthService {
       final token = await _secureStorage.read(key: _tokenKey);
       if (token == null) return null;
       
+      // Check connectivity first
+      if (!await _networkService.isConnected()) {
+        print('📡 No internet connection - skipping user fetch');
+        return null;
+      }
+      
       // Set the token for API calls
       _networkService.setAuthToken(token);
       
-      // Fetch user data from backend
-      final response = await _networkService.get('/auth/me');
+      // Fetch user data from backend with timeout
+      final response = await _networkService.get('/auth/me').timeout(
+        const Duration(seconds: 10),
+        onTimeout: () {
+          print('⏰ getCurrentUser: API call timed out after 10 seconds');
+          throw Exception('Request timed out');
+        },
+      );
+      
       if (response.statusCode == 200) {
         final userData = response.data['user'] as Map<String, dynamic>;
         return User.fromJson(userData);
@@ -428,6 +446,7 @@ class AuthService {
       return null;
     } catch (e) {
       print('❌ Error getting current user: $e');
+      // Return null instead of throwing to allow app to continue
       return null;
     }
   }

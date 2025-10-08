@@ -29,6 +29,8 @@ import 'package:teekoob/features/settings/bloc/settings_bloc.dart';
 import 'package:teekoob/features/subscription/services/subscription_service.dart';
 import 'package:teekoob/features/subscription/bloc/subscription_bloc.dart';
 import 'package:teekoob/core/bloc/notification_bloc.dart';
+import 'package:teekoob/features/podcasts/services/podcasts_service.dart';
+import 'package:teekoob/features/podcasts/bloc/podcasts_bloc.dart';
 
 void main() async {
   print('🚀 ===== APP STARTUP =====');
@@ -108,6 +110,9 @@ class TeekoobApp extends StatelessWidget {
             RepositoryProvider<NotificationServiceInterface>(
               create: (context) => _createNotificationService(),
             ),
+            RepositoryProvider<PodcastsService>(
+              create: (context) => PodcastsService(),
+            ),
           ],
                 child: MultiBlocProvider(
             providers: [
@@ -149,6 +154,11 @@ class TeekoobApp extends StatelessWidget {
               BlocProvider<NotificationBloc>(
                 create: (context) => NotificationBloc(
                   notificationService: context.read<NotificationServiceInterface>(),
+                ),
+              ),
+              BlocProvider<PodcastsBloc>(
+                create: (context) => PodcastsBloc(
+                  podcastsService: context.read<PodcastsService>(),
                 ),
               ),
             ],
