@@ -167,11 +167,27 @@ class LocalizationService {
     );
   }
 
-  // Get localized podcast text
-  static String get getPodcastsText {
+  // Get localized description text
+  static String get getDescriptionText {
     return getLocalizedText(
-      englishText: 'Podcasts',
-      somaliText: 'Podcastada',
+      englishText: 'Description',
+      somaliText: 'Sharaxaad',
+    );
+  }
+
+  // Get localized error occurred text
+  static String get getErrorOccurredText {
+    return getLocalizedText(
+      englishText: 'An error occurred',
+      somaliText: 'Qalad ayaa dhacay',
+    );
+  }
+
+  // Get localized try again later text
+  static String get getTryAgainLaterText {
+    return getLocalizedText(
+      englishText: 'Please try again later',
+      somaliText: 'Fadlan mar kale isku day',
     );
   }
 
@@ -212,6 +228,70 @@ class LocalizationService {
     return getLocalizedText(
       englishText: 'Recommended Podcasts',
       somaliText: 'Podcastada La Soo Jeediyay',
+    );
+  }
+
+  // Get localized episodes text
+  static String get getEpisodesText {
+    return getLocalizedText(
+      englishText: 'Episodes',
+      somaliText: 'Qaybaha',
+    );
+  }
+
+  // Get localized no podcast found text
+  static String get getNoPodcastFoundText {
+    return getLocalizedText(
+      englishText: 'No Podcast Found',
+      somaliText: 'Podcast Laga Heli Karin',
+    );
+  }
+
+  // Get localized no episode found text
+  static String get getNoEpisodeFoundText {
+    return getLocalizedText(
+      englishText: 'No Episode Found',
+      somaliText: 'Qayb Laga Heli Karin',
+    );
+  }
+
+  // Get localized no episodes available text
+  static String get getNoEpisodesAvailableText {
+    return getLocalizedText(
+      englishText: 'No Episodes Available',
+      somaliText: 'Qaybaha Ma Jiraan',
+    );
+  }
+
+  // Get localized check back later text
+  static String get getCheckBackLaterText {
+    return getLocalizedText(
+      englishText: 'Check back later for new episodes',
+      somaliText: 'Dib u soo celi si aad u hesho qaybaha cusub',
+    );
+  }
+
+  // Get localized show notes text
+  static String get getShowNotesText {
+    return getLocalizedText(
+      englishText: 'Show Notes',
+      somaliText: 'Qoraalka Barnaamijka',
+    );
+  }
+
+  // Get localized transcript text
+  static String get getTranscriptText {
+    return getLocalizedText(
+      englishText: 'Transcript',
+      somaliText: 'Qoraalka',
+    );
+  }
+
+  // Get localized featured text
+  static String get getFeaturedText {
+    return getLocalizedText(
+      englishText: 'Featured',
+      somaliText: 'La Dooran',
     );
   }
 

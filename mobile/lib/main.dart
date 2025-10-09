@@ -31,6 +31,7 @@ import 'package:teekoob/features/subscription/bloc/subscription_bloc.dart';
 import 'package:teekoob/core/bloc/notification_bloc.dart';
 import 'package:teekoob/features/podcasts/services/podcasts_service.dart';
 import 'package:teekoob/features/podcasts/bloc/podcasts_bloc.dart';
+import 'package:teekoob/core/services/global_audio_player_service.dart';
 
 void main() async {
   print('🚀 ===== APP STARTUP =====');
@@ -62,6 +63,12 @@ void main() async {
 /// Initialize Firebase in background without blocking app startup
 void _initializeFirebaseInBackground() async {
   try {
+    // Skip Firebase initialization on web platform
+    if (kIsWeb) {
+      print('🚀 ⚠️ Skipping Firebase initialization on web platform');
+      return;
+    }
+    
     await FirebaseNotificationService().initialize();
     print('🚀 ✅ Firebase Notification Service initialized successfully');
   } catch (e) {
@@ -72,6 +79,12 @@ void _initializeFirebaseInBackground() async {
 /// Create notification service with fallback
 NotificationServiceInterface _createNotificationService() {
   try {
+    // Use stub implementation on web platform
+    if (kIsWeb) {
+      print('🚀 Using stub notification service for web platform');
+      return FirebaseNotificationService(); // This will use the stub implementation
+    }
+    
     return FirebaseNotificationService();
   } catch (e) {
     print('🚀 ⚠️ Using fallback notification service due to Firebase error: $e');
@@ -173,8 +186,9 @@ class TeekoobApp extends StatelessWidget {
           },
           child: MultiProvider(
             providers: [
-              ChangeNotifierProvider(create: (context) => ThemeService()),
-              ChangeNotifierProvider(create: (context) => LanguageService()),
+            ChangeNotifierProvider(create: (context) => ThemeService()),
+            ChangeNotifierProvider(create: (context) => LanguageService()),
+            ChangeNotifierProvider(create: (context) => GlobalAudioPlayerService()),
             ],
             child: Consumer<LanguageService>(
               builder: (context, languageService, child) {

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:teekoob/core/models/podcast_model.dart';
 import 'package:teekoob/core/services/localization_service.dart';
+import 'package:teekoob/core/services/global_audio_player_service.dart';
 
 class PodcastCard extends StatelessWidget {
   final Podcast podcast;
@@ -52,37 +53,41 @@ class PodcastCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Cover Image
+            // Cover Image with Play Button
             Expanded(
               flex: 3,
-              child: Container(
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(12),
-                    topRight: Radius.circular(12),
+              child: Stack(
+                children: [
+                  Container(
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(12),
+                        topRight: Radius.circular(12),
+                      ),
+                      color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                    ),
+                    child: ClipRRect(
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(12),
+                        topRight: Radius.circular(12),
+                      ),
+                      child: podcast.coverImageUrl != null && podcast.coverImageUrl!.isNotEmpty
+                          ? Image.network(
+                              podcast.coverImageUrl!,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) {
+                                return _buildDefaultCover(context);
+                              },
+                              loadingBuilder: (context, child, loadingProgress) {
+                                if (loadingProgress == null) return child;
+                                return _buildLoadingCover(context);
+                              },
+                            )
+                          : _buildDefaultCover(context),
+                    ),
                   ),
-                  color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-                ),
-                child: ClipRRect(
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(12),
-                    topRight: Radius.circular(12),
-                  ),
-                  child: podcast.coverImageUrl != null && podcast.coverImageUrl!.isNotEmpty
-                      ? Image.network(
-                          podcast.coverImageUrl!,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            return _buildDefaultCover(context);
-                          },
-                          loadingBuilder: (context, child, loadingProgress) {
-                            if (loadingProgress == null) return child;
-                            return _buildLoadingCover(context);
-                          },
-                        )
-                      : _buildDefaultCover(context),
-                ),
+                ],
               ),
             ),
             

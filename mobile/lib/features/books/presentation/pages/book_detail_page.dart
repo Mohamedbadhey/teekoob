@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:provider/provider.dart';
 import 'package:teekoob/core/models/book_model.dart';
 import 'package:teekoob/core/config/app_config.dart';
 import 'package:teekoob/features/books/bloc/books_bloc.dart';
@@ -12,6 +13,7 @@ import 'package:teekoob/features/books/presentation/pages/book_read_page.dart';
 import 'package:teekoob/features/player/presentation/pages/audio_player_page.dart';
 import 'package:teekoob/features/player/services/audio_state_manager.dart';
 import 'package:teekoob/core/presentation/widgets/book_reminder_widget.dart';
+import 'package:teekoob/core/services/global_audio_player_service.dart';
 
 class BookDetailPage extends StatefulWidget {
   final String bookId;
@@ -412,19 +414,18 @@ class _BookDetailPageState extends State<BookDetailPage> {
           const SizedBox(width: 16),
           
           Expanded(
-            child: StreamBuilder<bool>(
-              stream: AudioStateManager().isPlayingStream,
-              builder: (context, snapshot) {
-                final bool isPlaying = snapshot.data ?? false;
-                final bool isCurrentBook = AudioStateManager().currentBook?.id == book?.id;
+            child: Consumer<GlobalAudioPlayerService>(
+              builder: (context, audioService, child) {
+                final bool isCurrentBook = audioService.currentItem?.id == book?.id;
+                final bool isPlaying = audioService.isPlaying && isCurrentBook;
                 
                 return OutlinedButton.icon(
                   onPressed: () {
                     if (book != null) {
                       if (isCurrentBook && isPlaying) {
-                        AudioStateManager().pause();
+                        audioService.pause();
                       } else {
-                        AudioStateManager().playBook(book!);
+                        audioService.playBook(book!);
                         context.push('/home/player/${book!.id}', extra: book);
                       }
                     }

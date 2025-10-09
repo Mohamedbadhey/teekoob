@@ -14,6 +14,8 @@ import 'package:teekoob/features/player/presentation/pages/audio_player_page.dar
 import 'package:teekoob/features/reader/presentation/pages/reader_page.dart';
 import 'package:teekoob/features/settings/presentation/pages/settings_page.dart';
 import 'package:teekoob/features/subscription/presentation/pages/subscription_page.dart';
+import 'package:teekoob/features/podcasts/presentation/pages/podcast_detail_page.dart';
+import 'package:teekoob/features/podcasts/presentation/pages/podcast_episode_page.dart';
 
 class AppRouter {
   static const String splash = '/';
@@ -28,6 +30,8 @@ class AppRouter {
   static const String audioPlayer = '/player/:id';
   static const String settings = '/settings';
   static const String subscription = '/subscription';
+  static const String podcastDetail = '/podcast/:id';
+  static const String podcastEpisode = '/podcast/:podcastId/episode/:episodeId';
   
   static final GoRouter router = GoRouter(
     initialLocation: splash,
@@ -121,6 +125,30 @@ class AppRouter {
           return AllBooksPage(category: category, title: title);
         },
       ),
+      
+      // Podcast Detail Page (Outside of AppScaffold to remove bottom navigation)
+      GoRoute(
+        path: '/podcast/:id',
+        name: 'podcastDetail',
+        builder: (context, state) {
+          final podcastId = state.pathParameters['id']!;
+          return PodcastDetailPage(podcastId: podcastId);
+        },
+      ),
+      
+      // Podcast Episode Page (Outside of AppScaffold to remove bottom navigation)
+      GoRoute(
+        path: '/podcast/:podcastId/episode/:episodeId',
+        name: 'podcastEpisode',
+        builder: (context, state) {
+          final podcastId = state.pathParameters['podcastId']!;
+          final episodeId = state.pathParameters['episodeId']!;
+          return PodcastEpisodePage(
+            podcastId: podcastId,
+            episodeId: episodeId,
+          );
+        },
+      ),
     ],
     
     // Redirect logic for authentication
@@ -176,6 +204,10 @@ class AppRouter {
       context.go('$home/player/$bookId');
   static void goToSettings(BuildContext context) => context.go('$home/settings');
   static void goToSubscription(BuildContext context) => context.go('$home/subscription');
+  static void goToPodcastDetail(BuildContext context, String podcastId) => 
+      context.go('/podcast/$podcastId');
+  static void goToPodcastEpisode(BuildContext context, String podcastId, String episodeId) => 
+      context.go('/podcast/$podcastId/episode/$episodeId');
   
   // Pop navigation
   static void goBack(BuildContext context) => context.pop();

@@ -97,6 +97,15 @@ class LoadEpisodeById extends PodcastsEvent {
   List<Object?> get props => [podcastId, episodeId];
 }
 
+class LoadPodcastEpisodeById extends PodcastsEvent {
+  final String episodeId;
+  
+  const LoadPodcastEpisodeById(this.episodeId);
+  
+  @override
+  List<Object?> get props => [episodeId];
+}
+
 class SearchPodcasts extends PodcastsEvent {
   final String query;
   final String? language;
@@ -230,6 +239,15 @@ class EpisodeLoaded extends PodcastsState {
   List<Object?> get props => [episode];
 }
 
+class PodcastEpisodeLoaded extends PodcastsState {
+  final PodcastEpisode episode;
+  
+  const PodcastEpisodeLoaded(this.episode);
+  
+  @override
+  List<Object?> get props => [episode];
+}
+
 // Search Results States
 class PodcastsSearchLoaded extends PodcastsState {
   final List<Podcast> podcasts;
@@ -289,6 +307,9 @@ class PodcastsBloc extends Bloc<PodcastsEvent, PodcastsState> {
     
     // Single episode
     on<LoadEpisodeById>(_onLoadEpisodeById);
+    
+    // Single podcast episode
+    on<LoadPodcastEpisodeById>(_onLoadPodcastEpisodeById);
     
     // Search podcasts
     on<SearchPodcasts>(_onSearchPodcasts);
@@ -384,7 +405,12 @@ class PodcastsBloc extends Bloc<PodcastsEvent, PodcastsState> {
     Emitter<PodcastsState> emit,
   ) async {
     try {
+      print('🎧 PodcastsBloc: Loading episodes for podcast: ${event.podcastId}');
+      print('🎧 PodcastsBloc: Event params - page: ${event.page}, limit: ${event.limit}, search: ${event.search}, season: ${event.season}');
+      
       emit(PodcastsLoading());
+      
+      print('🎧 PodcastsBloc: Calling getPodcastEpisodes service method');
       final episodes = await _podcastsService.getPodcastEpisodes(
         event.podcastId,
         page: event.page,
@@ -392,11 +418,18 @@ class PodcastsBloc extends Bloc<PodcastsEvent, PodcastsState> {
         search: event.search,
         season: event.season,
       );
+      
+      print('🎧 PodcastsBloc: Received ${episodes.length} episodes from service');
+      
       emit(PodcastEpisodesLoaded(
         episodes: episodes,
         podcastId: event.podcastId,
       ));
+      
+      print('✅ PodcastsBloc: Successfully emitted PodcastEpisodesLoaded state');
     } catch (e) {
+      print('💥 PodcastsBloc: Error loading episodes: $e');
+      print('💥 PodcastsBloc: Error type: ${e.runtimeType}');
       emit(PodcastsError('Failed to load podcast episodes: $e'));
     }
   }
@@ -410,6 +443,23 @@ class PodcastsBloc extends Bloc<PodcastsEvent, PodcastsState> {
       final episode = await _podcastsService.getEpisodeById(event.podcastId, event.episodeId);
       if (episode != null) {
         emit(EpisodeLoaded(episode));
+      } else {
+        emit(const PodcastsError('Episode not found'));
+      }
+    } catch (e) {
+      emit(PodcastsError('Failed to load episode: $e'));
+    }
+  }
+
+  Future<void> _onLoadPodcastEpisodeById(
+    LoadPodcastEpisodeById event,
+    Emitter<PodcastsState> emit,
+  ) async {
+    try {
+      emit(PodcastsLoading());
+      final episode = await _podcastsService.getEpisodeById('', event.episodeId);
+      if (episode != null) {
+        emit(PodcastEpisodeLoaded(episode));
       } else {
         emit(const PodcastsError('Episode not found'));
       }

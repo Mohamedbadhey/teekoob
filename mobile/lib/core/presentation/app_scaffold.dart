@@ -10,6 +10,8 @@ import 'package:teekoob/features/home/presentation/pages/home_page.dart';
 import 'package:teekoob/features/books/presentation/pages/books_page.dart';
 import 'package:teekoob/features/library/presentation/pages/library_page.dart';
 import 'package:teekoob/features/settings/presentation/pages/settings_page.dart';
+import 'package:teekoob/core/presentation/widgets/floating_audio_player.dart';
+import 'package:teekoob/core/services/global_audio_player_service.dart';
 
 class AppScaffold extends StatefulWidget {
   const AppScaffold({super.key});
@@ -109,11 +111,19 @@ class _AppScaffoldState extends State<AppScaffold> {
       },
       child: Consumer<LanguageService>(
         builder: (context, languageService, child) {
-          return Scaffold(
-          body: IndexedStack(
-            index: _currentIndex,
-            children: _pages,
-          ),
+          return ChangeNotifierProvider<GlobalAudioPlayerService>(
+            create: (context) => GlobalAudioPlayerService(),
+            child: Scaffold(
+              body: Stack(
+                children: [
+                  IndexedStack(
+                    index: _currentIndex,
+                    children: _pages,
+                  ),
+                  // Floating Audio Player (draggable)
+                  const FloatingAudioPlayer(),
+                ],
+              ),
           bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.surface,
@@ -191,7 +201,8 @@ class _AppScaffoldState extends State<AppScaffold> {
           ],
         ),
       ),
-    );
+            ),
+          );
         },
       ),
     );

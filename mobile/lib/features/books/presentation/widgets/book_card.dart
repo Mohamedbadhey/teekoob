@@ -4,6 +4,7 @@ import 'package:teekoob/core/config/app_config.dart';
 import 'package:teekoob/features/library/bloc/library_bloc.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:teekoob/core/services/global_audio_player_service.dart';
 
 class BookCard extends StatefulWidget {
   final Book book;

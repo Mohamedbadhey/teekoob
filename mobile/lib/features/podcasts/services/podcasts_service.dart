@@ -61,7 +61,7 @@ class PodcastsService {
     try {
       print('🔍 PodcastsService: Getting podcast by ID from API: $podcastId');
       
-      final response = await _networkService.get('/podcasts/$podcastId');
+      final response = await _networkService.get('/admin/podcasts/$podcastId');
       
       print('📡 PodcastsService: Server response status: ${response.statusCode}');
       
@@ -262,6 +262,7 @@ class PodcastsService {
   }) async {
     try {
       print('🎧 PodcastsService: Getting episodes for podcast: $podcastId');
+      print('🎧 PodcastsService: Query params - page: $page, limit: $limit, search: $search, season: $season');
       
       final queryParams = <String, dynamic>{
         'page': page,
@@ -271,20 +272,38 @@ class PodcastsService {
       if (search != null && search.isNotEmpty) queryParams['search'] = search;
       if (season != null) queryParams['season'] = season;
 
-      final response = await _networkService.get('/podcasts/$podcastId/episodes', queryParameters: queryParams);
+      print('🎧 PodcastsService: Making API call to /admin/podcasts/$podcastId/episodes');
+      final response = await _networkService.get('/admin/podcasts/$podcastId/episodes', queryParameters: queryParams);
+      
+      print('🎧 PodcastsService: API response status: ${response.statusCode}');
+      print('🎧 PodcastsService: API response data keys: ${response.data.keys.toList()}');
       
       if (response.statusCode == 200) {
         final episodesData = response.data['episodes'] as List;
-        final episodes = episodesData.map((json) => PodcastEpisode.fromJson(json)).toList();
+        print('🎧 PodcastsService: Raw episodes data count: ${episodesData.length}');
+        
+        if (episodesData.isNotEmpty) {
+          print('🎧 PodcastsService: First episode data: ${episodesData.first}');
+        }
+        
+        final episodes = episodesData.map((json) {
+          print('🎧 PodcastsService: Parsing episode: ${json['id']} - ${json['title']}');
+          return PodcastEpisode.fromJson(json);
+        }).toList();
         
         print('✅ getPodcastEpisodes: Successfully fetched ${episodes.length} episodes');
         return episodes;
       } else {
         print('❌ getPodcastEpisodes: API returned status ${response.statusCode}');
+        print('❌ getPodcastEpisodes: Response data: ${response.data}');
         return [];
       }
     } catch (e) {
       print('💥 getPodcastEpisodes: Error occurred: $e');
+      print('💥 getPodcastEpisodes: Error type: ${e.runtimeType}');
+      if (e.toString().contains('DioException')) {
+        print('💥 getPodcastEpisodes: DioException details: $e');
+      }
       return [];
     }
   }
@@ -294,7 +313,7 @@ class PodcastsService {
     try {
       print('🔍 PodcastsService: Getting episode by ID: $episodeId from podcast: $podcastId');
       
-      final response = await _networkService.get('/podcasts/$podcastId/episodes/$episodeId');
+      final response = await _networkService.get('/admin/podcasts/$podcastId/episodes/$episodeId');
       
       if (response.statusCode == 200) {
         final episodeData = response.data as Map<String, dynamic>;

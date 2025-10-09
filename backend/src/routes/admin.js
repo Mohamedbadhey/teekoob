@@ -1642,7 +1642,13 @@ router.get('/podcasts/:id/episodes', asyncHandler(async (req, res) => {
   
   let query = db('podcast_parts')
     .where('podcast_id', id)
-    .select('*');
+    .select(
+      'id', 'podcast_id', 'title', 'title_somali', 'description', 'description_somali',
+      'episode_number', 'season_number', 'duration', 'audio_url', 'transcript_url',
+      'transcript_content', 'show_notes', 'chapters', 'rating', 'play_count',
+      'download_count', 'is_featured', 'is_premium', 'is_free', 'published_at',
+      'created_at', 'updated_at'
+    );
 
   // Apply season filter if provided
   if (season && season !== 'all') {
@@ -1683,6 +1689,55 @@ router.get('/podcasts/:id/episodes', asyncHandler(async (req, res) => {
       totalPages: Math.ceil(parseInt(totalCount.count) / parseInt(limit))
     }
   });
+}));
+
+// Get single podcast episode
+router.get('/podcasts/:podcastId/episodes/:episodeId', asyncHandler(async (req, res) => {
+  try {
+    const { podcastId, episodeId } = req.params;
+    console.log('🔍 Admin: Fetching episode with ID:', episodeId, 'from podcast:', podcastId);
+    
+    const episode = await db('podcast_parts')
+      .select(
+        'id', 'podcast_id', 'title', 'title_somali', 'description', 'description_somali',
+        'episode_number', 'season_number', 'duration', 'audio_url', 'transcript_url',
+        'transcript_content', 'show_notes', 'chapters', 'rating', 'play_count',
+        'download_count', 'is_featured', 'is_premium', 'is_free', 'published_at',
+        'created_at', 'updated_at'
+      )
+      .where('id', episodeId)
+      .where('podcast_id', podcastId)
+      .first();
+    
+    if (!episode) {
+      console.log('❌ Admin: Episode not found with ID:', episodeId);
+      return res.status(404).json({ 
+        error: 'Episode not found',
+        code: 'EPISODE_NOT_FOUND',
+        requestedId: episodeId
+      });
+    }
+    
+    // Process episode data
+    const processedEpisode = {
+      ...episode,
+      is_featured: Boolean(episode.is_featured),
+      is_premium: Boolean(episode.is_premium),
+      is_free: Boolean(episode.is_free),
+      rating: episode.rating ? parseFloat(episode.rating) : 0,
+      play_count: episode.play_count ? parseInt(episode.play_count) : 0,
+      download_count: episode.download_count ? parseInt(episode.download_count) : 0,
+      duration: episode.duration ? parseInt(episode.duration) : null
+    };
+    
+    res.json(processedEpisode);
+  } catch (error) {
+    console.error('💥 Admin: Error fetching episode:', error);
+    res.status(500).json({
+      error: 'Internal server error while fetching episode',
+      details: error.message
+    });
+  }
 }));
 
 // Create podcast episode
