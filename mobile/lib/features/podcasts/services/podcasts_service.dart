@@ -61,7 +61,7 @@ class PodcastsService {
     try {
       print('🔍 PodcastsService: Getting podcast by ID from API: $podcastId');
       
-      final response = await _networkService.get('/admin/podcasts/$podcastId');
+      final response = await _networkService.get('/podcasts/$podcastId');
       
       print('📡 PodcastsService: Server response status: ${response.statusCode}');
       
@@ -272,8 +272,8 @@ class PodcastsService {
       if (search != null && search.isNotEmpty) queryParams['search'] = search;
       if (season != null) queryParams['season'] = season;
 
-      print('🎧 PodcastsService: Making API call to /admin/podcasts/$podcastId/episodes');
-      final response = await _networkService.get('/admin/podcasts/$podcastId/episodes', queryParameters: queryParams);
+      print('🎧 PodcastsService: Making API call to /podcasts/$podcastId/episodes');
+      final response = await _networkService.get('/podcasts/$podcastId/episodes', queryParameters: queryParams);
       
       print('🎧 PodcastsService: API response status: ${response.statusCode}');
       print('🎧 PodcastsService: API response data keys: ${response.data.keys.toList()}');
@@ -313,14 +313,20 @@ class PodcastsService {
     try {
       print('🔍 PodcastsService: Getting episode by ID: $episodeId from podcast: $podcastId');
       
-      final response = await _networkService.get('/admin/podcasts/$podcastId/episodes/$episodeId');
+      final response = await _networkService.get('/podcasts/$podcastId/episodes/$episodeId');
       
       if (response.statusCode == 200) {
-        final episodeData = response.data as Map<String, dynamic>;
-        final episode = PodcastEpisode.fromJson(episodeData);
-        
-        print('✅ getEpisodeById: Successfully fetched episode: ${episode.title}');
-        return episode;
+        final responseData = response.data as Map<String, dynamic>;
+        if (responseData['success'] == true && responseData['episode'] != null) {
+          final episodeData = responseData['episode'] as Map<String, dynamic>;
+          final episode = PodcastEpisode.fromJson(episodeData);
+          
+          print('✅ getEpisodeById: Successfully fetched episode: ${episode.title}');
+          return episode;
+        } else {
+          print('❌ getEpisodeById: Invalid response format');
+          return null;
+        }
       } else {
         print('❌ getEpisodeById: API returned status ${response.statusCode}');
         return null;

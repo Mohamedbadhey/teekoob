@@ -262,7 +262,7 @@ router.get('/:id/episodes', asyncHandler(async (req, res) => {
         'episode_number', 'season_number', 'duration', 'audio_url',
         'transcript_url', 'transcript_content', 'show_notes', 'chapters',
         'rating', 'play_count', 'download_count', 'is_featured', 'is_premium',
-        'is_free', 'published_at', 'metadata', 'created_at', 'updated_at'
+        'is_free', 'published_at', 'created_at', 'updated_at'
       );
 
     // Apply season filter if provided
@@ -328,6 +328,60 @@ router.get('/:id/episodes', asyncHandler(async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Failed to fetch podcast episodes',
+      details: error.message
+    });
+  }
+}));
+
+// Get single podcast episode
+router.get('/:podcastId/episodes/:episodeId', asyncHandler(async (req, res) => {
+  try {
+    const { podcastId, episodeId } = req.params;
+    console.log('🔍 Public: Fetching episode with ID:', episodeId, 'from podcast:', podcastId);
+    
+    const episode = await db('podcast_parts')
+      .select(
+        'id', 'podcast_id', 'title', 'title_somali', 'description', 'description_somali',
+        'episode_number', 'season_number', 'duration', 'audio_url', 'transcript_url',
+        'transcript_content', 'show_notes', 'chapters', 'rating', 'play_count',
+        'download_count', 'is_featured', 'is_premium', 'is_free', 'published_at',
+        'created_at', 'updated_at'
+      )
+      .where('id', episodeId)
+      .where('podcast_id', podcastId)
+      .first();
+    
+    if (!episode) {
+      console.log('❌ Public: Episode not found with ID:', episodeId);
+      return res.status(404).json({ 
+        success: false,
+        error: 'Episode not found',
+        code: 'EPISODE_NOT_FOUND',
+        requestedId: episodeId
+      });
+    }
+    
+    // Process episode data
+    const processedEpisode = {
+      ...episode,
+      is_featured: Boolean(episode.is_featured),
+      is_premium: Boolean(episode.is_premium),
+      is_free: Boolean(episode.is_free),
+      rating: episode.rating ? parseFloat(episode.rating) : 0,
+      play_count: episode.play_count ? parseInt(episode.play_count) : 0,
+      download_count: episode.download_count ? parseInt(episode.download_count) : 0,
+      duration: episode.duration ? parseInt(episode.duration) : null
+    };
+    
+    res.json({
+      success: true,
+      episode: processedEpisode
+    });
+  } catch (error) {
+    console.error('💥 Public: Error fetching episode:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error while fetching episode',
       details: error.message
     });
   }
