@@ -227,12 +227,8 @@ Note: We attempted to extract text from the PDF but were unable to. We've provid
                 return TextButton.icon(
                   onPressed: () {
                     if (_book != null) {
-                      if (isCurrentBook && isPlaying) {
-                        AudioStateManager().pause();
-                      } else {
-                        AudioStateManager().playBook(_book!);
-                        context.push('/home/player/${_book!.id}', extra: _book);
-                      }
+                      // Use GlobalAudioPlayerService instead of AudioStateManager
+                      context.push('/book/${_book!.id}/audio-player', extra: _book);
                     }
                   },
                   icon: Icon(

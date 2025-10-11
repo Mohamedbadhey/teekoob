@@ -782,4 +782,60 @@ class LocalizationService {
       somaliText: 'Beddel Shaandhaynta',
     );
   }
+
+  static String get getNowPlayingText {
+    return getLocalizedText(
+      englishText: 'Now Playing',
+      somaliText: 'Hadda La Ciyaaraya',
+    );
+  }
+
+  static String get getAudiobookText {
+    return getLocalizedText(
+      englishText: 'Audiobook',
+      somaliText: 'Buug Dhageysan',
+    );
+  }
+
+  static String get getBookDetailsText {
+    return getLocalizedText(
+      englishText: 'Book Details',
+      somaliText: 'Faahfaahinta Buugga',
+    );
+  }
+
+  static String get getAuthorText {
+    return getLocalizedText(
+      englishText: 'Author',
+      somaliText: 'Qoraa',
+    );
+  }
+
+  static String get getFormatText {
+    return getLocalizedText(
+      englishText: 'Format',
+      somaliText: 'Qaabka',
+    );
+  }
+
+  static String get getLoadingText {
+    return getLocalizedText(
+      englishText: 'Loading...',
+      somaliText: 'Waa La Soo Dejiyaa...',
+    );
+  }
+
+  static String get getDurationText {
+    return getLocalizedText(
+      englishText: 'Duration',
+      somaliText: 'Muddo',
+    );
+  }
+
+  static String get getComingSoonText {
+    return getLocalizedText(
+      englishText: 'Coming Soon',
+      somaliText: 'Dhawaan Imaya',
+    );
+  }
 }

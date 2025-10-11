@@ -41,6 +41,9 @@ dependencies:
   audio_session: ^0.1.18
   audioplayers: ^5.2.1
   
+  # System audio controls
+  flutter_local_notifications: ^17.2.3
+  
   # PDF & EPUB
   flutter_pdfview: ^1.4.1+1
   syncfusion_flutter_pdf: ^30.2.6
@@ -84,7 +87,7 @@ dependencies:
   
   # Firebase Cloud Messaging (Essential for closed app notifications)
   firebase_core: ^2.24.2
-  # firebase_messaging: ^14.7.10  # Temporarily disabled for web compatibility
+  # firebase_messaging: ^14.7.10  # Temporarily disabled for Android builds
 
 dev_dependencies:
   flutter_lints: ^3.0.0

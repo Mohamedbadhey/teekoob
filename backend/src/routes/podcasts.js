@@ -37,23 +37,26 @@ router.get('/', asyncHandler(async (req, res) => {
     console.log('📊 Podcasts endpoint params:', { page, limit, offset, search, category, language, featured, sortBy, sortOrder });
 
     let query = db('podcasts')
+      .leftJoin('podcast_parts', 'podcasts.id', 'podcast_parts.podcast_id')
       .select(
-        'id', 'title', 'title_somali', 'description', 'description_somali',
-        'host', 'host_somali', 'language', 'cover_image_url', 'rss_feed_url',
-        'website_url', 'total_episodes', 'rating', 'review_count',
-        'is_featured', 'is_new_release', 'is_premium', 'is_free',
-        'metadata', 'created_at', 'updated_at'
-      );
+        'podcasts.id', 'podcasts.title', 'podcasts.title_somali', 'podcasts.description', 'podcasts.description_somali',
+        'podcasts.host', 'podcasts.host_somali', 'podcasts.language', 'podcasts.cover_image_url', 'podcasts.rss_feed_url',
+        'podcasts.website_url', 'podcasts.rating', 'podcasts.review_count',
+        'podcasts.is_featured', 'podcasts.is_new_release', 'podcasts.is_premium', 'podcasts.is_free',
+        'podcasts.metadata', 'podcasts.created_at', 'podcasts.updated_at',
+        db.raw('COUNT(podcast_parts.id) as total_episodes')
+      )
+      .groupBy('podcasts.id');
 
     // Apply search filter
     if (search) {
       query = query.where(function() {
-        this.where('title', 'like', `%${search}%`)
-          .orWhere('title_somali', 'like', `%${search}%`)
-          .orWhere('description', 'like', `%${search}%`)
-          .orWhere('description_somali', 'like', `%${search}%`)
-          .orWhere('host', 'like', `%${search}%`)
-          .orWhere('host_somali', 'like', `%${search}%`);
+        this.where('podcasts.title', 'like', `%${search}%`)
+          .orWhere('podcasts.title_somali', 'like', `%${search}%`)
+          .orWhere('podcasts.description', 'like', `%${search}%`)
+          .orWhere('podcasts.description_somali', 'like', `%${search}%`)
+          .orWhere('podcasts.host', 'like', `%${search}%`)
+          .orWhere('podcasts.host_somali', 'like', `%${search}%`);
       });
     }
 
@@ -69,12 +72,12 @@ router.get('/', asyncHandler(async (req, res) => {
 
     // Apply language filter
     if (language && language !== 'all') {
-      query = query.where('language', language);
+      query = query.where('podcasts.language', language);
     }
 
     // Apply featured filter
     if (featured && featured !== 'all') {
-      query = query.where('is_featured', featured === 'true');
+      query = query.where('podcasts.is_featured', featured === 'true');
     }
 
     // Get total count
@@ -111,7 +114,7 @@ router.get('/', asyncHandler(async (req, res) => {
 
     // Get podcasts
     const podcasts = await query
-      .orderBy(sortBy, sortOrder)
+      .orderBy(`podcasts.${sortBy}`, sortOrder)
       .limit(limit)
       .offset(offset);
 
@@ -394,15 +397,18 @@ router.get('/featured/list', asyncHandler(async (req, res) => {
     console.log('🔍 Featured podcasts endpoint called with limit:', limit);
 
     const podcasts = await db('podcasts')
-      .where('is_featured', true)
+      .leftJoin('podcast_parts', 'podcasts.id', 'podcast_parts.podcast_id')
+      .where('podcasts.is_featured', true)
       .select(
-        'id', 'title', 'title_somali', 'description', 'description_somali',
-        'host', 'host_somali', 'language', 'cover_image_url', 'rss_feed_url',
-        'website_url', 'total_episodes', 'rating', 'review_count',
-        'is_featured', 'is_new_release', 'is_premium', 'is_free',
-        'metadata', 'created_at', 'updated_at'
+        'podcasts.id', 'podcasts.title', 'podcasts.title_somali', 'podcasts.description', 'podcasts.description_somali',
+        'podcasts.host', 'podcasts.host_somali', 'podcasts.language', 'podcasts.cover_image_url', 'podcasts.rss_feed_url',
+        'podcasts.website_url', 'podcasts.rating', 'podcasts.review_count',
+        'podcasts.is_featured', 'podcasts.is_new_release', 'podcasts.is_premium', 'podcasts.is_free',
+        'podcasts.metadata', 'podcasts.created_at', 'podcasts.updated_at',
+        db.raw('COUNT(podcast_parts.id) as total_episodes')
       )
-      .orderBy('created_at', 'desc')
+      .groupBy('podcasts.id')
+      .orderBy('podcasts.created_at', 'desc')
       .limit(parseInt(limit));
 
     console.log('⭐ Retrieved featured podcasts:', podcasts.length);
@@ -465,15 +471,18 @@ router.get('/new-releases/list', asyncHandler(async (req, res) => {
     console.log('🔍 New release podcasts endpoint called with limit:', limit);
 
     const podcasts = await db('podcasts')
-      .where('is_new_release', true)
+      .leftJoin('podcast_parts', 'podcasts.id', 'podcast_parts.podcast_id')
+      .where('podcasts.is_new_release', true)
       .select(
-        'id', 'title', 'title_somali', 'description', 'description_somali',
-        'host', 'host_somali', 'language', 'cover_image_url', 'rss_feed_url',
-        'website_url', 'total_episodes', 'rating', 'review_count',
-        'is_featured', 'is_new_release', 'is_premium', 'is_free',
-        'metadata', 'created_at', 'updated_at'
+        'podcasts.id', 'podcasts.title', 'podcasts.title_somali', 'podcasts.description', 'podcasts.description_somali',
+        'podcasts.host', 'podcasts.host_somali', 'podcasts.language', 'podcasts.cover_image_url', 'podcasts.rss_feed_url',
+        'podcasts.website_url', 'podcasts.rating', 'podcasts.review_count',
+        'podcasts.is_featured', 'podcasts.is_new_release', 'podcasts.is_premium', 'podcasts.is_free',
+        'podcasts.metadata', 'podcasts.created_at', 'podcasts.updated_at',
+        db.raw('COUNT(podcast_parts.id) as total_episodes')
       )
-      .orderBy('created_at', 'desc')
+      .groupBy('podcasts.id')
+      .orderBy('podcasts.created_at', 'desc')
       .limit(parseInt(limit));
 
     console.log('🆕 Retrieved new release podcasts:', podcasts.length);
@@ -536,14 +545,17 @@ router.get('/recent/list', asyncHandler(async (req, res) => {
     console.log('🔍 Recent podcasts endpoint called with limit:', limit);
 
     const podcasts = await db('podcasts')
+      .leftJoin('podcast_parts', 'podcasts.id', 'podcast_parts.podcast_id')
       .select(
-        'id', 'title', 'title_somali', 'description', 'description_somali',
-        'host', 'host_somali', 'language', 'cover_image_url', 'rss_feed_url',
-        'website_url', 'total_episodes', 'rating', 'review_count',
-        'is_featured', 'is_new_release', 'is_premium', 'is_free',
-        'metadata', 'created_at', 'updated_at'
+        'podcasts.id', 'podcasts.title', 'podcasts.title_somali', 'podcasts.description', 'podcasts.description_somali',
+        'podcasts.host', 'podcasts.host_somali', 'podcasts.language', 'podcasts.cover_image_url', 'podcasts.rss_feed_url',
+        'podcasts.website_url', 'podcasts.rating', 'podcasts.review_count',
+        'podcasts.is_featured', 'podcasts.is_new_release', 'podcasts.is_premium', 'podcasts.is_free',
+        'podcasts.metadata', 'podcasts.created_at', 'podcasts.updated_at',
+        db.raw('COUNT(podcast_parts.id) as total_episodes')
       )
-      .orderBy('created_at', 'desc')
+      .groupBy('podcasts.id')
+      .orderBy('podcasts.created_at', 'desc')
       .limit(parseInt(limit));
 
     console.log('📅 Retrieved recent podcasts:', podcasts.length);
@@ -606,15 +618,18 @@ router.get('/free/list', asyncHandler(async (req, res) => {
     console.log('🔍 Free podcasts endpoint called with limit:', limit);
 
     const podcasts = await db('podcasts')
-      .where('is_free', true)
+      .leftJoin('podcast_parts', 'podcasts.id', 'podcast_parts.podcast_id')
+      .where('podcasts.is_free', true)
       .select(
-        'id', 'title', 'title_somali', 'description', 'description_somali',
-        'host', 'host_somali', 'language', 'cover_image_url', 'rss_feed_url',
-        'website_url', 'total_episodes', 'rating', 'review_count',
-        'is_featured', 'is_new_release', 'is_premium', 'is_free',
-        'metadata', 'created_at', 'updated_at'
+        'podcasts.id', 'podcasts.title', 'podcasts.title_somali', 'podcasts.description', 'podcasts.description_somali',
+        'podcasts.host', 'podcasts.host_somali', 'podcasts.language', 'podcasts.cover_image_url', 'podcasts.rss_feed_url',
+        'podcasts.website_url', 'podcasts.rating', 'podcasts.review_count',
+        'podcasts.is_featured', 'podcasts.is_new_release', 'podcasts.is_premium', 'podcasts.is_free',
+        'podcasts.metadata', 'podcasts.created_at', 'podcasts.updated_at',
+        db.raw('COUNT(podcast_parts.id) as total_episodes')
       )
-      .orderBy('created_at', 'desc')
+      .groupBy('podcasts.id')
+      .orderBy('podcasts.created_at', 'desc')
       .limit(parseInt(limit));
 
     console.log('🆓 Retrieved free podcasts:', podcasts.length);
@@ -677,13 +692,16 @@ router.get('/random/list', asyncHandler(async (req, res) => {
     console.log('🔍 Random podcasts endpoint called with limit:', limit);
 
     const podcasts = await db('podcasts')
+      .leftJoin('podcast_parts', 'podcasts.id', 'podcast_parts.podcast_id')
       .select(
-        'id', 'title', 'title_somali', 'description', 'description_somali',
-        'host', 'host_somali', 'language', 'cover_image_url', 'rss_feed_url',
-        'website_url', 'total_episodes', 'rating', 'review_count',
-        'is_featured', 'is_new_release', 'is_premium', 'is_free',
-        'metadata', 'created_at', 'updated_at'
+        'podcasts.id', 'podcasts.title', 'podcasts.title_somali', 'podcasts.description', 'podcasts.description_somali',
+        'podcasts.host', 'podcasts.host_somali', 'podcasts.language', 'podcasts.cover_image_url', 'podcasts.rss_feed_url',
+        'podcasts.website_url', 'podcasts.rating', 'podcasts.review_count',
+        'podcasts.is_featured', 'podcasts.is_new_release', 'podcasts.is_premium', 'podcasts.is_free',
+        'podcasts.metadata', 'podcasts.created_at', 'podcasts.updated_at',
+        db.raw('COUNT(podcast_parts.id) as total_episodes')
       )
+      .groupBy('podcasts.id')
       .orderByRaw('RAND()')
       .limit(parseInt(limit));
 

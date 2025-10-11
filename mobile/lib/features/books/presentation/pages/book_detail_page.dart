@@ -426,7 +426,7 @@ class _BookDetailPageState extends State<BookDetailPage> {
                         audioService.pause();
                       } else {
                         audioService.playBook(book!);
-                        context.push('/home/player/${book!.id}', extra: book);
+                        context.push('/book/${book!.id}/audio-player', extra: book);
                       }
                     }
                   },

@@ -302,25 +302,13 @@ class PodcastEpisode {
     try {
       return PodcastEpisode(
         id: json['id'] ?? '',
-        podcastId: json['podcast_id'] ?? '',
+        podcastId: json['podcast_id'] ?? json['podcastId'] ?? '',
         title: json['title'] ?? '',
-        titleSomali: json['title_somali'],
+        titleSomali: json['title_somali'] ?? json['titleSomali'],
         description: json['description'],
-        descriptionSomali: json['description_somali'],
-        episodeNumber: json['episode_number'] != null 
-            ? (json['episode_number'] is String 
-                ? int.tryParse(json['episode_number']) ?? 1
-                : (json['episode_number'] is num 
-                    ? json['episode_number'].toInt() 
-                    : 1))
-            : 1,
-        seasonNumber: json['season_number'] != null 
-            ? (json['season_number'] is String 
-                ? int.tryParse(json['season_number']) ?? 1
-                : (json['season_number'] is num 
-                    ? json['season_number'].toInt() 
-                    : 1))
-            : 1,
+        descriptionSomali: json['description_somali'] ?? json['descriptionSomali'],
+        episodeNumber: _parseInt(json['episode_number'] ?? json['episodeNumber'], defaultValue: 1),
+        seasonNumber: _parseInt(json['season_number'] ?? json['seasonNumber'], defaultValue: 1),
         duration: json['duration'] != null 
             ? (json['duration'] is String 
                 ? int.tryParse(json['duration']) ?? 0
@@ -331,11 +319,7 @@ class PodcastEpisode {
         audioUrl: json['audio_url'] ?? json['audioUrl'],
         transcriptUrl: json['transcript_url'] ?? json['transcriptUrl'],
         transcriptContent: json['transcript_content'] ?? json['transcriptContent'],
-        showNotes: json['show_notes'] != null 
-            ? (json['show_notes'] is String 
-                ? jsonDecode(json['show_notes'])
-                : json['show_notes'])
-            : null,
+        showNotes: _parseShowNotes(json['show_notes'] ?? json['showNotes']),
         chapters: json['chapters'] != null 
             ? (json['chapters'] is String 
                 ? List<Map<String, dynamic>>.from(jsonDecode(json['chapters']))
@@ -348,37 +332,64 @@ class PodcastEpisode {
                     ? json['rating'].toDouble() 
                     : 0.0))
             : 0.0,
-        playCount: json['play_count'] != null 
-            ? (json['play_count'] is String 
-                ? int.tryParse(json['play_count']) ?? 0
-                : (json['play_count'] is num 
-                    ? json['play_count'].toInt() 
-                    : 0))
-            : 0,
-        downloadCount: json['download_count'] != null 
-            ? (json['download_count'] is String 
-                ? int.tryParse(json['download_count']) ?? 0
-                : (json['download_count'] is num 
-                    ? json['download_count'].toInt() 
-                    : 0))
-            : 0,
-        isFeatured: json['is_featured'] == true || json['is_featured'] == 1,
-        isPremium: json['is_premium'] == true || json['is_premium'] == 1,
-        isFree: json['is_free'] == true || json['is_free'] == 1,
-        publishedAt: json['published_at'] != null 
-            ? DateTime.parse(json['published_at'])
-            : DateTime.now(),
-        createdAt: json['created_at'] != null 
-            ? DateTime.parse(json['created_at'])
-            : DateTime.now(),
-        updatedAt: json['updated_at'] != null 
-            ? DateTime.parse(json['updated_at'])
-            : DateTime.now(),
+        playCount: _parseInt(json['play_count'] ?? json['playCount'], defaultValue: 0),
+        downloadCount: _parseInt(json['download_count'] ?? json['downloadCount'], defaultValue: 0),
+        isFeatured: _parseBoolean(json['is_featured'] ?? json['isFeatured']),
+        isPremium: _parseBoolean(json['is_premium'] ?? json['isPremium']),
+        isFree: _parseBoolean(json['is_free'] ?? json['isFree']),
+        publishedAt: _parseDateTime(json['published_at'] ?? json['publishedAt']),
+        createdAt: _parseDateTime(json['created_at'] ?? json['createdAt']),
+        updatedAt: _parseDateTime(json['updated_at'] ?? json['updatedAt']),
       );
     } catch (e) {
       print('💥 PodcastEpisode.fromJson: Error parsing episode: $e');
       rethrow;
     }
+  }
+
+  // Helper method to parse boolean values from various types
+  static bool _parseBoolean(dynamic value) {
+    if (value == null) return false;
+    if (value is bool) return value;
+    if (value is int) return value == 1;
+    if (value is String) return value.toLowerCase() == 'true' || value == '1';
+    return false;
+  }
+
+  // Helper method to parse integer values from various types
+  static int _parseInt(dynamic value, {required int defaultValue}) {
+    if (value == null) return defaultValue;
+    if (value is int) return value;
+    if (value is String) return int.tryParse(value) ?? defaultValue;
+    if (value is num) return value.toInt();
+    return defaultValue;
+  }
+
+  // Helper method to parse DateTime values
+  static DateTime _parseDateTime(dynamic value) {
+    if (value == null) return DateTime.now();
+    if (value is String) {
+      try {
+        return DateTime.parse(value);
+      } catch (e) {
+        return DateTime.now();
+      }
+    }
+    return DateTime.now();
+  }
+
+  // Helper method to parse show notes from various types
+  static Map<String, dynamic>? _parseShowNotes(dynamic value) {
+    if (value == null) return null;
+    if (value is Map<String, dynamic>) return value;
+    if (value is String) {
+      try {
+        return jsonDecode(value);
+      } catch (e) {
+        return null;
+      }
+    }
+    return null;
   }
 
   // Convert to JSON

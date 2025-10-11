@@ -67,7 +67,7 @@ class _PodcastDetailPageState extends State<PodcastDetailPage>
   }
 
   void _navigateToEpisode(PodcastEpisode episode) {
-    context.go('/podcast/${widget.podcastId}/episode/${episode.id}');
+    context.push('/podcast/${widget.podcastId}/episode/${episode.id}');
   }
 
   @override
@@ -245,7 +245,9 @@ class _PodcastDetailPageState extends State<PodcastDetailPage>
     }
 
     final coverImageUrl = _podcast!.coverImageUrl != null && _podcast!.coverImageUrl!.isNotEmpty
-        ? '${AppConfig.mediaBaseUrl}/${_podcast!.coverImageUrl}'
+        ? (_podcast!.coverImageUrl!.startsWith('http') 
+            ? _podcast!.coverImageUrl 
+            : '${AppConfig.mediaBaseUrl}${_podcast!.coverImageUrl}')
         : null;
 
     return Container(

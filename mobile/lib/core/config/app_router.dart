@@ -14,6 +14,7 @@ import 'package:teekoob/features/player/presentation/pages/audio_player_page.dar
 import 'package:teekoob/features/reader/presentation/pages/reader_page.dart';
 import 'package:teekoob/features/settings/presentation/pages/settings_page.dart';
 import 'package:teekoob/features/subscription/presentation/pages/subscription_page.dart';
+import 'package:teekoob/features/books/presentation/pages/book_audio_player_page.dart';
 import 'package:teekoob/features/podcasts/presentation/pages/podcast_detail_page.dart';
 import 'package:teekoob/features/podcasts/presentation/pages/podcast_episode_page.dart';
 
@@ -112,6 +113,16 @@ class AppRouter {
         builder: (context, state) {
           final bookId = state.pathParameters['id']!;
           return BookDetailPage(bookId: bookId);
+        },
+      ),
+      
+      // Book Audio Player Page (Outside of AppScaffold to remove bottom navigation)
+      GoRoute(
+        path: '/book/:id/audio-player',
+        name: 'bookAudioPlayer',
+        builder: (context, state) {
+          final bookId = state.pathParameters['id']!;
+          return BookAudioPlayerPage(bookId: bookId);
         },
       ),
       

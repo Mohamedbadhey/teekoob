@@ -20,7 +20,7 @@ class AppScaffold extends StatefulWidget {
   State<AppScaffold> createState() => _AppScaffoldState();
 }
 
-class _AppScaffoldState extends State<AppScaffold> {
+class _AppScaffoldState extends State<AppScaffold> with WidgetsBindingObserver {
   int _currentIndex = 0;
 
   final List<Widget> _pages = [
@@ -29,6 +29,26 @@ class _AppScaffoldState extends State<AppScaffold> {
     const LibraryPage(),
     const SettingsPage(),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    // Handle app lifecycle changes for background audio
+    final audioService = GlobalAudioPlayerService();
+    audioService.handleAppLifecycleChange(state);
+  }
 
   @override
   void didChangeDependencies() {

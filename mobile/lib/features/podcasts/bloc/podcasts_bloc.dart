@@ -98,12 +98,13 @@ class LoadEpisodeById extends PodcastsEvent {
 }
 
 class LoadPodcastEpisodeById extends PodcastsEvent {
+  final String podcastId;
   final String episodeId;
   
-  const LoadPodcastEpisodeById(this.episodeId);
+  const LoadPodcastEpisodeById(this.podcastId, this.episodeId);
   
   @override
-  List<Object?> get props => [episodeId];
+  List<Object?> get props => [podcastId, episodeId];
 }
 
 class SearchPodcasts extends PodcastsEvent {
@@ -457,7 +458,7 @@ class PodcastsBloc extends Bloc<PodcastsEvent, PodcastsState> {
   ) async {
     try {
       emit(PodcastsLoading());
-      final episode = await _podcastsService.getEpisodeById('', event.episodeId);
+      final episode = await _podcastsService.getEpisodeById(event.podcastId, event.episodeId);
       if (episode != null) {
         emit(PodcastEpisodeLoaded(episode));
       } else {

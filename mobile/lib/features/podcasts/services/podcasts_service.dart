@@ -66,13 +66,19 @@ class PodcastsService {
       print('📡 PodcastsService: Server response status: ${response.statusCode}');
       
       if (response.statusCode == 200) {
-        final podcastData = response.data as Map<String, dynamic>;
-        print('📚 PodcastsService: API podcast data keys: ${podcastData.keys.toList()}');
+        final responseData = response.data as Map<String, dynamic>;
+        print('📚 PodcastsService: API response data keys: ${responseData.keys.toList()}');
         
-        final podcast = Podcast.fromJson(podcastData);
-        print('📖 PodcastsService: Successfully parsed podcast: ${podcast.title}');
-        
-        return podcast;
+        if (responseData['success'] == true && responseData['podcast'] != null) {
+          final podcastData = responseData['podcast'] as Map<String, dynamic>;
+          final podcast = Podcast.fromJson(podcastData);
+          print('📖 PodcastsService: Successfully parsed podcast: ${podcast.title}');
+          
+          return podcast;
+        } else {
+          print('❌ PodcastsService: Invalid response format');
+          return null;
+        }
       } else {
         print('❌ PodcastsService: Server returned status ${response.statusCode}');
         return null;

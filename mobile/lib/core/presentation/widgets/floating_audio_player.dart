@@ -154,7 +154,7 @@ class _FloatingAudioPlayerState extends State<FloatingAudioPlayer>
     return AnimatedBuilder(
       animation: GlobalAudioPlayerService(),
       builder: (context, child) {
-        if (!GlobalAudioPlayerService().hasItem) {
+        if (!GlobalAudioPlayerService().shouldShowFloatingPlayer) {
           return const SizedBox.shrink();
         }
 
