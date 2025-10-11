@@ -30,22 +30,25 @@ class PodcastCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
     final cardWidth = width ?? _getResponsiveCardWidth(screenWidth);
-    final cardHeight = height ?? _getResponsiveCardHeight();
+    final cardHeight = height ?? _getResponsiveCardHeight(screenHeight);
+    final isSmallScreen = screenWidth < 400;
+    final isTablet = screenWidth > 768;
 
     return GestureDetector(
       onTap: onTap,
       child: Container(
         width: cardWidth,
         height: cardHeight,
-        margin: const EdgeInsets.only(right: 16),
+        margin: EdgeInsets.only(right: isSmallScreen ? 12 : 16),
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.surface,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(isSmallScreen ? 8 : 12),
           boxShadow: [
             BoxShadow(
               color: Theme.of(context).shadowColor.withOpacity(0.1),
-              blurRadius: 8,
+              blurRadius: isSmallScreen ? 6 : 8,
               offset: const Offset(0, 2),
             ),
           ],
@@ -95,7 +98,7 @@ class PodcastCard extends StatelessWidget {
             Expanded(
               flex: 2,
               child: Padding(
-                padding: const EdgeInsets.all(12),
+                padding: EdgeInsets.all(isSmallScreen ? 8 : 12),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -103,7 +106,7 @@ class PodcastCard extends StatelessWidget {
                     Text(
                       podcast.displayTitle,
                       style: TextStyle(
-                        fontSize: 14,
+                        fontSize: isSmallScreen ? 12 : (isTablet ? 16 : 14),
                         fontWeight: FontWeight.w600,
                         color: Theme.of(context).colorScheme.onSurface,
                       ),
@@ -111,14 +114,14 @@ class PodcastCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                     
-                    const SizedBox(height: 4),
+                    SizedBox(height: isSmallScreen ? 2 : 4),
                     
                     // Host
                     if (podcast.displayHost.isNotEmpty)
                       Text(
                         podcast.displayHost,
                         style: TextStyle(
-                          fontSize: 12,
+                          fontSize: isSmallScreen ? 10 : (isTablet ? 14 : 12),
                           color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                         ),
                         maxLines: 1,
@@ -136,15 +139,18 @@ class PodcastCard extends StatelessWidget {
                             children: [
                               Icon(
                                 Icons.headphones,
-                                size: 12,
+                                size: isSmallScreen ? 10 : (isTablet ? 14 : 12),
                                 color: Theme.of(context).colorScheme.primary,
                               ),
-                              const SizedBox(width: 4),
-                              Text(
-                                '${podcast.totalEpisodes ?? 0}',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                              SizedBox(width: isSmallScreen ? 2 : 4),
+                              Flexible(
+                                child: Text(
+                                  _formatEpisodeCount(podcast.totalEpisodes ?? 0),
+                                  style: TextStyle(
+                                    fontSize: isSmallScreen ? 9 : (isTablet ? 13 : 11),
+                                    fontWeight: FontWeight.w500,
+                                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
+                                  ),
                                 ),
                               ),
                             ],
@@ -157,32 +163,38 @@ class PodcastCard extends StatelessWidget {
                             children: [
                               if (podcast.isFeatured)
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: isSmallScreen ? 3 : 4, 
+                                    vertical: isSmallScreen ? 1 : 2
+                                  ),
                                   decoration: BoxDecoration(
                                     color: Colors.green,
-                                    borderRadius: BorderRadius.circular(4),
+                                    borderRadius: BorderRadius.circular(isSmallScreen ? 3 : 4),
                                   ),
                                   child: Text(
                                     '★',
                                     style: TextStyle(
-                                      fontSize: 8,
+                                      fontSize: isSmallScreen ? 7 : (isTablet ? 10 : 8),
                                       color: Colors.white,
                                     ),
                                   ),
                                 ),
                               if (podcast.isFeatured && podcast.isPremium)
-                                const SizedBox(width: 4),
+                                SizedBox(width: isSmallScreen ? 2 : 4),
                               if (podcast.isPremium)
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: isSmallScreen ? 3 : 4, 
+                                    vertical: isSmallScreen ? 1 : 2
+                                  ),
                                   decoration: BoxDecoration(
                                     color: Colors.blue,
-                                    borderRadius: BorderRadius.circular(4),
+                                    borderRadius: BorderRadius.circular(isSmallScreen ? 3 : 4),
                                   ),
                                   child: Text(
                                     'P',
                                     style: TextStyle(
-                                      fontSize: 8,
+                                      fontSize: isSmallScreen ? 7 : (isTablet ? 10 : 8),
                                       color: Colors.white,
                                       fontWeight: FontWeight.bold,
                                     ),
@@ -257,22 +269,44 @@ class PodcastCard extends StatelessWidget {
 
   double _getResponsiveCardWidth(double screenWidth) {
     if (screenWidth < 360) {
-      return screenWidth * 0.40; // Small phones
+      return screenWidth * 0.42; // Small phones - slightly larger for better visibility
     } else if (screenWidth < 400) {
-      return screenWidth * 0.38; // Medium phones
+      return screenWidth * 0.40; // Medium phones
     } else if (screenWidth < 480) {
-      return screenWidth * 0.36; // Large phones
+      return screenWidth * 0.38; // Large phones
     } else if (screenWidth < 600) {
-      return screenWidth * 0.34; // Very large phones
+      return screenWidth * 0.36; // Very large phones
     } else if (screenWidth < 768) {
-      return screenWidth * 0.32; // Small tablets
+      return screenWidth * 0.34; // Small tablets
+    } else if (screenWidth < 1024) {
+      return screenWidth * 0.30; // Medium tablets
     } else {
-      return screenWidth * 0.28; // Large tablets
+      return screenWidth * 0.26; // Large tablets/desktop
     }
   }
 
-  double _getResponsiveCardHeight() {
-    return 200; // Fixed height for consistency
+  double _getResponsiveCardHeight(double screenHeight) {
+    if (screenHeight < 600) {
+      return 180; // Small screens
+    } else if (screenHeight < 800) {
+      return 200; // Medium screens
+    } else {
+      return 220; // Large screens
+    }
+  }
+
+  String _formatEpisodeCount(int count) {
+    if (count == 0) {
+      return '0 episodes';
+    } else if (count == 1) {
+      return '1 episode';
+    } else if (count < 1000) {
+      return '$count episodes';
+    } else if (count < 1000000) {
+      return '${(count / 1000).toStringAsFixed(1)}K episodes';
+    } else {
+      return '${(count / 1000000).toStringAsFixed(1)}M episodes';
+    }
   }
 }
 
@@ -289,16 +323,18 @@ class ShimmerPodcastCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
     final cardWidth = width ?? _getResponsiveCardWidth(screenWidth);
-    final cardHeight = height ?? _getResponsiveCardHeight();
+    final cardHeight = height ?? _getResponsiveCardHeight(screenHeight);
+    final isSmallScreen = screenWidth < 400;
 
     return Container(
       width: cardWidth,
       height: cardHeight,
-      margin: const EdgeInsets.only(right: 16),
+      margin: EdgeInsets.only(right: isSmallScreen ? 12 : 16),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(isSmallScreen ? 8 : 12),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -383,21 +419,29 @@ class ShimmerPodcastCard extends StatelessWidget {
 
   double _getResponsiveCardWidth(double screenWidth) {
     if (screenWidth < 360) {
-      return screenWidth * 0.40;
+      return screenWidth * 0.42; // Small phones - slightly larger for better visibility
     } else if (screenWidth < 400) {
-      return screenWidth * 0.38;
+      return screenWidth * 0.40; // Medium phones
     } else if (screenWidth < 480) {
-      return screenWidth * 0.36;
+      return screenWidth * 0.38; // Large phones
     } else if (screenWidth < 600) {
-      return screenWidth * 0.34;
+      return screenWidth * 0.36; // Very large phones
     } else if (screenWidth < 768) {
-      return screenWidth * 0.32;
+      return screenWidth * 0.34; // Small tablets
+    } else if (screenWidth < 1024) {
+      return screenWidth * 0.30; // Medium tablets
     } else {
-      return screenWidth * 0.28;
+      return screenWidth * 0.26; // Large tablets/desktop
     }
   }
 
-  double _getResponsiveCardHeight() {
-    return 200;
+  double _getResponsiveCardHeight(double screenHeight) {
+    if (screenHeight < 600) {
+      return 180; // Small screens
+    } else if (screenHeight < 800) {
+      return 200; // Medium screens
+    } else {
+      return 220; // Large screens
+    }
   }
 }

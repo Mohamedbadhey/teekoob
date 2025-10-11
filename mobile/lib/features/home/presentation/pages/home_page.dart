@@ -1189,34 +1189,30 @@ class _HomePageState extends State<HomePage> {
   double _getResponsiveHorizontalCardWidth() {
     final screenWidth = MediaQuery.of(context).size.width;
     if (screenWidth < 360) {
-      return screenWidth * 0.40; // Small phones - more conservative
+      return screenWidth * 0.42; // Small phones - slightly larger for better visibility
     } else if (screenWidth < 400) {
-      return screenWidth * 0.38; // Medium phones - more conservative
+      return screenWidth * 0.40; // Medium phones
     } else if (screenWidth < 480) {
-      return screenWidth * 0.36; // Large phones - more conservative
+      return screenWidth * 0.38; // Large phones
     } else if (screenWidth < 600) {
-      return screenWidth * 0.34; // Very large phones - more conservative
+      return screenWidth * 0.36; // Very large phones
     } else if (screenWidth < 768) {
-      return screenWidth * 0.32; // Small tablets - more conservative
+      return screenWidth * 0.34; // Small tablets
+    } else if (screenWidth < 1024) {
+      return screenWidth * 0.30; // Medium tablets
     } else {
-      return screenWidth * 0.28; // Large tablets - more conservative
+      return screenWidth * 0.26; // Large tablets/desktop
     }
   }
 
   double _getResponsiveHorizontalCardHeight() {
     final screenHeight = MediaQuery.of(context).size.height;
     if (screenHeight < 600) {
-      return screenHeight * 0.26; // Very small screens - content fitted with overflow prevention
-    } else if (screenHeight < 700) {
-      return screenHeight * 0.24; // Small screens - content fitted with overflow prevention
+      return 180; // Small screens
     } else if (screenHeight < 800) {
-      return screenHeight * 0.22; // Medium screens - content fitted with overflow prevention
-    } else if (screenHeight < 900) {
-      return screenHeight * 0.20; // Large screens - content fitted with overflow prevention
-    } else if (screenHeight < 1000) {
-      return screenHeight * 0.18; // Very large screens - content fitted with overflow prevention
+      return 200; // Medium screens
     } else {
-      return screenHeight * 0.16; // Extra large screens - content fitted with overflow prevention
+      return 220; // Large screens
     }
   }
 
