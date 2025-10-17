@@ -286,10 +286,10 @@ class _BookAudioPlayerPageState extends State<BookAudioPlayerPage>
   @override
   Widget build(BuildContext context) {
     return PopScope(
-      canPop: true, // Allow popping by default
+      canPop: false, // Prevent automatic popping to handle it manually
       onPopInvokedWithResult: (didPop, result) async {
         if (!didPop) {
-          // If pop was prevented, handle it manually
+          // Handle back navigation manually
           _handleBackNavigation();
         }
       },

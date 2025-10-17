@@ -261,7 +261,19 @@ class NetworkService {
         );
       case DioExceptionType.badResponse:
         final statusCode = error.response?.statusCode;
-        final message = error.response?.data?['message'] ?? 'Bad response';
+        dynamic respData = error.response?.data;
+        String message;
+        if (respData is Map) {
+          message = (respData['message'] ?? respData['error'] ?? 'Bad response').toString();
+        } else if (respData is String) {
+          message = respData;
+        } else {
+          message = 'Bad response';
+        }
+        // Friendlier message for rate limiting
+        if (statusCode == 429) {
+          message = 'Too many requests. Please try again later.';
+        }
         return DioException(
           requestOptions: error.requestOptions,
           error: 'HTTP $statusCode: $message',

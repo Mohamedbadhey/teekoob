@@ -17,10 +17,18 @@ class _FloatingAudioPlayerState extends State<FloatingAudioPlayer>
   late Animation<Offset> _slideAnimation;
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
+  late AnimationController _expandController;
+  late Animation<double> _expandAnimation;
   
   // Dragging state
   Offset _position = const Offset(16, 0); // Default position
   bool _isDragging = false;
+  bool _isExpanded = false;
+  
+  // Audio controls state
+  double _volume = 1.0;
+  double _playbackSpeed = 1.0;
+  bool _isSeeking = false;
 
   @override
   void initState() {
@@ -52,6 +60,19 @@ class _FloatingAudioPlayerState extends State<FloatingAudioPlayer>
       curve: Curves.easeInOut,
     ));
     
+    _expandController = AnimationController(
+      duration: const Duration(milliseconds: 400),
+      vsync: this,
+    );
+    
+    _expandAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _expandController,
+      curve: Curves.easeInOut,
+    ));
+    
     // Start slide animation
     _slideController.forward();
     
@@ -63,6 +84,7 @@ class _FloatingAudioPlayerState extends State<FloatingAudioPlayer>
   void dispose() {
     _slideController.dispose();
     _pulseController.dispose();
+    _expandController.dispose();
     GlobalAudioPlayerService().removeListener(_onAudioServiceChanged);
     super.dispose();
   }
@@ -91,6 +113,77 @@ class _FloatingAudioPlayerState extends State<FloatingAudioPlayer>
         // We need to get the podcast ID from the episode
         AppRouter.goToPodcastEpisode(context, '', audioService.currentItem!.id);
       }
+    }
+  }
+
+  void _toggleExpanded() {
+    setState(() {
+      _isExpanded = !_isExpanded;
+    });
+    
+    if (_isExpanded) {
+      _expandController.forward();
+    } else {
+      _expandController.reverse();
+    }
+    
+    HapticFeedback.lightImpact();
+  }
+
+  void _skipBackward() {
+    final audioService = GlobalAudioPlayerService();
+    final newPosition = audioService.position - const Duration(seconds: 15);
+    audioService.seekTo(newPosition < Duration.zero ? Duration.zero : newPosition);
+    HapticFeedback.lightImpact();
+  }
+
+  void _skipForward() {
+    final audioService = GlobalAudioPlayerService();
+    final newPosition = audioService.position + const Duration(seconds: 15);
+    final maxPosition = audioService.duration;
+    audioService.seekTo(newPosition > maxPosition ? maxPosition : newPosition);
+    HapticFeedback.lightImpact();
+  }
+
+  void _playPreviousEpisode() {
+    final audioService = GlobalAudioPlayerService();
+    if (audioService.hasPreviousEpisode) {
+      audioService.playPreviousEpisode();
+      HapticFeedback.lightImpact();
+    }
+  }
+
+  void _playNextEpisode() {
+    final audioService = GlobalAudioPlayerService();
+    if (audioService.hasNextEpisode) {
+      audioService.playNextEpisode();
+      HapticFeedback.lightImpact();
+    }
+  }
+
+  void _changePlaybackSpeed() {
+    final speeds = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
+    final currentIndex = speeds.indexOf(_playbackSpeed);
+    final nextIndex = (currentIndex + 1) % speeds.length;
+    
+    setState(() {
+      _playbackSpeed = speeds[nextIndex];
+    });
+    
+    GlobalAudioPlayerService().setPlaybackSpeed(_playbackSpeed);
+    HapticFeedback.lightImpact();
+  }
+
+  String _formatDuration(Duration duration) {
+    String twoDigits(int n) => n.toString().padLeft(2, '0');
+    final hours = duration.inHours;
+    final minutes = duration.inMinutes.remainder(60);
+    final seconds = duration.inSeconds.remainder(60);
+    
+    if (hours > 0) {
+      return '${twoDigits(hours)}:${twoDigits(minutes)}:${twoDigits(seconds)}';
+    } else {
+      return '${twoDigits(minutes)}:${twoDigits(seconds)}';
     }
   }
 
@@ -160,6 +253,7 @@ class _FloatingAudioPlayerState extends State<FloatingAudioPlayer>
 
         final audioService = GlobalAudioPlayerService();
         final currentItem = audioService.currentItem!;
+        final progress = audioService.progress;
 
         return Positioned(
           left: _position.dx,
@@ -170,150 +264,374 @@ class _FloatingAudioPlayerState extends State<FloatingAudioPlayer>
             onPanEnd: _onPanEnd,
             child: SlideTransition(
               position: _slideAnimation,
-              child: Container(
-                width: 200, // Fixed width for better dragging
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                width: _isExpanded ? 320 : 280,
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surface,
-                  borderRadius: BorderRadius.circular(AppConfig.defaultBorderRadius),
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Theme.of(context).colorScheme.surface,
+                      Theme.of(context).colorScheme.surface.withOpacity(0.95),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: Theme.of(context).colorScheme.outline.withOpacity(0.1),
+                    width: 1,
+                  ),
                   boxShadow: [
                     BoxShadow(
-                      color: Theme.of(context).shadowColor.withOpacity(_isDragging ? 0.4 : 0.2),
-                      blurRadius: _isDragging ? 16 : 12,
-                      offset: const Offset(0, 4),
+                      color: Theme.of(context).shadowColor.withOpacity(_isDragging ? 0.4 : 0.15),
+                      blurRadius: _isDragging ? 20 : 15,
+                      offset: const Offset(0, 8),
+                      spreadRadius: _isDragging ? 2 : 0,
                     ),
                   ],
                 ),
                 child: Material(
                   color: Colors.transparent,
-                  child: InkWell(
-                    onTap: _navigateToPlayer,
-                    borderRadius: BorderRadius.circular(AppConfig.defaultBorderRadius),
-                    child: Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: Row(
-                        children: [
-                          // Cover Image
-                          Container(
-                            width: 48,
-                            height: 48,
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(8),
-                              color: Theme.of(context).colorScheme.outline.withOpacity(0.1),
-                            ),
-                            child: currentItem.coverImageUrl != null && currentItem.coverImageUrl!.isNotEmpty
-                                ? ClipRRect(
-                                    borderRadius: BorderRadius.circular(8),
-                                    child: Image.network(
-                                      currentItem.coverImageUrl!,
-                                      fit: BoxFit.cover,
-                                      errorBuilder: (context, error, stackTrace) {
-                                        return Icon(
-                                          currentItem.type == AudioType.book ? Icons.book : Icons.radio,
-                                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
-                                          size: 24,
-                                        );
-                                      },
-                                    ),
-                                  )
-                                : Icon(
-                                    currentItem.type == AudioType.book ? Icons.book : Icons.radio,
-                                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
-                                    size: 24,
-                                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Progress bar
+                      Container(
+                        height: 3,
+                        margin: const EdgeInsets.only(top: 8),
+                        child: LinearProgressIndicator(
+                          value: progress,
+                          backgroundColor: Theme.of(context).colorScheme.outline.withOpacity(0.2),
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Theme.of(context).colorScheme.primary,
                           ),
-                          const SizedBox(width: 12),
-                          
-                          // Content
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  currentItem.title,
-                                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  currentItem.author ?? 'Unknown',
-                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          
-                          // Play/Pause Button
-                          GestureDetector(
-                            onTap: () {
-                              if (audioService.isPlaying) {
-                                audioService.pause();
-                              } else {
-                                audioService.resume();
-                              }
-                            },
-                            child: Container(
-                              width: 32,
-                              height: 32,
-                              decoration: BoxDecoration(
-                                color: Theme.of(context).colorScheme.primary,
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                              child: Icon(
-                                audioService.isPlaying ? Icons.pause : Icons.play_arrow,
-                                color: Theme.of(context).colorScheme.onPrimary,
-                                size: 20,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          
-                          // Drag Handle
-                          Container(
-                            width: 24,
-                            height: 24,
-                            decoration: BoxDecoration(
-                              color: Theme.of(context).colorScheme.outline.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Icon(
-                              Icons.drag_handle,
-                              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
-                              size: 14,
-                            ),
-                          ),
-                          const SizedBox(width: 4),
-                          
-                          // Close Button
-                          GestureDetector(
-                            onTap: () {
-                              audioService.stop();
-                            },
-                            child: Container(
-                              width: 32,
-                              height: 32,
-                              decoration: BoxDecoration(
-                                color: Theme.of(context).colorScheme.outline.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                              child: Icon(
-                                Icons.close,
-                                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-                                size: 16,
-                              ),
-                            ),
-                          ),
-                        ],
+                        ),
                       ),
-                    ),
+                      
+                      // Main content
+                      InkWell(
+                        onTap: _navigateToPlayer,
+                        borderRadius: BorderRadius.circular(20),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            children: [
+                              // Top row with cover, info, and controls
+                              Row(
+                                children: [
+                                  // Cover Image with pulse animation
+                                  AnimatedBuilder(
+                                    animation: _pulseAnimation,
+                                    builder: (context, child) {
+                                      return Transform.scale(
+                                        scale: audioService.isPlaying ? _pulseAnimation.value : 1.0,
+                                        child: Container(
+                                          width: 56,
+                                          height: 56,
+                                          decoration: BoxDecoration(
+                                            borderRadius: BorderRadius.circular(12),
+                                            gradient: LinearGradient(
+                                              begin: Alignment.topLeft,
+                                              end: Alignment.bottomRight,
+                                              colors: [
+                                                Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                                                Theme.of(context).colorScheme.secondary.withOpacity(0.1),
+                                              ],
+                                            ),
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: Theme.of(context).colorScheme.primary.withOpacity(0.2),
+                                                blurRadius: 8,
+                                                offset: const Offset(0, 2),
+                                              ),
+                                            ],
+                                          ),
+                                          child: currentItem.coverImageUrl != null && currentItem.coverImageUrl!.isNotEmpty
+                                              ? ClipRRect(
+                                                  borderRadius: BorderRadius.circular(12),
+                                                  child: Image.network(
+                                                    currentItem.coverImageUrl!,
+                                                    fit: BoxFit.cover,
+                                                    errorBuilder: (context, error, stackTrace) {
+                                                      return Icon(
+                                                        currentItem.type == AudioType.book ? Icons.book : Icons.radio,
+                                                        color: Theme.of(context).colorScheme.primary,
+                                                        size: 28,
+                                                      );
+                                                    },
+                                                  ),
+                                                )
+                                              : Icon(
+                                                  currentItem.type == AudioType.book ? Icons.book : Icons.radio,
+                                                  color: Theme.of(context).colorScheme.primary,
+                                                  size: 28,
+                                                ),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                  const SizedBox(width: 16),
+                                  
+                                  // Content
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(
+                                          currentItem.title,
+                                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                            fontWeight: FontWeight.w600,
+                                            color: Theme.of(context).colorScheme.onSurface,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          currentItem.displaySubtitle,
+                                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          '${_formatDuration(audioService.position)} / ${_formatDuration(audioService.duration)}',
+                                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                            color: Theme.of(context).colorScheme.primary,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  
+                                  // Play/Pause Button
+                                  GestureDetector(
+                                    onTap: () {
+                                      if (audioService.isPlaying) {
+                                        audioService.pause();
+                                      } else {
+                                        audioService.resume();
+                                      }
+                                      HapticFeedback.lightImpact();
+                                    },
+                                    child: Container(
+                                      width: 44,
+                                      height: 44,
+                                      decoration: BoxDecoration(
+                                        gradient: LinearGradient(
+                                          begin: Alignment.topLeft,
+                                          end: Alignment.bottomRight,
+                                          colors: [
+                                            Theme.of(context).colorScheme.primary,
+                                            Theme.of(context).colorScheme.primary.withOpacity(0.8),
+                                          ],
+                                        ),
+                                        borderRadius: BorderRadius.circular(22),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
+                                            blurRadius: 8,
+                                            offset: const Offset(0, 2),
+                                          ),
+                                        ],
+                                      ),
+                                      child: Icon(
+                                        audioService.isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                                        color: Theme.of(context).colorScheme.onPrimary,
+                                        size: 24,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  
+                                  // Expand/Collapse Button
+                                  GestureDetector(
+                                    onTap: _toggleExpanded,
+                                    child: Container(
+                                      width: 36,
+                                      height: 36,
+                                      decoration: BoxDecoration(
+                                        color: Theme.of(context).colorScheme.outline.withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(18),
+                                      ),
+                                      child: AnimatedRotation(
+                                        turns: _isExpanded ? 0.5 : 0.0,
+                                        duration: const Duration(milliseconds: 300),
+                                        child: Icon(
+                                          Icons.expand_more_rounded,
+                                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                                          size: 20,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  
+                                  const SizedBox(width: 8),
+                                  
+                                  // Close Button
+                                  GestureDetector(
+                                    onTap: () {
+                                      audioService.stop();
+                                      HapticFeedback.lightImpact();
+                                    },
+                                    child: Container(
+                                      width: 36,
+                                      height: 36,
+                                      decoration: BoxDecoration(
+                                        color: Theme.of(context).colorScheme.error.withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(18),
+                                      ),
+                                      child: Icon(
+                                        Icons.close_rounded,
+                                        color: Theme.of(context).colorScheme.error,
+                                        size: 18,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              
+                              // Expandable controls section
+                              AnimatedBuilder(
+                                animation: _expandAnimation,
+                                builder: (context, child) {
+                                  return SizeTransition(
+                                    sizeFactor: _expandAnimation,
+                                    child: Container(
+                                      margin: const EdgeInsets.only(top: 16),
+                                      padding: const EdgeInsets.all(16),
+                                      decoration: BoxDecoration(
+                                        color: Theme.of(context).colorScheme.surface.withOpacity(0.5),
+                                        borderRadius: BorderRadius.circular(16),
+                                        border: Border.all(
+                                          color: Theme.of(context).colorScheme.outline.withOpacity(0.1),
+                                        ),
+                                      ),
+                                      child: Column(
+                                        children: [
+                                          // Episode navigation controls (for podcasts)
+                                          if (currentItem.type == AudioType.podcast) ...[
+                                            Row(
+                                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                              children: [
+                                                // Previous episode
+                                                _buildControlButton(
+                                                  icon: Icons.skip_previous_rounded,
+                                                  onTap: _playPreviousEpisode,
+                                                  tooltip: 'Previous episode',
+                                                ),
+                                                
+                                                // Next episode
+                                                _buildControlButton(
+                                                  icon: Icons.skip_next_rounded,
+                                                  onTap: _playNextEpisode,
+                                                  tooltip: 'Next episode',
+                                                ),
+                                              ],
+                                            ),
+                                            const SizedBox(height: 12),
+                                          ],
+                                          
+                                          // Skip controls and speed
+                                          Row(
+                                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                            children: [
+                                              // Skip backward
+                                              _buildControlButton(
+                                                icon: Icons.replay_10_rounded,
+                                                onTap: _skipBackward,
+                                                tooltip: 'Skip 15s back',
+                                              ),
+                                              
+                                              // Speed control
+                                              _buildControlButton(
+                                                icon: Icons.speed_rounded,
+                                                onTap: _changePlaybackSpeed,
+                                                tooltip: '${_playbackSpeed}x speed',
+                                                child: Text(
+                                                  '${_playbackSpeed}x',
+                                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                                    fontWeight: FontWeight.w600,
+                                                    color: Theme.of(context).colorScheme.primary,
+                                                  ),
+                                                ),
+                                              ),
+                                              
+                                              // Skip forward
+                                              _buildControlButton(
+                                                icon: Icons.forward_10_rounded,
+                                                onTap: _skipForward,
+                                                tooltip: 'Skip 15s forward',
+                                              ),
+                                            ],
+                                          ),
+                                          
+                                          const SizedBox(height: 16),
+                                          
+                                          // Seek bar
+                                          Row(
+                                            children: [
+                                              Text(
+                                                _formatDuration(audioService.position),
+                                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                                                ),
+                                              ),
+                                              Expanded(
+                                                child: SliderTheme(
+                                                  data: SliderTheme.of(context).copyWith(
+                                                    activeTrackColor: Theme.of(context).colorScheme.primary,
+                                                    inactiveTrackColor: Theme.of(context).colorScheme.outline.withOpacity(0.2),
+                                                    thumbColor: Theme.of(context).colorScheme.primary,
+                                                    thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 8),
+                                                    trackHeight: 3,
+                                                  ),
+                                                  child: Slider(
+                                                    value: progress.clamp(0.0, 1.0),
+                                                    onChanged: (value) {
+                                                      if (!_isSeeking) {
+                                                        setState(() {
+                                                          _isSeeking = true;
+                                                        });
+                                                      }
+                                                    },
+                                                    onChangeEnd: (value) {
+                                                      final newPosition = Duration(
+                                                        milliseconds: (value * audioService.duration.inMilliseconds).round(),
+                                                      );
+                                                      audioService.seekTo(newPosition);
+                                                      setState(() {
+                                                        _isSeeking = false;
+                                                      });
+                                                      HapticFeedback.lightImpact();
+                                                    },
+                                                  ),
+                                                ),
+                                              ),
+                                              Text(
+                                                _formatDuration(audioService.duration),
+                                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -321,6 +639,36 @@ class _FloatingAudioPlayerState extends State<FloatingAudioPlayer>
           ),
         );
       },
+    );
+  }
+
+  Widget _buildControlButton({
+    required IconData icon,
+    required VoidCallback onTap,
+    String? tooltip,
+    Widget? child,
+  }) {
+    return Tooltip(
+      message: tooltip ?? '',
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          width: 48,
+          height: 48,
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.outline.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(
+              color: Theme.of(context).colorScheme.outline.withOpacity(0.2),
+            ),
+          ),
+          child: child ?? Icon(
+            icon,
+            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
+            size: 20,
+          ),
+        ),
+      ),
     );
   }
 }

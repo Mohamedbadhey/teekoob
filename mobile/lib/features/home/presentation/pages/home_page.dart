@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:teekoob/core/services/localization_service.dart';
@@ -19,7 +21,10 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage> {
+class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin<HomePage> {
+  // Initialization control
+  bool _initialized = false;
+  final List<Timer> _scheduledTimers = [];
   List<Book> _featuredBooks = [];
   List<Book> _newReleases = [];
   List<Book> _recentBooks = [];
@@ -40,6 +45,14 @@ class _HomePageState extends State<HomePage> {
   List<Book> _originalRecentBooks = [];
   List<Book> _originalFreeBooks = [];
   List<Book> _originalRandomBooks = [];
+  
+  // Error states for each section
+  String? _featuredBooksError;
+  String? _newReleasesError;
+  String? _recentBooksError;
+  String? _freeBooksError;
+  String? _randomBooksError;
+  String? _categoriesError;
 
   // Podcast state variables
   List<Podcast> _featuredPodcasts = [];
@@ -59,56 +72,144 @@ class _HomePageState extends State<HomePage> {
   List<Podcast> _originalRecentPodcasts = [];
   List<Podcast> _originalFreePodcasts = [];
   List<Podcast> _originalRandomPodcasts = [];
+  
+  // Error states for podcast sections
+  String? _featuredPodcastsError;
+  String? _newReleasePodcastsError;
+  String? _recentPodcastsError;
+  String? _freePodcastsError;
+  String? _randomPodcastsError;
 
   @override
   void initState() {
     super.initState();
-    _loadInitialData();
-    _loadLibraryData();
+    // Initialize only once to avoid repeated API storms when revisiting
+    if (!_initialized) {
+      _initialized = true;
+      _loadEssentialData();
+    }
   }
 
-  void _loadInitialData() {
-    // Set all loading states to true initially
-    setState(() {
-      _isLoadingFeatured = true;
-      _isLoadingNewReleases = true;
-      _isLoadingRecentBooks = true;
-      _isLoadingFreeBooks = true;
-      _isLoadingRandomBooks = true;
-      _isLoadingCategories = true;
-      
-      // Podcast loading states
-      _isLoadingFeaturedPodcasts = true;
-      _isLoadingNewReleasePodcasts = true;
-      _isLoadingRecentPodcasts = true;
-      _isLoadingFreePodcasts = true;
-      _isLoadingRandomPodcasts = true;
-    });
+  @override
+  void dispose() {
+    // Cancel any scheduled timers to prevent setState or dispatch after dispose
+    for (final timer in _scheduledTimers) {
+      if (timer.isActive) timer.cancel();
+    }
+    _scheduledTimers.clear();
+    super.dispose();
+  }
+
+  void _loadEssentialData() {
+    print('🏠 HomePage: Loading essential data first...');
     
-    // Load featured books (for featured section)
-    context.read<BooksBloc>().add(const LoadFeaturedBooks(limit: 6));
+    // Load only the most important data first
+    if (!_isLoadingFeatured && _featuredBooks.isEmpty) {
+      setState(() {
+        _isLoadingFeatured = true;
+      });
+      context.read<BooksBloc>().add(const LoadFeaturedBooks(limit: 6));
+    }
+    if (!_isLoadingCategories && _categories.isEmpty) {
+      setState(() {
+        _isLoadingCategories = true;
+      });
+      context.read<BooksBloc>().add(const LoadCategories());
+    }
     
-    // Load new releases (for new releases section)
-    context.read<BooksBloc>().add(const LoadNewReleases(limit: 10));
+    // Load library data
+    _loadLibraryData();
     
-    // Load recent books (sorted by date - most recent first)
-    context.read<BooksBloc>().add(const LoadRecentBooks(limit: 6));
+    // Load additional data with delays to prevent overwhelming the system
+    _loadAdditionalDataWithDelay();
+  }
+
+  void _loadAdditionalDataWithDelay() {
+    // Load new releases after a short delay
+    _scheduledTimers.add(Timer(const Duration(milliseconds: 300), () {
+      if (!mounted) return;
+      if (!_isLoadingNewReleases && _newReleases.isEmpty) {
+        setState(() => _isLoadingNewReleases = true);
+        context.read<BooksBloc>().add(const LoadNewReleases(limit: 10));
+      }
+    }));
+    
+    // Load recent books after another delay
+    _scheduledTimers.add(Timer(const Duration(milliseconds: 600), () {
+      if (!mounted) return;
+      if (!_isLoadingRecentBooks && _recentBooks.isEmpty) {
+        setState(() => _isLoadingRecentBooks = true);
+        context.read<BooksBloc>().add(const LoadRecentBooks(limit: 6));
+      }
+    }));
     
     // Load free books
-    context.read<BooksBloc>().add(const LoadFreeBooks(limit: 6));
+    _scheduledTimers.add(Timer(const Duration(milliseconds: 900), () {
+      if (!mounted) return;
+      if (!_isLoadingFreeBooks && _freeBooks.isEmpty) {
+        setState(() => _isLoadingFreeBooks = true);
+        context.read<BooksBloc>().add(const LoadFreeBooks(limit: 6));
+      }
+    }));
     
-    // Load random books for recommendations
-    context.read<BooksBloc>().add(const LoadRandomBooks(limit: 5));
+    // Load random books
+    _scheduledTimers.add(Timer(const Duration(milliseconds: 1200), () {
+      if (!mounted) return;
+      if (!_isLoadingRandomBooks && _randomBooks.isEmpty) {
+        setState(() => _isLoadingRandomBooks = true);
+        context.read<BooksBloc>().add(const LoadRandomBooks(limit: 5));
+      }
+    }));
     
-    // Load categories
-    context.read<BooksBloc>().add(const LoadCategories());
+    // Load podcasts with further delays
+    _loadPodcastsWithDelay();
+  }
+
+  void _loadPodcastsWithDelay() {
+    // Load featured podcasts
+    _scheduledTimers.add(Timer(const Duration(milliseconds: 1500), () {
+      if (!mounted) return;
+      if (!_isLoadingFeaturedPodcasts && _featuredPodcasts.isEmpty) {
+        setState(() => _isLoadingFeaturedPodcasts = true);
+        context.read<PodcastsBloc>().add(const LoadFeaturedPodcasts(limit: 6));
+      }
+    }));
     
-    // Load podcasts
-    context.read<PodcastsBloc>().add(const LoadFeaturedPodcasts(limit: 6));
-    context.read<PodcastsBloc>().add(const LoadNewReleasePodcasts(limit: 10));
-    context.read<PodcastsBloc>().add(const LoadRecentPodcasts(limit: 6));
-    context.read<PodcastsBloc>().add(const LoadFreePodcasts(limit: 6));
-    context.read<PodcastsBloc>().add(const LoadRandomPodcasts(limit: 5));
+    // Load new release podcasts
+    _scheduledTimers.add(Timer(const Duration(milliseconds: 1800), () {
+      if (!mounted) return;
+      if (!_isLoadingNewReleasePodcasts && _newReleasePodcasts.isEmpty) {
+        setState(() => _isLoadingNewReleasePodcasts = true);
+        context.read<PodcastsBloc>().add(const LoadNewReleasePodcasts(limit: 10));
+      }
+    }));
+    
+    // Load recent podcasts
+    _scheduledTimers.add(Timer(const Duration(milliseconds: 2100), () {
+      if (!mounted) return;
+      if (!_isLoadingRecentPodcasts && _recentPodcasts.isEmpty) {
+        setState(() => _isLoadingRecentPodcasts = true);
+        context.read<PodcastsBloc>().add(const LoadRecentPodcasts(limit: 6));
+      }
+    }));
+    
+    // Load free podcasts
+    _scheduledTimers.add(Timer(const Duration(milliseconds: 2400), () {
+      if (!mounted) return;
+      if (!_isLoadingFreePodcasts && _freePodcasts.isEmpty) {
+        setState(() => _isLoadingFreePodcasts = true);
+        context.read<PodcastsBloc>().add(const LoadFreePodcasts(limit: 6));
+      }
+    }));
+    
+    // Load random podcasts
+    _scheduledTimers.add(Timer(const Duration(milliseconds: 2700), () {
+      if (!mounted) return;
+      if (!_isLoadingRandomPodcasts && _randomPodcasts.isEmpty) {
+        setState(() => _isLoadingRandomPodcasts = true);
+        context.read<PodcastsBloc>().add(const LoadRandomPodcasts(limit: 5));
+      }
+    }));
   }
 
   void _loadLibraryData() {
@@ -183,104 +284,134 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     return MultiBlocListener(
       listeners: [
         // Books Bloc Listener
         BlocListener<BooksBloc, BooksState>(
           listener: (context, state) {
+            if (!mounted) return; // Prevent setState on unmounted widget
+            
             if (state is FeaturedBooksLoaded) {
               setState(() {
                 _featuredBooks = state.books;
-                _originalFeaturedBooks = List.from(state.books); // Store original
+                _originalFeaturedBooks = List.from(state.books);
                 _isLoadingFeatured = false;
               });
-              print('🏠 HomePage: Featured books loaded: ${state.books.length}');
-              print('📚 HomePage: Featured book titles: ${state.books.map((b) => b.title).toList()}');
+              print('🏠 Featured books loaded: ${state.books.length}');
             } else if (state is NewReleasesLoaded) {
               setState(() {
                 _newReleases = state.books;
-                _originalNewReleases = List.from(state.books); // Store original
+                _originalNewReleases = List.from(state.books);
                 _isLoadingNewReleases = false;
               });
-              print('🏠 HomePage: New releases loaded: ${state.books.length}');
-              print('📚 HomePage: New release titles: ${state.books.map((b) => b.title).toList()}');
+              print('🏠 New releases loaded: ${state.books.length}');
             } else if (state is RecentBooksLoaded) {
               setState(() {
                 _recentBooks = state.books;
-                _originalRecentBooks = List.from(state.books); // Store original
+                _originalRecentBooks = List.from(state.books);
                 _isLoadingRecentBooks = false;
               });
-              print('🏠 HomePage: Recent books loaded: ${state.books.length}');
-              print('📚 HomePage: Recent book titles: ${state.books.map((b) => b.title).toList()}');
+              print('🏠 Recent books loaded: ${state.books.length}');
             } else if (state is FreeBooksLoaded) {
               setState(() {
                 _freeBooks = state.books;
-                _originalFreeBooks = List.from(state.books); // Store original
+                _originalFreeBooks = List.from(state.books);
                 _isLoadingFreeBooks = false;
               });
-              print('🏠 HomePage: Free books loaded: ${state.books.length}');
-              print('📚 HomePage: Free book titles: ${state.books.map((b) => b.title).toList()}');
+              print('🏠 Free books loaded: ${state.books.length}');
             } else if (state is RandomBooksLoaded) {
-              print('🏠 HomePage: RandomBooksLoaded state received with ${state.books.length} books');
-              print('📚 HomePage: Book titles: ${state.books.map((b) => b.title).toList()}');
               setState(() {
                 _randomBooks = state.books;
-                _originalRandomBooks = List.from(state.books); // Store original
+                _originalRandomBooks = List.from(state.books);
                 _isLoadingRandomBooks = false;
               });
-              print('✅ HomePage: Updated _randomBooks state with ${_randomBooks.length} books');
-              print('📖 HomePage: Final _randomBooks titles: ${_randomBooks.map((b) => b.title).toList()}');
+              print('🏠 Random books loaded: ${state.books.length}');
             } else if (state is CategoriesLoaded) {
               setState(() {
                 _categories = state.categories;
                 _isLoadingCategories = false;
               });
-              print('🏠 HomePage: Categories loaded: ${state.categories.length}');
+              print('🏠 Categories loaded: ${state.categories.length}');
             } else if (state is BooksError) {
-              print('🏠 HomePage: Books error: ${state.message}');
+              print('❌ Books error: ${state.message}');
+              // Handle error gracefully - set loading states to false and store error
+              setState(() {
+                _isLoadingFeatured = false;
+                _isLoadingNewReleases = false;
+                _isLoadingRecentBooks = false;
+                _isLoadingFreeBooks = false;
+                _isLoadingRandomBooks = false;
+                _isLoadingCategories = false;
+                
+                // Set appropriate error messages based on context
+                if (_isLoadingFeatured) _featuredBooksError = state.message;
+                if (_isLoadingNewReleases) _newReleasesError = state.message;
+                if (_isLoadingRecentBooks) _recentBooksError = state.message;
+                if (_isLoadingFreeBooks) _freeBooksError = state.message;
+                if (_isLoadingRandomBooks) _randomBooksError = state.message;
+                if (_isLoadingCategories) _categoriesError = state.message;
+              });
             }
           },
         ),
         // Podcasts Bloc Listener
         BlocListener<PodcastsBloc, PodcastsState>(
           listener: (context, state) {
+            if (!mounted) return; // Prevent setState on unmounted widget
+            
             if (state is FeaturedPodcastsLoaded) {
               setState(() {
                 _featuredPodcasts = state.podcasts;
                 _originalFeaturedPodcasts = List.from(state.podcasts);
                 _isLoadingFeaturedPodcasts = false;
               });
-              print('🏠 HomePage: Featured podcasts loaded: ${state.podcasts.length}');
+              print('🏠 Featured podcasts loaded: ${state.podcasts.length}');
             } else if (state is NewReleasePodcastsLoaded) {
               setState(() {
                 _newReleasePodcasts = state.podcasts;
                 _originalNewReleasePodcasts = List.from(state.podcasts);
                 _isLoadingNewReleasePodcasts = false;
               });
-              print('🏠 HomePage: New release podcasts loaded: ${state.podcasts.length}');
+              print('🏠 New release podcasts loaded: ${state.podcasts.length}');
             } else if (state is RecentPodcastsLoaded) {
               setState(() {
                 _recentPodcasts = state.podcasts;
                 _originalRecentPodcasts = List.from(state.podcasts);
                 _isLoadingRecentPodcasts = false;
               });
-              print('🏠 HomePage: Recent podcasts loaded: ${state.podcasts.length}');
+              print('🏠 Recent podcasts loaded: ${state.podcasts.length}');
             } else if (state is FreePodcastsLoaded) {
               setState(() {
                 _freePodcasts = state.podcasts;
                 _originalFreePodcasts = List.from(state.podcasts);
                 _isLoadingFreePodcasts = false;
               });
-              print('🏠 HomePage: Free podcasts loaded: ${state.podcasts.length}');
+              print('🏠 Free podcasts loaded: ${state.podcasts.length}');
             } else if (state is RandomPodcastsLoaded) {
               setState(() {
                 _randomPodcasts = state.podcasts;
                 _originalRandomPodcasts = List.from(state.podcasts);
                 _isLoadingRandomPodcasts = false;
               });
-              print('🏠 HomePage: Random podcasts loaded: ${state.podcasts.length}');
+              print('🏠 Random podcasts loaded: ${state.podcasts.length}');
             } else if (state is PodcastsError) {
-              print('🏠 HomePage: Podcasts error: ${state.message}');
+              print('❌ Podcasts error: ${state.message}');
+              // Handle error gracefully - set loading states to false and store error
+              setState(() {
+                _isLoadingFeaturedPodcasts = false;
+                _isLoadingNewReleasePodcasts = false;
+                _isLoadingRecentPodcasts = false;
+                _isLoadingFreePodcasts = false;
+                _isLoadingRandomPodcasts = false;
+                
+                // Set appropriate error messages based on context
+                if (_isLoadingFeaturedPodcasts) _featuredPodcastsError = state.message;
+                if (_isLoadingNewReleasePodcasts) _newReleasePodcastsError = state.message;
+                if (_isLoadingRecentPodcasts) _recentPodcastsError = state.message;
+                if (_isLoadingFreePodcasts) _freePodcastsError = state.message;
+                if (_isLoadingRandomPodcasts) _randomPodcastsError = state.message;
+              });
             }
           },
         ),
@@ -525,11 +656,30 @@ class _HomePageState extends State<HomePage> {
           if (_isLoadingFeatured) ...[
             SizedBox(
               width: double.infinity,
-              child: ShimmerBookCard(
+              child: kIsWeb ? Container(
+                height: _getResponsiveHorizontalCardHeight(),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surface,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Center(
+                  child: CircularProgressIndicator(
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                ),
+              ) : ShimmerBookCard(
                 width: double.infinity,
                 height: _getResponsiveHorizontalCardHeight(),
               ),
             ),
+          ] else if (_featuredBooksError != null) ...[
+            _buildErrorState(_featuredBooksError!, () {
+              setState(() {
+                _featuredBooksError = null;
+                _isLoadingFeatured = true;
+              });
+              context.read<BooksBloc>().add(const LoadFeaturedBooks(limit: 6));
+            }),
           ] else if (_featuredBooks.isNotEmpty) ...[
             SizedBox(
               width: double.infinity,
@@ -571,6 +721,14 @@ class _HomePageState extends State<HomePage> {
     
     if (_isLoadingFreeBooks)
       return _buildLoadingHorizontalScroll();
+    else if (_freeBooksError != null)
+      return _buildErrorState(_freeBooksError!, () {
+        setState(() {
+          _freeBooksError = null;
+          _isLoadingFreeBooks = true;
+        });
+        context.read<BooksBloc>().add(const LoadFreeBooks(limit: 6));
+      });
     else if (_freeBooks.isNotEmpty)
       return _buildBooksHorizontalScroll(_freeBooks, 'Free Books');
     else
@@ -582,6 +740,14 @@ class _HomePageState extends State<HomePage> {
     
     if (_isLoadingRecentBooks)
       return _buildLoadingHorizontalScroll();
+    else if (_recentBooksError != null)
+      return _buildErrorState(_recentBooksError!, () {
+        setState(() {
+          _recentBooksError = null;
+          _isLoadingRecentBooks = true;
+        });
+        context.read<BooksBloc>().add(const LoadRecentBooks(limit: 6));
+      });
     else if (_recentBooks.isNotEmpty)
       return _buildBooksHorizontalScroll(_recentBooks, LocalizationService.getRecentBooksText);
     else
@@ -593,6 +759,14 @@ class _HomePageState extends State<HomePage> {
     
     if (_isLoadingNewReleases)
       return _buildLoadingHorizontalScroll();
+    else if (_newReleasesError != null)
+      return _buildErrorState(_newReleasesError!, () {
+        setState(() {
+          _newReleasesError = null;
+          _isLoadingNewReleases = true;
+        });
+        context.read<BooksBloc>().add(const LoadNewReleases(limit: 10));
+      });
     else if (_newReleases.isNotEmpty)
       return _buildBooksHorizontalScroll(_newReleases, LocalizationService.getNewReleasesText);
     else
@@ -608,10 +782,73 @@ class _HomePageState extends State<HomePage> {
     
     if (_isLoadingRandomBooks)
       return _buildLoadingHorizontalScroll();
+    else if (_randomBooksError != null)
+      return _buildErrorState(_randomBooksError!, () {
+        setState(() {
+          _randomBooksError = null;
+          _isLoadingRandomBooks = true;
+        });
+        context.read<BooksBloc>().add(const LoadRandomBooks(limit: 5));
+      });
     else if (_randomBooks.isNotEmpty)
       return _buildBooksHorizontalScroll(_randomBooks, LocalizationService.getRecommendedBooksText);
     else
       return _buildEmptyState(LocalizationService.getNoRecommendedBooksAvailableText);
+  }
+
+  Widget _buildErrorState(String error, VoidCallback onRetry) {
+    return Container(
+      height: _getResponsiveHorizontalCardHeight() + 20,
+      margin: const EdgeInsets.symmetric(horizontal: 20),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.error.withOpacity(0.3),
+          width: 1,
+        ),
+      ),
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.error_outline,
+              color: Theme.of(context).colorScheme.error,
+              size: 32,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Failed to load content',
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurface,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              error.length > 50 ? '${error.substring(0, 50)}...' : error,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                fontSize: 12,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 12),
+            ElevatedButton.icon(
+              onPressed: onRetry,
+              icon: const Icon(Icons.refresh, size: 16),
+              label: const Text('Retry'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Theme.of(context).colorScheme.primary,
+                foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _buildEmptyState(String message) {
@@ -826,7 +1063,7 @@ class _HomePageState extends State<HomePage> {
                         userId: 'current_user', // TODO: Get from auth service
                         width: _getResponsiveHorizontalCardWidth(), // Responsive width based on screen size
                         // No fixed height - uses responsive height from BookCard component
-                        enableAnimations: true,
+                        enableAnimations: !kIsWeb,
                       );
                     },
                   );
@@ -885,13 +1122,26 @@ class _HomePageState extends State<HomePage> {
         padding: const EdgeInsets.only(left: 20),
         itemCount: 5,
         itemBuilder: (context, index) {
-          return Container(
-            margin: EdgeInsets.only(right: index < 4 ? 16 : 0),
-            child: ShimmerBookCard(
+          if (kIsWeb) {
+            return Container(
+              margin: EdgeInsets.only(right: index < 4 ? 16 : 0),
               width: _getResponsiveHorizontalCardWidth(),
               height: _getResponsiveHorizontalCardHeight(),
-            ),
-          );
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surface,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Theme.of(context).colorScheme.outline),
+              ),
+            );
+          } else {
+            return Container(
+              margin: EdgeInsets.only(right: index < 4 ? 16 : 0),
+              child: ShimmerBookCard(
+                width: _getResponsiveHorizontalCardWidth(),
+                height: _getResponsiveHorizontalCardHeight(),
+              ),
+            );
+          }
         },
       ),
     );
@@ -928,11 +1178,30 @@ class _HomePageState extends State<HomePage> {
           if (_isLoadingFeaturedPodcasts) ...[
             SizedBox(
               width: double.infinity,
-              child: ShimmerPodcastCard(
+              child: kIsWeb ? Container(
+                height: _getResponsiveHorizontalCardHeight(),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surface,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Center(
+                  child: CircularProgressIndicator(
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                ),
+              ) : ShimmerPodcastCard(
                 width: double.infinity,
                 height: _getResponsiveHorizontalCardHeight(),
               ),
             ),
+          ] else if (_featuredPodcastsError != null) ...[
+            _buildErrorState(_featuredPodcastsError!, () {
+              setState(() {
+                _featuredPodcastsError = null;
+                _isLoadingFeaturedPodcasts = true;
+              });
+              context.read<PodcastsBloc>().add(const LoadFeaturedPodcasts(limit: 6));
+            }),
           ] else if (_featuredPodcasts.isNotEmpty) ...[
             SizedBox(
               width: double.infinity,
@@ -959,6 +1228,14 @@ class _HomePageState extends State<HomePage> {
     
     if (_isLoadingFreePodcasts)
       return _buildLoadingPodcastHorizontalScroll();
+    else if (_freePodcastsError != null)
+      return _buildErrorState(_freePodcastsError!, () {
+        setState(() {
+          _freePodcastsError = null;
+          _isLoadingFreePodcasts = true;
+        });
+        context.read<PodcastsBloc>().add(const LoadFreePodcasts(limit: 6));
+      });
     else if (_freePodcasts.isNotEmpty)
       return _buildPodcastsHorizontalScroll(_freePodcasts, LocalizationService.getFreePodcastsText);
     else
@@ -970,6 +1247,14 @@ class _HomePageState extends State<HomePage> {
     
     if (_isLoadingRecentPodcasts)
       return _buildLoadingPodcastHorizontalScroll();
+    else if (_recentPodcastsError != null)
+      return _buildErrorState(_recentPodcastsError!, () {
+        setState(() {
+          _recentPodcastsError = null;
+          _isLoadingRecentPodcasts = true;
+        });
+        context.read<PodcastsBloc>().add(const LoadRecentPodcasts(limit: 6));
+      });
     else if (_recentPodcasts.isNotEmpty)
       return _buildPodcastsHorizontalScroll(_recentPodcasts, LocalizationService.getRecentPodcastsText);
     else
@@ -981,6 +1266,14 @@ class _HomePageState extends State<HomePage> {
     
     if (_isLoadingNewReleasePodcasts)
       return _buildLoadingPodcastHorizontalScroll();
+    else if (_newReleasePodcastsError != null)
+      return _buildErrorState(_newReleasePodcastsError!, () {
+        setState(() {
+          _newReleasePodcastsError = null;
+          _isLoadingNewReleasePodcasts = true;
+        });
+        context.read<PodcastsBloc>().add(const LoadNewReleasePodcasts(limit: 10));
+      });
     else if (_newReleasePodcasts.isNotEmpty)
       return _buildPodcastsHorizontalScroll(_newReleasePodcasts, LocalizationService.getNewReleasePodcastsText);
     else
@@ -995,6 +1288,14 @@ class _HomePageState extends State<HomePage> {
     
     if (_isLoadingRandomPodcasts)
       return _buildLoadingPodcastHorizontalScroll();
+    else if (_randomPodcastsError != null)
+      return _buildErrorState(_randomPodcastsError!, () {
+        setState(() {
+          _randomPodcastsError = null;
+          _isLoadingRandomPodcasts = true;
+        });
+        context.read<PodcastsBloc>().add(const LoadRandomPodcasts(limit: 5));
+      });
     else if (_randomPodcasts.isNotEmpty)
       return _buildPodcastsHorizontalScroll(_randomPodcasts, LocalizationService.getRecommendedPodcastsText);
     else
@@ -1069,7 +1370,7 @@ class _HomePageState extends State<HomePage> {
                 isFavorite: false,
                 userId: 'current_user',
                 width: _getResponsiveHorizontalCardWidth(),
-                enableAnimations: true,
+                enableAnimations: !kIsWeb,
               );
             },
           ),
@@ -1088,17 +1389,33 @@ class _HomePageState extends State<HomePage> {
         padding: const EdgeInsets.only(left: 20),
         itemCount: 5,
         itemBuilder: (context, index) {
-          return Container(
-            margin: EdgeInsets.only(right: index < 4 ? 16 : 0),
-            child: ShimmerPodcastCard(
+          if (kIsWeb) {
+            return Container(
+              margin: EdgeInsets.only(right: index < 4 ? 16 : 0),
               width: _getResponsiveHorizontalCardWidth(),
               height: _getResponsiveHorizontalCardHeight(),
-            ),
-          );
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surface,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Theme.of(context).colorScheme.outline),
+              ),
+            );
+          } else {
+            return Container(
+              margin: EdgeInsets.only(right: index < 4 ? 16 : 0),
+              child: ShimmerPodcastCard(
+                width: _getResponsiveHorizontalCardWidth(),
+                height: _getResponsiveHorizontalCardHeight(),
+              ),
+            );
+          }
         },
       ),
     );
   }
+
+  @override
+  bool get wantKeepAlive => true;
 
   Widget _buildEmptyPodcastState(String message) {
     String sectionTitle = LocalizationService.getRecentPodcastsText;

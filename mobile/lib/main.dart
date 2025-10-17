@@ -92,8 +92,46 @@ NotificationServiceInterface _createNotificationService() {
   }
 }
 
-class TeekoobApp extends StatelessWidget {
+class TeekoobApp extends StatefulWidget {
   const TeekoobApp({super.key});
+
+  @override
+  State<TeekoobApp> createState() => _TeekoobAppState();
+}
+
+class _TeekoobAppState extends State<TeekoobApp> with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    
+    // Initialize global audio service
+    _initializeGlobalAudioService();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    
+    // Handle app lifecycle changes for background audio
+    final audioService = GlobalAudioPlayerService();
+    audioService.handleAppLifecycleChange(state);
+  }
+
+  Future<void> _initializeGlobalAudioService() async {
+    try {
+      await GlobalAudioPlayerService().initialize();
+      print('🎵 ✅ Global Audio Service initialized for background playback');
+    } catch (e) {
+      print('🎵 ❌ Failed to initialize Global Audio Service: $e');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -178,10 +216,12 @@ class TeekoobApp extends StatelessWidget {
         child: BlocListener<AuthBloc, AuthState>(
           listener: (context, authState) {
             if (authState is Authenticated) {
-              // Load user's theme preference when authenticated
-              final userTheme = authState.user.preferences['theme'] ?? 'system';
-              final themeService = context.read<ThemeService>();
-              themeService.setThemeFromString(userTheme);
+              // Apply theme change after current frame to avoid setState during build
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                final userTheme = authState.user.preferences['theme'] ?? 'system';
+                final themeService = context.read<ThemeService>();
+                themeService.setThemeFromString(userTheme);
+              });
             }
           },
           child: MultiProvider(

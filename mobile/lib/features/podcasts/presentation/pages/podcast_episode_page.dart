@@ -113,7 +113,12 @@ class _PodcastEpisodePageState extends State<PodcastEpisodePage>
       if (_audioService.currentItem?.id == _episode!.id) {
         await _audioService.resume();
       } else {
-        await _audioService.playPodcastEpisode(_episode!);
+        // Use the new queue management functionality
+        if (_episodes.isNotEmpty) {
+          await _audioService.playPodcastEpisodeWithQueue(_episode!, _episodes, widget.podcastId);
+        } else {
+          await _audioService.playPodcastEpisode(_episode!);
+        }
       }
     }
   }
@@ -168,81 +173,27 @@ class _PodcastEpisodePageState extends State<PodcastEpisodePage>
   }
 
   void _skipPrevious() {
-    print('🎧 _skipPrevious: Episodes count: ${_episodes.length}');
-    print('🎧 _skipPrevious: Current episode ID: ${_episode?.id}');
+    print('🎧 _skipPrevious: Using global audio service queue management');
     
-    if (_episodes.isEmpty || _episode == null) {
-      print('❌ _skipPrevious: No episodes or current episode is null');
+    if (_audioService.hasPreviousEpisode) {
+      _audioService.playPreviousEpisode();
+    } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('No previous episode available')),
       );
-      return;
     }
-
-    // Find current episode index
-    final currentIndex = _episodes.indexWhere((ep) => ep.id == _episode!.id);
-    print('🎧 _skipPrevious: Current episode index: $currentIndex');
-    
-    if (currentIndex == -1) {
-      print('❌ _skipPrevious: Current episode not found in episodes list');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Current episode not found in list')),
-      );
-      return;
-    }
-    
-    if (currentIndex == 0) {
-      print('❌ _skipPrevious: Already at first episode');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('No previous episode available')),
-      );
-      return;
-    }
-
-    // Navigate to previous episode
-    final previousEpisode = _episodes[currentIndex - 1];
-    print('🎧 _skipPrevious: Navigating to previous episode: ${previousEpisode.id} - ${previousEpisode.title}');
-    _navigateToEpisode(previousEpisode);
   }
 
   void _skipNext() {
-    print('🎧 _skipNext: Episodes count: ${_episodes.length}');
-    print('🎧 _skipNext: Current episode ID: ${_episode?.id}');
-    print('🎧 _skipNext: All episode IDs: ${_episodes.map((e) => e.id).toList()}');
-    print('🎧 _skipNext: All episode titles: ${_episodes.map((e) => e.title).toList()}');
+    print('🎧 _skipNext: Using global audio service queue management');
     
-    if (_episodes.isEmpty || _episode == null) {
-      print('❌ _skipNext: No episodes or current episode is null');
+    if (_audioService.hasNextEpisode) {
+      _audioService.playNextEpisode();
+    } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('No next episode available')),
       );
-      return;
     }
-
-    // Find current episode index
-    final currentIndex = _episodes.indexWhere((ep) => ep.id == _episode!.id);
-    print('🎧 _skipNext: Current episode index: $currentIndex');
-    
-    if (currentIndex == -1) {
-      print('❌ _skipNext: Current episode not found in episodes list');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Current episode not found in list')),
-      );
-      return;
-    }
-    
-    if (currentIndex == _episodes.length - 1) {
-      print('❌ _skipNext: Already at last episode (index: $currentIndex, total: ${_episodes.length})');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('No next episode available')),
-      );
-      return;
-    }
-
-    // Navigate to next episode
-    final nextEpisode = _episodes[currentIndex + 1];
-    print('🎧 _skipNext: Navigating to next episode: ${nextEpisode.id} - ${nextEpisode.title}');
-    _navigateToEpisode(nextEpisode);
   }
 
   void _navigateToEpisode(PodcastEpisode episode) {
@@ -346,20 +297,24 @@ class _PodcastEpisodePageState extends State<PodcastEpisodePage>
   }
 
   void _handleBackNavigation() {
+    print('🎧 PodcastEpisodePage: Back button pressed');
+    
     // Check if we can pop (there's something in the navigation stack)
     if (context.canPop()) {
-      // If audio is playing, show floating player instead of closing
-      if (_audioService.isPlaying || _audioService.isPaused) {
-        // Navigate back to podcast detail page, floating player will show
-        context.pop();
-      } else {
-        // No audio playing, normal navigation
-        context.pop();
-      }
+      print('🎧 PodcastEpisodePage: Can pop, navigating back');
+      // Navigate back to previous page (podcast detail or episodes list)
+      context.pop();
     } else {
-      // Nothing to pop, navigate to home page instead
-      print('🎧 PodcastEpisodePage: Nothing to pop, navigating to home');
-      context.go('/home');
+      // Nothing to pop, navigate to podcast detail page or home
+      print('🎧 PodcastEpisodePage: Nothing to pop, navigating to podcast detail');
+      try {
+        // Try to navigate to podcast detail page first
+        context.go('/podcast/${widget.podcastId}');
+      } catch (e) {
+        // If that fails, go to home
+        print('🎧 PodcastEpisodePage: Failed to navigate to podcast detail, going to home');
+        context.go('/home');
+      }
     }
   }
 
@@ -396,10 +351,10 @@ class _PodcastEpisodePageState extends State<PodcastEpisodePage>
   @override
   Widget build(BuildContext context) {
     return PopScope(
-      canPop: true, // Allow popping by default
+      canPop: false, // Prevent automatic popping to handle it manually
       onPopInvokedWithResult: (didPop, result) async {
         if (!didPop) {
-          // If pop was prevented, handle it manually
+          // Handle back navigation manually
           _handleBackNavigation();
         }
       },
