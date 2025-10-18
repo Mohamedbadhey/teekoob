@@ -1,14 +1,18 @@
 import 'dart:async';
 import 'package:just_audio/just_audio.dart';
 import 'package:audio_session/audio_session.dart';
+import 'package:audio_service/audio_service.dart';
 import 'package:teekoob/core/models/book_model.dart';
 import 'package:teekoob/core/config/app_config.dart';
+import 'package:teekoob/core/services/audio_handler_service.dart';
 
 class AudioPlayerService {
+  AudioHandlerService? _audioHandler;
   final AudioPlayer _audioPlayer = AudioPlayer();
   StreamSubscription<PlayerState>? _playerStateSubscription;
   StreamSubscription<Duration?>? _positionSubscription;
   StreamSubscription<Duration?>? _durationSubscription;
+  StreamSubscription<PlaybackState>? _playbackStateSubscription;
   
   // Current book being played
   Book? _currentBook;
@@ -56,6 +60,26 @@ class AudioPlayerService {
   AudioPlayerService() {
     _initializeAudioSession();
     _setupStreams();
+    _initAudioService();
+  }
+
+  Future<void> _initAudioService() async {
+    try {
+      _audioHandler = await initAudioService();
+      
+      // Listen to audio handler playback state
+      _playbackStateSubscription = _audioHandler?.playbackState.listen((state) {
+        _isPlaying = state.playing;
+        _isPlayingController.add(state.playing);
+        
+        if (state.updatePosition != Duration.zero) {
+          _currentPosition = state.updatePosition;
+          _positionController.add(state.updatePosition);
+        }
+      });
+    } catch (e) {
+      print('Failed to initialize audio service: $e');
+    }
   }
 
   Future<void> _initializeAudioSession() async {
@@ -130,6 +154,11 @@ class AudioPlayerService {
       final fullAudioUrl = _buildFullAudioUrl(url);
       print('🎵 AudioPlayerService: Loading audio from: $fullAudioUrl');
 
+      // Load audio through audio handler for background playback
+      if (_audioHandler != null) {
+        await _audioHandler!.loadAudio(book, fullAudioUrl);
+      }
+      
       // Set audio source
       await _audioPlayer.setUrl(fullAudioUrl);
       
@@ -151,6 +180,9 @@ class AudioPlayerService {
   // Play audio
   Future<void> play() async {
     try {
+      if (_audioHandler != null) {
+        await _audioHandler!.play();
+      }
       await _audioPlayer.play();
       _isPlaying = true;
       _isPlayingController.add(true);
@@ -162,6 +194,9 @@ class AudioPlayerService {
   // Pause audio
   Future<void> pause() async {
     try {
+      if (_audioHandler != null) {
+        await _audioHandler!.pause();
+      }
       await _audioPlayer.pause();
       _isPlaying = false;
       _isPlayingController.add(false);
@@ -173,6 +208,9 @@ class AudioPlayerService {
   // Stop audio
   Future<void> stop() async {
     try {
+      if (_audioHandler != null) {
+        await _audioHandler!.stop();
+      }
       await _audioPlayer.stop();
       _isPlaying = false;
       _isPlayingController.add(false);
@@ -186,6 +224,9 @@ class AudioPlayerService {
   // Seek to specific position
   Future<void> seekTo(Duration position) async {
     try {
+      if (_audioHandler != null) {
+        await _audioHandler!.seek(position);
+      }
       await _audioPlayer.seek(position);
       _currentPosition = position;
       _positionController.add(position);
@@ -222,6 +263,9 @@ class AudioPlayerService {
   Future<void> setPlaybackSpeed(double speed) async {
     try {
       if (speed >= 0.5 && speed <= 2.0) {
+        if (_audioHandler != null) {
+          await _audioHandler!.setSpeed(speed);
+        }
         await _audioPlayer.setSpeed(speed);
         _playbackSpeed = speed;
         _speedController.add(speed);
@@ -367,6 +411,7 @@ class AudioPlayerService {
     _playerStateSubscription?.cancel();
     _positionSubscription?.cancel();
     _durationSubscription?.cancel();
+    _playbackStateSubscription?.cancel();
     _sleepTimer?.cancel();
     
     _isPlayingController.close();
@@ -377,6 +422,7 @@ class AudioPlayerService {
     _repeatController.close();
     _sleepTimerController.close();
     
+    _audioHandler?.dispose();
     _audioPlayer.dispose();
   }
 
