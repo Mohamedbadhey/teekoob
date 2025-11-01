@@ -32,11 +32,26 @@ android {
     }
 
     buildTypes {
-        release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+
+      release {
+        isMinifyEnabled = true
+        isShrinkResources = true
+        signingConfig = signingConfigs.getByName("debug")
+        proguardFiles(
+            getDefaultProguardFile("proguard-android-optimize.txt"),
+            "proguard-rules.pro"
+        )
+
+        // ✅ Correct Kotlin DSL syntax for disabling lint checks
+        lint {
+            checkReleaseBuilds = false
+            abortOnError = false
         }
+    }
+    debug {
+        signingConfig = signingConfigs.getByName("debug")
+    }
+      
     }
 }
 

@@ -200,7 +200,7 @@ class _BookCardState extends State<BookCard> with TickerProviderStateMixin {
   void _toggleFavorite(BuildContext context) {
     print('❤️ BookCard: Toggling favorite for book ${widget.book.id}');
     try {
-      context.read<LibraryBloc>().add(ToggleFavorite(widget.userId, widget.book.id));
+      context.read<LibraryBloc>().add(ToggleFavorite(widget.userId, widget.book.id, itemType: 'book'));
       
       // Show success message with animation
       ScaffoldMessenger.of(context).showSnackBar(

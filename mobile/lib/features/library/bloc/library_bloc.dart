@@ -71,12 +71,22 @@ class UpdateBookStatus extends LibraryEvent {
 
 class ToggleFavorite extends LibraryEvent {
   final String userId;
-  final String bookId;
+  final String itemId;
+  final String itemType; // 'book' or 'podcast'
 
-  const ToggleFavorite(this.userId, this.bookId);
+  const ToggleFavorite(this.userId, this.itemId, {this.itemType = 'book'});
 
   @override
-  List<Object> get props => [userId, bookId];
+  List<Object> get props => [userId, itemId, itemType];
+}
+
+class LoadFavorites extends LibraryEvent {
+  final String? type; // 'book', 'podcast', or null for all
+
+  const LoadFavorites({this.type});
+
+  @override
+  List<Object?> get props => [type];
 }
 
 class AddBookmark extends LibraryEvent {
@@ -273,6 +283,7 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
     on<UpdateReadingProgress>(_onUpdateReadingProgress);
     on<UpdateBookStatus>(_onUpdateBookStatus);
     on<ToggleFavorite>(_onToggleFavorite);
+    on<LoadFavorites>(_onLoadFavorites);
     on<AddBookmark>(_onAddBookmark);
     on<RemoveBookmark>(_onRemoveBookmark);
     on<AddNote>(_onAddNote);
@@ -296,9 +307,9 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
       final library = _libraryService.getUserLibrary(event.userId);
       print('🎯 LibraryBloc: Library items retrieved: ${library.length}');
 
-      print('🎯 LibraryBloc: Calling _libraryService.getFavoriteBooks...');
-      final favorites = _libraryService.getFavoriteBooks(event.userId);
-      print('🎯 LibraryBloc: Favorite books retrieved: ${favorites.length}');
+      print('🎯 LibraryBloc: Loading favorites...');
+      final favorites = await _libraryService.getFavorites();
+      print('🎯 LibraryBloc: Favorites retrieved: ${favorites.length}');
 
       print('🎯 LibraryBloc: Calling _libraryService.getRecentlyReadBooks...');
       final recentlyRead = _libraryService.getRecentlyReadBooks(event.userId);
@@ -418,17 +429,61 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
     Emitter<LibraryState> emit,
   ) async {
     try {
-      await _libraryService.toggleFavorite(event.userId, event.bookId);
+      bool isFavorite;
+      if (event.itemType == 'book') {
+        isFavorite = await _libraryService.toggleBookFavorite(event.itemId);
+      } else {
+        isFavorite = await _libraryService.togglePodcastFavorite(event.itemId);
+      }
 
-      emit(const LibraryOperationSuccess(
-        message: 'Favorite status updated successfully',
+      emit(LibraryOperationSuccess(
+        message: isFavorite 
+            ? 'Added to favorites' 
+            : 'Removed from favorites',
         operation: 'favorite',
       ));
 
-      // Reload library
-      add(LoadLibrary(event.userId));
+      // Reload favorites if in loaded state
+      if (state is LibraryLoaded) {
+        final currentState = state as LibraryLoaded;
+        final favorites = await _libraryService.getFavorites();
+        emit(LibraryLoaded(
+          library: currentState.library,
+          favorites: favorites,
+          recentlyRead: currentState.recentlyRead,
+          stats: currentState.stats,
+        ));
+      }
     } catch (e) {
       emit(LibraryError('Failed to toggle favorite: $e'));
+    }
+  }
+
+  Future<void> _onLoadFavorites(
+    LoadFavorites event,
+    Emitter<LibraryState> emit,
+  ) async {
+    try {
+      final favorites = await _libraryService.getFavorites(type: event.type);
+      
+      if (state is LibraryLoaded) {
+        final currentState = state as LibraryLoaded;
+        emit(LibraryLoaded(
+          library: currentState.library,
+          favorites: favorites,
+          recentlyRead: currentState.recentlyRead,
+          stats: currentState.stats,
+        ));
+      } else {
+        emit(LibraryLoaded(
+          library: const [],
+          favorites: favorites,
+          recentlyRead: const [],
+          stats: {},
+        ));
+      }
+    } catch (e) {
+      emit(LibraryError('Failed to load favorites: $e'));
     }
   }
 

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:teekoob/core/models/podcast_model.dart';
 import 'package:teekoob/core/services/localization_service.dart';
 import 'package:teekoob/core/services/global_audio_player_service.dart';
+import 'package:teekoob/features/library/bloc/library_bloc.dart';
 
 class PodcastCard extends StatelessWidget {
   final Podcast podcast;
@@ -90,6 +92,38 @@ class PodcastCard extends StatelessWidget {
                           : _buildDefaultCover(context),
                     ),
                   ),
+                  // Favorite button
+                  if (showLibraryActions)
+                    Positioned(
+                      top: 8,
+                      right: 8,
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: () => _toggleFavorite(context),
+                          borderRadius: BorderRadius.circular(20),
+                          child: Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).colorScheme.surface.withOpacity(0.9),
+                              borderRadius: BorderRadius.circular(20),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.2),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: Icon(
+                              isFavorite ? Icons.favorite : Icons.favorite_border,
+                              size: isSmallScreen ? 16 : 18,
+                              color: isFavorite ? Colors.red : Theme.of(context).colorScheme.onSurface,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
                 ],
               ),
             ),
@@ -293,6 +327,33 @@ class PodcastCard extends StatelessWidget {
     } else {
       return 220; // Large screens
     }
+  }
+
+  void _toggleFavorite(BuildContext context) {
+    context.read<LibraryBloc>().add(
+      ToggleFavorite(userId, podcast.id, itemType: 'podcast'),
+    );
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Icon(
+              isFavorite ? Icons.favorite_border : Icons.favorite,
+              color: Colors.white,
+            ),
+            const SizedBox(width: 8),
+            Text(isFavorite ? 'Removed from favorites' : 'Added to favorites!'),
+          ],
+        ),
+        backgroundColor: Theme.of(context).colorScheme.primary,
+        duration: const Duration(seconds: 2),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
+      ),
+    );
   }
 
   String _formatEpisodeCount(int count) {

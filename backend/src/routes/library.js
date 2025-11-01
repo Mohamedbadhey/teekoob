@@ -507,26 +507,10 @@ router.delete('/:bookId', asyncHandler(async (req, res) => {
   });
 }));
 
-// Toggle favorite status
-router.put('/favorite', asyncHandler(async (req, res) => {
-  const { userId, bookId, isFavorite } = req.body;
-  const authenticatedUserId = req.userId;
-  
-  // Validate input
-  if (!userId || !bookId || typeof isFavorite !== 'boolean') {
-    return res.status(400).json({ 
-      error: 'userId, bookId, and isFavorite are required',
-      code: 'INVALID_INPUT'
-    });
-  }
-  
-  // Check if the authenticated user matches the requested userId
-  if (authenticatedUserId !== userId) {
-    return res.status(403).json({ 
-      error: 'Access denied',
-      code: 'ACCESS_DENIED'
-    });
-  }
+// Toggle favorite status for books
+router.put('/favorites/books/:bookId', asyncHandler(async (req, res) => {
+  const { bookId } = req.params;
+  const userId = req.userId;
   
   // Check if book exists and is published
   const book = await db('books')
@@ -541,49 +525,241 @@ router.put('/favorite', asyncHandler(async (req, res) => {
     });
   }
   
-  // Check if book is already in library
-  const existingEntry = await db('user_library')
+  // Check if already favorited
+  const existingFavorite = await db('user_favorites')
     .where('user_id', userId)
-    .where('book_id', bookId)
+    .where('item_id', bookId)
+    .where('item_type', 'book')
     .first();
   
-  if (existingEntry) {
-    // Update existing entry
+  if (existingFavorite) {
+    // Remove from favorites
+    await db('user_favorites')
+      .where('user_id', userId)
+      .where('item_id', bookId)
+      .where('item_type', 'book')
+      .del();
+    
+    // Also update user_library if exists
     await db('user_library')
       .where('user_id', userId)
       .where('book_id', bookId)
       .update({
-        is_favorite: isFavorite,
+        is_favorite: false,
         updated_at: new Date()
       });
     
-    logger.info('Favorite status updated:', { userId, bookId, isFavorite });
+    logger.info('Book removed from favorites:', { userId, bookId });
     
     res.json({
-      message: 'Favorite status updated successfully',
-      isFavorite
+      message: 'Book removed from favorites',
+      isFavorite: false
     });
   } else {
-    // Create new library entry as favorite
-    const [libraryId] = await db('user_library').insert({
+    // Add to favorites
+    const favoriteId = require('crypto').randomUUID();
+    await db('user_favorites').insert({
+      id: favoriteId,
       user_id: userId,
-      book_id: bookId,
-      status: 'wishlist', // Default status for favorite-only items
-      is_favorite: isFavorite,
-      started_reading_at: new Date(),
-      last_read_at: new Date(),
+      item_id: bookId,
+      item_type: 'book',
       created_at: new Date(),
       updated_at: new Date()
-    }).returning('id');
+    });
     
-    logger.info('Book added to library as favorite:', { userId, bookId, libraryId, isFavorite });
+    // Also update user_library if exists, or create entry
+    const libraryEntry = await db('user_library')
+      .where('user_id', userId)
+      .where('book_id', bookId)
+      .first();
+    
+    if (libraryEntry) {
+      await db('user_library')
+        .where('user_id', userId)
+        .where('book_id', bookId)
+        .update({
+          is_favorite: true,
+          updated_at: new Date()
+        });
+    } else {
+      // Create library entry
+      await db('user_library').insert({
+        user_id: userId,
+        book_id: bookId,
+        status: 'wishlist',
+        is_favorite: true,
+        created_at: new Date(),
+        updated_at: new Date()
+      });
+    }
+    
+    logger.info('Book added to favorites:', { userId, bookId, favoriteId });
     
     res.status(201).json({
-      message: 'Book added to library as favorite successfully',
-      libraryId,
-      isFavorite
+      message: 'Book added to favorites',
+      isFavorite: true
     });
   }
+}));
+
+// Toggle favorite status for podcasts
+router.put('/favorites/podcasts/:podcastId', asyncHandler(async (req, res) => {
+  const { podcastId } = req.params;
+  const userId = req.userId;
+  
+  // Check if podcast exists
+  const podcast = await db('podcasts')
+    .where('id', podcastId)
+    .first();
+  
+  if (!podcast) {
+    return res.status(404).json({ 
+      error: 'Podcast not found',
+      code: 'PODCAST_NOT_FOUND'
+    });
+  }
+  
+  // Check if already favorited
+  const existingFavorite = await db('user_favorites')
+    .where('user_id', userId)
+    .where('item_id', podcastId)
+    .where('item_type', 'podcast')
+    .first();
+  
+  if (existingFavorite) {
+    // Remove from favorites
+    await db('user_favorites')
+      .where('user_id', userId)
+      .where('item_id', podcastId)
+      .where('item_type', 'podcast')
+      .del();
+    
+    logger.info('Podcast removed from favorites:', { userId, podcastId });
+    
+    res.json({
+      message: 'Podcast removed from favorites',
+      isFavorite: false
+    });
+  } else {
+    // Add to favorites
+    const favoriteId = require('crypto').randomUUID();
+    await db('user_favorites').insert({
+      id: favoriteId,
+      user_id: userId,
+      item_id: podcastId,
+      item_type: 'podcast',
+      created_at: new Date(),
+      updated_at: new Date()
+    });
+    
+    logger.info('Podcast added to favorites:', { userId, podcastId, favoriteId });
+    
+    res.status(201).json({
+      message: 'Podcast added to favorites',
+      isFavorite: true
+    });
+  }
+}));
+
+// Get all favorites
+router.get('/favorites', asyncHandler(async (req, res) => {
+  const userId = req.userId;
+  const { type, page = 1, limit = 20 } = req.query;
+  const offset = (page - 1) * limit;
+  
+  let query = db('user_favorites as uf')
+    .where('uf.user_id', userId);
+  
+  // Filter by type if provided
+  if (type && ['book', 'podcast'].includes(type)) {
+    query = query.where('uf.item_type', type);
+  }
+  
+  // Get total count
+  const totalCount = await query.clone().count('* as count').first();
+  
+  // Get favorites with item details
+  const favorites = await query
+    .select('uf.*')
+    .orderBy('uf.created_at', 'desc')
+    .limit(limit)
+    .offset(offset);
+  
+  // Get book details for book favorites
+  const bookIds = favorites.filter(f => f.item_type === 'book').map(f => f.item_id);
+  const books = bookIds.length > 0 
+    ? await db('books')
+        .whereIn('id', bookIds)
+        .where('status', 'published')
+        .select('id', 'title', 'title_somali', 'author', 'cover_image_url', 'language', 'format', 'is_free', 'price')
+    : [];
+  
+  // Get podcast details for podcast favorites
+  const podcastIds = favorites.filter(f => f.item_type === 'podcast').map(f => f.item_id);
+  const podcasts = podcastIds.length > 0
+    ? await db('podcasts')
+        .whereIn('id', podcastIds)
+        .select('id', 'title', 'title_somali', 'host', 'host_somali', 'cover_image_url', 'language', 'is_free')
+    : [];
+  
+  // Combine favorites with item details
+  const favoritesWithDetails = favorites.map(fav => {
+    if (fav.item_type === 'book') {
+      const book = books.find(b => b.id === fav.item_id);
+      return {
+        ...fav,
+        item: book
+      };
+    } else {
+      const podcast = podcasts.find(p => p.id === fav.item_id);
+      return {
+        ...fav,
+        item: podcast
+      };
+    }
+  }).filter(f => f.item != null); // Filter out items that don't exist anymore
+  
+  res.json({
+    favorites: favoritesWithDetails,
+    pagination: {
+      page: parseInt(page),
+      limit: parseInt(limit),
+      total: totalCount.count,
+      totalPages: Math.ceil(totalCount.count / limit)
+    }
+  });
+}));
+
+// Check if book is favorited
+router.get('/favorites/book/:itemId', asyncHandler(async (req, res) => {
+  const { itemId } = req.params;
+  const userId = req.userId;
+  
+  const favorite = await db('user_favorites')
+    .where('user_id', userId)
+    .where('item_id', itemId)
+    .where('item_type', 'book')
+    .first();
+  
+  res.json({
+    isFavorite: !!favorite
+  });
+}));
+
+// Check if podcast is favorited
+router.get('/favorites/podcast/:itemId', asyncHandler(async (req, res) => {
+  const { itemId } = req.params;
+  const userId = req.userId;
+  
+  const favorite = await db('user_favorites')
+    .where('user_id', userId)
+    .where('item_id', itemId)
+    .where('item_type', 'podcast')
+    .first();
+  
+  res.json({
+    isFavorite: !!favorite
+  });
 }));
 
 // Get reading statistics

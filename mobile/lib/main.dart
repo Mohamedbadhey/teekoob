@@ -32,6 +32,7 @@ import 'package:teekoob/core/bloc/notification_bloc.dart';
 import 'package:teekoob/features/podcasts/services/podcasts_service.dart';
 import 'package:teekoob/features/podcasts/bloc/podcasts_bloc.dart';
 import 'package:teekoob/core/services/global_audio_player_service.dart';
+import 'package:just_audio_background/just_audio_background.dart';
 
 void main() async {
   print('🚀 ===== APP STARTUP =====');
@@ -44,6 +45,14 @@ void main() async {
     print('🚀 Initializing Localization...');
     await LocalizationService.initialize();
     print('🚀 ✅ Localization initialized');
+    
+    // Initialize just_audio_background
+    await JustAudioBackground.init(
+      androidNotificationChannelId: 'com.teekoob.app.audio',
+      androidNotificationChannelName: 'Teekoob Audio Player',
+      androidNotificationOngoing: true,
+      androidNotificationIcon: 'mipmap/ic_launcher',
+    );
     
     print('🚀 Starting TeekoobApp...');
     runApp(TeekoobApp());

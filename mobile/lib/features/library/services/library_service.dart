@@ -375,21 +375,78 @@ class LibraryService {
     }
   }
 
-  // Get favorite books
-  List<Map<String, dynamic>> getFavoriteBooks(String userId) {
+  // Toggle favorite for book
+  Future<bool> toggleBookFavorite(String bookId) async {
     try {
-      print('❤️ LibraryService: Getting favorite books for user: $userId');
-      // Note: No local storage - return empty library
-      final library = <Map<String, dynamic>>[];
-      final favorites = library.where((item) => 
-        item['isFavorite'] == true || item['status'] == 'favorite'
-      ).toList();
-      print('❤️ LibraryService: Retrieved ${favorites.length} favorite books');
+      final response = await _networkService.put('/library/favorites/books/$bookId');
+      final isFavorite = response.data['isFavorite'] as bool;
+      print('❤️ LibraryService: Book favorite toggled: $bookId, isFavorite: $isFavorite');
+      return isFavorite;
+    } catch (e) {
+      print('❌ LibraryService: Error toggling book favorite: $e');
+      rethrow;
+    }
+  }
+
+  // Toggle favorite for podcast
+  Future<bool> togglePodcastFavorite(String podcastId) async {
+    try {
+      final response = await _networkService.put('/library/favorites/podcasts/$podcastId');
+      final isFavorite = response.data['isFavorite'] as bool;
+      print('❤️ LibraryService: Podcast favorite toggled: $podcastId, isFavorite: $isFavorite');
+      return isFavorite;
+    } catch (e) {
+      print('❌ LibraryService: Error toggling podcast favorite: $e');
+      rethrow;
+    }
+  }
+
+  // Check if book is favorited
+  Future<bool> isBookFavorite(String bookId) async {
+    try {
+      final response = await _networkService.get('/library/favorites/book/$bookId');
+      return response.data['isFavorite'] as bool? ?? false;
+    } catch (e) {
+      print('❌ LibraryService: Error checking book favorite: $e');
+      return false;
+    }
+  }
+
+  // Check if podcast is favorited
+  Future<bool> isPodcastFavorite(String podcastId) async {
+    try {
+      final response = await _networkService.get('/library/favorites/podcast/$podcastId');
+      return response.data['isFavorite'] as bool? ?? false;
+    } catch (e) {
+      print('❌ LibraryService: Error checking podcast favorite: $e');
+      return false;
+    }
+  }
+
+  // Get all favorites
+  Future<List<Map<String, dynamic>>> getFavorites({String? type}) async {
+    try {
+      final queryParams = type != null ? {'type': type} : null;
+      final response = await _networkService.get('/library/favorites', queryParameters: queryParams);
+      final favorites = (response.data['favorites'] as List?)
+          ?.map((item) => item as Map<String, dynamic>)
+          .toList() ?? [];
+      print('❤️ LibraryService: Retrieved ${favorites.length} favorites');
       return favorites;
     } catch (e) {
-      print('❌ LibraryService: Error getting favorite books: $e');
+      print('❌ LibraryService: Error getting favorites: $e');
       return [];
     }
+  }
+
+  // Get favorite books
+  Future<List<Map<String, dynamic>>> getFavoriteBooks() async {
+    return getFavorites(type: 'book');
+  }
+
+  // Get favorite podcasts
+  Future<List<Map<String, dynamic>>> getFavoritePodcasts() async {
+    return getFavorites(type: 'podcast');
   }
 
   // Get recently read books

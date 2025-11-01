@@ -1,8 +1,9 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:audioplayers/audioplayers.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:just_audio/just_audio.dart';
+import 'package:just_audio_background/just_audio_background.dart';
+import 'package:audio_session/audio_session.dart';
 import 'package:teekoob/core/models/book_model.dart';
 import 'package:teekoob/core/models/podcast_model.dart';
 import 'package:teekoob/core/config/app_config.dart';
@@ -54,12 +55,12 @@ class AudioItem {
     );
   }
 
-  factory AudioItem.fromPodcastEpisode(PodcastEpisode episode) {
+  factory AudioItem.fromPodcastEpisode(PodcastEpisode episode, {Podcast? podcast}) {
     return AudioItem(
       id: episode.id,
       title: episode.title,
-      host: 'Podcast Host', // Default host since episode doesn't have host info
-      coverImageUrl: null, // Episode doesn't have cover image
+      host: podcast?.host ?? podcast?.displayHost ?? 'Podcast',
+      coverImageUrl: podcast?.coverImageUrl,
       audioUrl: _buildFullUrl(episode.audioUrl),
       type: AudioType.podcast,
       duration: episode.duration != null 
@@ -88,7 +89,6 @@ class GlobalAudioPlayerService extends ChangeNotifier {
   GlobalAudioPlayerService._internal();
 
   final AudioPlayer _audioPlayer = AudioPlayer();
-  final FlutterLocalNotificationsPlugin _notifications = FlutterLocalNotificationsPlugin();
   
   AudioItem? _currentItem;
   AudioPlayerState _state = AudioPlayerState.stopped;
@@ -96,13 +96,14 @@ class GlobalAudioPlayerService extends ChangeNotifier {
   Duration _duration = Duration.zero;
   bool _isInitialized = false;
   StreamSubscription<Duration>? _positionSubscription;
-  StreamSubscription<Duration>? _durationSubscription;
+  StreamSubscription<Duration?>? _durationSubscription;
   StreamSubscription<PlayerState>? _playerStateSubscription;
   
   // Episode queue management
   List<PodcastEpisode> _episodeQueue = [];
   int _currentEpisodeIndex = -1;
   String? _currentPodcastId;
+  Podcast? _currentPodcast; // Store podcast for episode queue playback
 
   // Getters
   AudioItem? get currentItem => _currentItem;
@@ -130,16 +131,10 @@ class GlobalAudioPlayerService extends ChangeNotifier {
       case AppLifecycleState.resumed:
         // App came back to foreground - audio should continue playing
         print('🎵 App resumed - audio should continue');
-        if (_currentItem != null && _state == AudioPlayerState.playing) {
-          _updateSystemAudioControls();
-        }
         break;
       case AppLifecycleState.paused:
         // App went to background - audio should continue playing
         print('🎵 App paused - audio continues in background');
-        if (_currentItem != null && _state == AudioPlayerState.playing) {
-          _updateSystemAudioControls();
-        }
         break;
       case AppLifecycleState.detached:
         // App is being terminated - stop audio
@@ -162,73 +157,62 @@ class GlobalAudioPlayerService extends ChangeNotifier {
     if (_isInitialized) return;
 
     try {
-      // Initialize system audio controls
-      await _initializeSystemAudioControls();
-
-      // Configure for background playback
-      await _audioPlayer.setAudioContext(AudioContext(
-        iOS: AudioContextIOS(
-          category: AVAudioSessionCategory.playback,
-          options: [
-            AVAudioSessionOptions.defaultToSpeaker,
-            AVAudioSessionOptions.allowBluetooth,
-            AVAudioSessionOptions.allowBluetoothA2DP,
-            AVAudioSessionOptions.mixWithOthers,
-            AVAudioSessionOptions.allowAirPlay,
-          ],
+      // Configure audio session for background playback
+      final session = await AudioSession.instance;
+      await session.configure(const AudioSessionConfiguration(
+        avAudioSessionCategory: AVAudioSessionCategory.playback,
+        avAudioSessionCategoryOptions: AVAudioSessionCategoryOptions.mixWithOthers,
+        avAudioSessionMode: AVAudioSessionMode.spokenAudio,
+        avAudioSessionRouteSharingPolicy: AVAudioSessionRouteSharingPolicy.defaultPolicy,
+        avAudioSessionSetActiveOptions: AVAudioSessionSetActiveOptions.none,
+        androidAudioAttributes: AndroidAudioAttributes(
+          contentType: AndroidAudioContentType.music,
+          flags: AndroidAudioFlags.none,
+          usage: AndroidAudioUsage.media,
         ),
-        android: AudioContextAndroid(
-          isSpeakerphoneOn: true,
-          stayAwake: true,
-          contentType: AndroidContentType.music,
-          usageType: AndroidUsageType.media,
-          audioFocus: AndroidAudioFocus.gain,
-        ),
+        androidAudioFocusGainType: AndroidAudioFocusGainType.gain,
+        androidWillPauseWhenDucked: false,
       ));
 
       // Listen to position changes
-      _positionSubscription = _audioPlayer.onPositionChanged.listen((position) {
+      _positionSubscription = _audioPlayer.positionStream.listen((position) {
         _position = position;
         notifyListeners();
-        
-        // Update notification with current progress every 5 seconds
-        if (_currentItem != null && _state == AudioPlayerState.playing) {
-          final seconds = position.inSeconds;
-          if (seconds % 5 == 0) { // Update every 5 seconds
-            _updateSystemAudioControls();
-          }
-        }
       });
 
       // Listen to duration changes
-      _durationSubscription = _audioPlayer.onDurationChanged.listen((duration) {
-        _duration = duration;
-        notifyListeners();
+      _durationSubscription = _audioPlayer.durationStream.listen((duration) {
+        if (duration != null) {
+          _duration = duration;
+          notifyListeners();
+        }
       });
 
       // Listen to player state changes
-      _playerStateSubscription = _audioPlayer.onPlayerStateChanged.listen((playerState) {
-        switch (playerState) {
-          case PlayerState.playing:
-            _state = AudioPlayerState.playing;
-            _updateSystemAudioControls();
+      _playerStateSubscription = _audioPlayer.playerStateStream.listen((playerState) {
+        switch (playerState.processingState) {
+          case ProcessingState.idle:
+            if (!playerState.playing) {
+              _state = AudioPlayerState.stopped;
+            }
             break;
-          case PlayerState.paused:
-            _state = AudioPlayerState.paused;
-            _updateSystemAudioControls();
+          case ProcessingState.loading:
+            _state = AudioPlayerState.loading;
             break;
-          case PlayerState.stopped:
-            _state = AudioPlayerState.stopped;
-            _hideSystemAudioControls();
+          case ProcessingState.buffering:
+            _state = AudioPlayerState.loading;
             break;
-          case PlayerState.completed:
+          case ProcessingState.ready:
+            if (playerState.playing) {
+              _state = AudioPlayerState.playing;
+            } else {
+              _state = AudioPlayerState.paused;
+            }
+            break;
+          case ProcessingState.completed:
             _state = AudioPlayerState.stopped;
             _position = Duration.zero;
             _handleEpisodeCompletion();
-            break;
-          case PlayerState.disposed:
-            _state = AudioPlayerState.stopped;
-            _hideSystemAudioControls();
             break;
         }
         notifyListeners();
@@ -255,7 +239,7 @@ class GlobalAudioPlayerService extends ChangeNotifier {
 
       // If it's the same item, just resume
       if (_currentItem?.id == item.id && _state == AudioPlayerState.paused) {
-        await _audioPlayer.resume();
+        await _audioPlayer.play();
         return;
       }
 
@@ -266,13 +250,44 @@ class GlobalAudioPlayerService extends ChangeNotifier {
 
       _currentItem = item;
       
-      // Set audio source
-      await _audioPlayer.setSourceUrl(item.audioUrl);
+      // Build cover image URL for MediaItem
+      String? coverImageUrl;
+      if (item.coverImageUrl != null && item.coverImageUrl!.isNotEmpty) {
+        if (item.coverImageUrl!.startsWith('http')) {
+          coverImageUrl = item.coverImageUrl;
+        } else {
+          coverImageUrl = '${AppConfig.mediaBaseUrl}${item.coverImageUrl}';
+        }
+      }
+      
+      // Create MediaItem for lock screen controls
+      final mediaItem = MediaItem(
+        id: item.id,
+        title: item.title,
+        artist: item.type == AudioType.book ? (item.author ?? 'Unknown Author') : (item.host ?? 'Podcast'),
+        album: item.type == AudioType.book ? 'Audiobook' : 'Podcast',
+        artUri: coverImageUrl != null ? Uri.parse(coverImageUrl) : null,
+        duration: item.duration,
+        extras: {
+          'type': item.type == AudioType.book ? 'book' : 'podcast',
+          'id': item.id,
+        },
+      );
+      
+      // Create AudioSource with MediaItem tag for just_audio_background
+      final audioSource = AudioSource.uri(
+        Uri.parse(item.audioUrl),
+        tag: mediaItem,
+      );
+      
+      // Set audio source (this will trigger lock screen controls via just_audio_background)
+      await _audioPlayer.setAudioSource(audioSource);
       
       // Start playing
-      await _audioPlayer.resume();
+      await _audioPlayer.play();
       
       print('🎵 Playing: ${item.displayTitle}');
+      print('🎵 Lock screen controls enabled via just_audio_background');
     } catch (e) {
       print('❌ Error playing audio: $e');
       _state = AudioPlayerState.error;
@@ -287,8 +302,8 @@ class GlobalAudioPlayerService extends ChangeNotifier {
   }
 
   // Play podcast episode
-  Future<void> playPodcastEpisode(PodcastEpisode episode) async {
-    final audioItem = AudioItem.fromPodcastEpisode(episode);
+  Future<void> playPodcastEpisode(PodcastEpisode episode, {Podcast? podcast}) async {
+    final audioItem = AudioItem.fromPodcastEpisode(episode, podcast: podcast);
     await playItem(audioItem);
   }
 
@@ -301,7 +316,10 @@ class GlobalAudioPlayerService extends ChangeNotifier {
   }
 
   // Play podcast episode with queue management
-  Future<void> playPodcastEpisodeWithQueue(PodcastEpisode episode, List<PodcastEpisode> episodes, String podcastId) async {
+  Future<void> playPodcastEpisodeWithQueue(PodcastEpisode episode, List<PodcastEpisode> episodes, String podcastId, {Podcast? podcast}) async {
+    // Store podcast for queue navigation
+    _currentPodcast = podcast;
+    
     // Set the episode queue
     setEpisodeQueue(episodes, podcastId);
     
@@ -315,10 +333,10 @@ class GlobalAudioPlayerService extends ChangeNotifier {
     
     print('🎧 Playing episode ${_currentEpisodeIndex + 1}/${_episodeQueue.length}: ${episode.title}');
     
-    // Play the episode
-    await playPodcastEpisode(episode);
+    // Play the episode with podcast metadata
+    await playPodcastEpisode(episode, podcast: podcast);
   }
-
+  
   // Play next episode
   Future<void> playNextEpisode() async {
     if (!hasNextEpisode) {
@@ -330,7 +348,7 @@ class GlobalAudioPlayerService extends ChangeNotifier {
     print('🎧 Playing next episode: ${nextEpisodeData.title}');
     
     _currentEpisodeIndex++;
-    await playPodcastEpisode(nextEpisodeData);
+    await playPodcastEpisode(nextEpisodeData, podcast: _currentPodcast);
   }
 
   // Play previous episode
@@ -344,7 +362,7 @@ class GlobalAudioPlayerService extends ChangeNotifier {
     print('🎧 Playing previous episode: ${previousEpisodeData.title}');
     
     _currentEpisodeIndex--;
-    await playPodcastEpisode(previousEpisodeData);
+    await playPodcastEpisode(previousEpisodeData, podcast: _currentPodcast);
   }
 
   // Pause audio
@@ -360,7 +378,7 @@ class GlobalAudioPlayerService extends ChangeNotifier {
   // Resume audio
   Future<void> resume() async {
     try {
-      await _audioPlayer.resume();
+      await _audioPlayer.play();
       print('▶️ Audio resumed');
     } catch (e) {
       print('❌ Error resuming audio: $e');
@@ -392,7 +410,7 @@ class GlobalAudioPlayerService extends ChangeNotifier {
   // Set playback speed
   Future<void> setPlaybackSpeed(double speed) async {
     try {
-      await _audioPlayer.setPlaybackRate(speed);
+      await _audioPlayer.setSpeed(speed);
       print('⚡ Playback speed set to: ${speed}x');
     } catch (e) {
       print('❌ Error setting playback speed: $e');
@@ -441,121 +459,11 @@ class GlobalAudioPlayerService extends ChangeNotifier {
       });
     } else {
       print('🎧 No next episode available or not a podcast episode');
-      _hideSystemAudioControls();
     }
   }
 
-  // Dispose resources
-  @override
-  // System Audio Controls Methods
-  Future<void> _initializeSystemAudioControls() async {
-    const AndroidInitializationSettings initializationSettingsAndroid =
-        AndroidInitializationSettings('@mipmap/ic_launcher');
-    
-    const InitializationSettings initializationSettings =
-        InitializationSettings(android: initializationSettingsAndroid);
-
-    await _notifications.initialize(
-      initializationSettings,
-      onDidReceiveNotificationResponse: _onNotificationTap,
-    );
-  }
-
-  void _onNotificationTap(NotificationResponse response) {
-    // Handle notification tap and actions
-    print('🎵 System audio control tapped: ${response.actionId}');
-    
-    switch (response.actionId) {
-      case 'play_pause':
-        togglePlayPause();
-        break;
-      case 'prev':
-        // Skip backward 15 seconds
-        final newPosition = _position - const Duration(seconds: 15);
-        seekTo(newPosition < Duration.zero ? Duration.zero : newPosition);
-        break;
-      case 'next':
-        // Skip forward 15 seconds
-        final newPosition = _position + const Duration(seconds: 15);
-        final maxPosition = _duration;
-        seekTo(newPosition > maxPosition ? maxPosition : newPosition);
-        break;
-      case 'prev_episode':
-        // Play previous episode (for podcasts)
-        if (_currentItem?.type == AudioType.podcast) {
-          playPreviousEpisode();
-        }
-        break;
-      case 'next_episode':
-        // Play next episode (for podcasts)
-        if (_currentItem?.type == AudioType.podcast) {
-          playNextEpisode();
-        }
-        break;
-      case 'close':
-        stop();
-        break;
-      default:
-        // Default tap - could navigate to player if needed
-        break;
-    }
-  }
-
-  Future<void> _updateSystemAudioControls() async {
-    if (_currentItem == null) return;
-
-    final AndroidNotificationDetails androidPlatformChannelSpecifics =
-        AndroidNotificationDetails(
-      'audio_player',
-      'Audio Player',
-      channelDescription: 'Background audio playback controls',
-      importance: Importance.low,
-      priority: Priority.low,
-      showWhen: false,
-      ongoing: true,
-      autoCancel: false,
-      // largeIcon: _currentItem!.coverImageUrl != null && _currentItem!.coverImageUrl!.isNotEmpty
-      //     ? NetworkResourceAndroidBitmap(_currentItem!.coverImageUrl!)
-      //     : null,
-      actions: [
-        // For podcast episodes, show previous/next episode controls
-        if (_currentItem?.type == AudioType.podcast) ...[
-          AndroidNotificationAction('prev_episode', '⏮️ Prev', showsUserInterface: false),
-          AndroidNotificationAction('prev', '⏪ 15s', showsUserInterface: false),
-        ] else
-          AndroidNotificationAction('prev', '⏪ 15s', showsUserInterface: false),
-        
-        AndroidNotificationAction(
-          'play_pause', 
-          isPlaying ? '⏸️ Pause' : '▶️ Play', 
-          showsUserInterface: false
-        ),
-        
-        // For podcast episodes, show next episode controls
-        if (_currentItem?.type == AudioType.podcast) ...[
-          AndroidNotificationAction('next', '⏩ 15s', showsUserInterface: false),
-          AndroidNotificationAction('next_episode', '⏭️ Next', showsUserInterface: false),
-        ] else
-          AndroidNotificationAction('next', '⏩ 15s', showsUserInterface: false),
-        
-        AndroidNotificationAction('close', '❌ Close', showsUserInterface: false),
-      ],
-    );
-
-    final NotificationDetails platformChannelSpecifics =
-        NotificationDetails(android: androidPlatformChannelSpecifics);
-
-    await _notifications.show(
-      1,
-      _currentItem!.title,
-      '${_currentItem!.displaySubtitle} • ${getFormattedTime(_position)} / ${getFormattedTime(_duration)}',
-      platformChannelSpecifics,
-    );
-  }
-
-  Future<void> _hideSystemAudioControls() async {
-    await _notifications.cancel(1);
-  }
+  // Note: Lock screen controls are automatically handled by just_audio_background
+  // when using AudioSource.uri() with MediaItem tags
 
   // Dispose resources
   @override

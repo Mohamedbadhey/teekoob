@@ -9,6 +9,12 @@ import 'package:teekoob/features/books/presentation/widgets/shimmer_book_card.da
 import 'package:teekoob/features/books/presentation/widgets/search_bar.dart' as custom_search;
 import 'package:teekoob/features/books/presentation/widgets/book_filters.dart';
 import 'package:teekoob/features/library/bloc/library_bloc.dart';
+import 'package:teekoob/features/podcasts/services/podcasts_service.dart';
+import 'package:teekoob/features/podcasts/presentation/widgets/podcast_card.dart';
+import 'package:teekoob/core/models/podcast_model.dart';
+import 'package:teekoob/features/books/services/books_service.dart';
+
+enum ContentType { all, books, podcast }
 
 class BooksPage extends StatefulWidget {
   const BooksPage({super.key});
@@ -19,6 +25,8 @@ class BooksPage extends StatefulWidget {
 
 class _BooksPageState extends State<BooksPage> {
   final TextEditingController _searchController = TextEditingController();
+  final BooksService _booksService = BooksService();
+  final PodcastsService _podcastsService = PodcastsService();
   List<String> _selectedCategories = [];
   String _selectedYear = '';
   String _sortBy = 'title';
@@ -26,6 +34,10 @@ class _BooksPageState extends State<BooksPage> {
   bool _hasLoadedInitialData = false;
   bool _isInitialBuild = true;
   String _currentSearchQuery = '';
+  List<dynamic> _allContent = [];
+  ContentType _selectedContentType = ContentType.all;
+  bool _isLoadingContent = false;
+  String? _contentError;
 
   @override
   void initState() {
@@ -73,6 +85,8 @@ class _BooksPageState extends State<BooksPage> {
     context.read<BooksBloc>().add(const LoadLanguages());
     print('📖 BooksPage: Dispatching LoadLibrary event');
     context.read<LibraryBloc>().add(const LoadLibrary('current_user'));
+    // Load both books and podcasts into the feed
+    _loadCombinedContent();
   }
 
   void _searchBooks(String query) {
@@ -83,19 +97,13 @@ class _BooksPageState extends State<BooksPage> {
       setState(() {
         _currentSearchQuery = q;
       });
-      context.read<BooksBloc>().add(LoadBooks(
-        search: q,
-        categories: _selectedCategories.isNotEmpty ? _selectedCategories : null,
-        year: _selectedYear.isEmpty ? null : _selectedYear,
-        sortBy: _sortBy,
-        sortOrder: _sortOrder,
-      ));
+      _loadCombinedContent();
     } else {
       print('🔍 BooksPage: Empty query, loading books with filters');
       setState(() {
         _currentSearchQuery = '';
       });
-      _loadBooksWithFilters();
+      _loadCombinedContent();
     }
   }
 
@@ -110,13 +118,7 @@ class _BooksPageState extends State<BooksPage> {
     print('🔧 BooksPage: Filters - categories: $_selectedCategories, year: $_selectedYear');
     print('🔧 BooksPage: Filters - sortBy: $_sortBy, sortOrder: $_sortOrder');
     
-    context.read<BooksBloc>().add(LoadBooks(
-      search: _currentSearchQuery.isNotEmpty ? _currentSearchQuery : null,
-      categories: _selectedCategories.isNotEmpty ? _selectedCategories : null,
-      year: _selectedYear.isEmpty ? null : _selectedYear,
-      sortBy: _sortBy,
-      sortOrder: _sortOrder,
-    ));
+    _loadCombinedContent();
   }
 
   void _applyFilters() {
@@ -135,78 +137,44 @@ class _BooksPageState extends State<BooksPage> {
     _loadBooksWithFilters();
   }
 
+ Future<void> _loadCombinedContent() async {
+  setState(() { _isLoadingContent = true; _contentError = null; });
+  try {
+    final booksFut = _booksService.getBooks(
+      search: _currentSearchQuery,
+      categories: _selectedCategories,
+      year: _selectedYear.isNotEmpty ? _selectedYear : null,
+      sortBy: _sortBy,
+      sortOrder: _sortOrder,
+    ).then((res) => res['books'] as List);
+    final podcastsFut = _podcastsService.getPodcasts(
+      search: _currentSearchQuery,
+      categories: _selectedCategories,
+      sortBy: _sortBy,
+      sortOrder: _sortOrder,
+    ).then((res) => res['podcasts'] as List);
+    final books = await booksFut;
+    final podcasts = await podcastsFut;
+    final allContent = [...books, ...podcasts];
+    setState(() => _allContent = allContent);
+  } catch (e) {
+    setState(() => _contentError = e.toString());
+  } finally {
+    setState(() => _isLoadingContent = false);
+  }
+}
+  
   @override
   Widget build(BuildContext context) {
-    return BlocListener<BooksBloc, BooksState>(
-      listenWhen: (previous, current) {
-        // Only listen to states that are relevant to the books list
-        return current is BooksLoading || 
-               current is BooksLoaded || 
-               current is BooksError || 
-               current is SearchResultsLoaded;
-      },
-      listener: (context, state) {
-        print('🎧 BooksPage BlocListener: State changed to ${state.runtimeType}');
-        
-        if (state is BooksLoading) {
-          print('⏳ BooksPage Listener: Books are loading...');
-        } else if (state is BooksLoaded) {
-          print('✅ BooksPage Listener: Books loaded successfully - ${state.books.length} books');
-        } else if (state is BooksError) {
-          print('❌ BooksPage Listener: Books error - ${state.message}');
-        } else if (state is SearchResultsLoaded) {
-          print('🔍 BooksPage Listener: Search results loaded - ${state.books.length} books');
-        }
-      },
-      child: Scaffold(
-        backgroundColor: Theme.of(context).colorScheme.background,
-        body: SafeArea(
-          child: Column(
-            children: [
-              _buildModernHeader(),
-              _buildSearchSection(),
-          Expanded(
-            child: BlocBuilder<BooksBloc, BooksState>(
-                  buildWhen: (previous, current) {
-                    // Only rebuild for states that are relevant to the books list
-                    return current is BooksLoading || 
-                           current is BooksLoaded || 
-                           current is BooksError || 
-                           current is SearchResultsLoaded ||
-                           current is BooksInitial;
-                  },
-              builder: (context, state) {
-                    print('🔍 BooksPage BlocBuilder: Current state = ${state.runtimeType}');
-                    
-                if (state is BooksLoading) {
-                      print('📱 BooksPage: Showing loading state');
-                      return _buildLoadingState();
-                } else if (state is BooksError) {
-                      print('❌ BooksPage: Showing error state - ${state.message}');
-                      return _buildErrorState(state);
-                    } else if (state is SearchResultsLoaded) {
-                      print('🔍 BooksPage: Showing search results - ${state.books.length} books');
-                      // Show the same compact list without a separate search header
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            child: _buildBooksList(state.books),
-                          ),
-                        ],
-                      );
-                    } else if (state is BooksLoaded) {
-                      print('📚 BooksPage: Showing books grid - ${state.books.length} books');
-                      return _buildBooksGrid(state);
-                    } else {
-                      print('⏳ BooksPage: Initial/Unknown state, showing loading state');
-                      return _buildLoadingState();
-                    }
-                  },
-                ),
-              ),
-            ],
-          ),
+    return Scaffold(
+      backgroundColor: Theme.of(context).colorScheme.background,
+      body: SafeArea(
+        child: Column(
+          children: [
+            _buildModernHeader(),
+            _buildSearchSection(),
+            Expanded(child: _buildContentList()),
+          ],
         ),
       ),
     );
@@ -328,14 +296,13 @@ class _BooksPageState extends State<BooksPage> {
         final screenWidth = constraints.maxWidth;
         return Container(
           margin: EdgeInsets.fromLTRB(
-            screenWidth * 0.05, // 5% of screen width
+            screenWidth * 0.05, 
             0, 
-            screenWidth * 0.05, // 5% of screen width
-            screenWidth * 0.04, // 4% of screen width
+            screenWidth * 0.05, 
+            screenWidth * 0.04,
           ),
       child: Column(
         children: [
-          // Search bar with enhanced styling
           Container(
             decoration: BoxDecoration(
               color: Colors.white,
@@ -358,12 +325,21 @@ class _BooksPageState extends State<BooksPage> {
               onSearch: _searchBooks,
               onClear: () {
                 _searchController.clear();
-                _loadBooksWithFilters();
+                _loadCombinedContent();
               },
             ),
           ),
-          
-          // Search suggestions removed per request
+              SizedBox(height: 12),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  _contentTypeButton('All', ContentType.all),
+                  SizedBox(width: 12),
+                  _contentTypeButton('Books', ContentType.books),
+                  SizedBox(width: 12),
+                  _contentTypeButton('Podcast', ContentType.podcast),
+                ],
+              ),
         ],
       ),
         );
@@ -371,6 +347,27 @@ class _BooksPageState extends State<BooksPage> {
     );
   }
 
+  Widget _contentTypeButton(String label, ContentType type) {
+    final bool selected = _selectedContentType == type;
+    return ElevatedButton(
+      onPressed: () {
+        setState(() => _selectedContentType = type);
+      },
+      style: ElevatedButton.styleFrom(
+        backgroundColor: selected
+            ? Theme.of(context).colorScheme.primary
+            : Colors.grey.shade200,
+        foregroundColor: selected
+            ? Colors.white
+            : Theme.of(context).colorScheme.primary,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+        ),
+        elevation: selected ? 2 : 0,
+      ),
+      child: Text(label, style: TextStyle(fontWeight: FontWeight.bold)),
+    );
+  }
 
 
   Widget _buildLoadingState() {
@@ -519,7 +516,7 @@ class _BooksPageState extends State<BooksPage> {
                 ElevatedButton.icon(
                   onPressed: () {
                     _searchController.clear();
-                    _loadBooksWithFilters();
+                    _loadCombinedContent();
                   },
                   icon: const Icon(Icons.refresh_rounded),
                   label: Text(LocalizationService.getRefreshText),
@@ -876,5 +873,102 @@ class _BooksPageState extends State<BooksPage> {
         ),
       ),
     );
+  }
+
+  Widget _buildContentList() {
+    if (_isLoadingContent) {
+      return Center(child: CircularProgressIndicator());
+    }
+    if (_contentError != null) {
+      return Center(child: Text('Error: $_contentError', style: TextStyle(color: Colors.red)));
+    }
+    if (_allContent.isEmpty) {
+      // Instead of _buildEmptyState(), show nothing/no UI
+      return const SizedBox.shrink();
+    }
+    // Separate by type
+   final books = _allContent.where((e) => e is Book).cast<Book>().toList();
+final podcasts = _allContent.where((e) => e is Podcast).cast<Podcast>().toList();
+    List<dynamic> feedCards;
+    switch (_selectedContentType) {
+      case ContentType.books:
+        feedCards = books;
+        break;
+      case ContentType.podcast:
+        feedCards = podcasts;
+        break;
+      default:
+        feedCards = [...books, ...podcasts];
+        break;
+    }
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final screenWidth = constraints.maxWidth;
+        int crossAxisCount = 2;
+        if (screenWidth > 800) crossAxisCount = 4;
+        else if (screenWidth > 600) crossAxisCount = 3;
+        final cardWidth = (screenWidth - 24 - (crossAxisCount-1)*16) / crossAxisCount;
+        return GridView.builder(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: crossAxisCount,
+            mainAxisSpacing: 16,
+            crossAxisSpacing: 16,
+            childAspectRatio: 0.68,
+          ),
+          itemCount: feedCards.length,
+          itemBuilder: (context, index) {
+            final item = feedCards[index];
+            if (item is Book) {
+              return BookCard(
+                book: item,
+                onTap: () => _navigateToBookDetail(item),
+                compact: false,
+                width: cardWidth,
+                userId: 'current_user',
+              );
+            } else if (item is Podcast) {
+              return PodcastCard(
+                podcast: item,
+                onTap: () => _navigateToPodcastDetail(item),
+                width: cardWidth,
+                userId: 'current_user',
+              );
+            } else {
+              return const SizedBox.shrink();
+            }
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildSectionHeader(String title) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
+      child: Row(
+        children: [
+          Icon(
+            title == 'Books' ? Icons.menu_book_rounded : Icons.podcasts_rounded,
+            color: Theme.of(context).colorScheme.primary,
+          ),
+          const SizedBox(width: 12),
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 1.0,
+              color: Theme.of(context).colorScheme.primary,
+              shadows: [Shadow(color: Colors.black12, blurRadius: 6)],
+            ),
+          )
+        ],
+      ),
+    );
+  }
+
+  void _navigateToPodcastDetail(Podcast podcast) {
+    context.go('/podcast/${podcast.id}');
   }
 }

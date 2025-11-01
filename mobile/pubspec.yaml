@@ -38,6 +38,7 @@ dependencies:
   
   # Audio & Video
   just_audio: ^0.9.36
+  just_audio_background: ^0.0.1-beta.17
   audio_session: ^0.1.18
   audioplayers: ^5.2.1
   audio_service: ^0.18.12
@@ -58,6 +59,12 @@ dependencies:
   flutter_secure_storage: ^9.0.0
   google_sign_in: ^6.2.1
   
+  # Payment Integration
+  flutter_stripe: ^10.1.1
+  
+  # Cloud Firestore for user data
+  cloud_firestore: ^4.13.6
+  
   # Localization
   flutter_localizations:
     sdk: flutter
@@ -71,6 +78,12 @@ dependencies:
   
   # Offline Support
   sqflite: ^2.3.0
+  
+  # File encryption for offline content
+  encrypt: ^5.0.3
+  
+  # Download manager
+  flutter_downloader: ^1.11.6
   
   # Image Processing
   image_picker: ^1.0.4
@@ -89,6 +102,9 @@ dependencies:
   # Firebase Cloud Messaging (Essential for closed app notifications)
   firebase_core: ^2.24.2
   # firebase_messaging: ^14.7.10  # Temporarily disabled for Android builds
+  
+  # Provider package (already imported in main.dart)
+  provider: ^6.1.1
 
 dev_dependencies:
   flutter_lints: ^3.0.0

@@ -115,9 +115,9 @@ class _PodcastEpisodePageState extends State<PodcastEpisodePage>
       } else {
         // Use the new queue management functionality
         if (_episodes.isNotEmpty) {
-          await _audioService.playPodcastEpisodeWithQueue(_episode!, _episodes, widget.podcastId);
+          await _audioService.playPodcastEpisodeWithQueue(_episode!, _episodes, widget.podcastId, podcast: _podcast);
         } else {
-          await _audioService.playPodcastEpisode(_episode!);
+          await _audioService.playPodcastEpisode(_episode!, podcast: _podcast);
         }
       }
     }

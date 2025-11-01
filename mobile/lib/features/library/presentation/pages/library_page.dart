@@ -39,10 +39,194 @@ class _LibraryPageState extends State<LibraryPage> {
     print('🎯 LibraryPage: Loading library data for user: $_userId');
     try {
       context.read<LibraryBloc>().add(LoadLibrary(_userId));
+      context.read<LibraryBloc>().add(LoadFavorites());
       print('✅ LibraryPage: LoadLibrary event dispatched successfully');
     } catch (e) {
       print('❌ LibraryPage: Error dispatching LoadLibrary event: $e');
     }
+  }
+
+  Widget _buildLibraryContent(LibraryLoaded state) {
+    return DefaultTabController(
+      length: 2,
+      child: Column(
+        children: [
+          TabBar(
+            labelColor: Theme.of(context).colorScheme.primary,
+            unselectedLabelColor: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+            indicatorColor: Theme.of(context).colorScheme.primary,
+            tabs: const [
+              Tab(text: 'Library'),
+              Tab(text: 'Favorites'),
+            ],
+          ),
+          Expanded(
+            child: TabBarView(
+              children: [
+                _buildLibraryTab(state),
+                _buildFavoritesTab(state),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLibraryTab(LibraryLoaded state) {
+    if (state.library.isEmpty) {
+      return _buildPremiumOfflineMessage();
+    }
+    return _buildBooksGrid(state.library);
+  }
+
+  Widget _buildFavoritesTab(LibraryLoaded state) {
+    if (state.favorites.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.favorite_border_rounded,
+                size: 64,
+                color: const Color(0xFF0466c8).withOpacity(0.6),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                LocalizationService.getLocalizedText(
+                  englishText: 'No favorites yet',
+                  somaliText: 'Weli ma jiraan jeceshaha',
+                ),
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF0466c8),
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                LocalizationService.getLocalizedText(
+                  englishText: 'Tap the heart icon on books or podcasts to add them to favorites',
+                  somaliText: 'Guji astaanta wadnaha kutubta ama podkaasta si aad ugu daro jeceshaha',
+                ),
+                style: TextStyle(
+                  color: const Color(0xFF0466c8).withOpacity(0.7),
+                  fontSize: 14,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // Separate books and podcasts
+    final favoriteBooks = state.favorites
+        .where((f) => f['item_type'] == 'book' && f['item'] != null)
+        .map((f) => f['item'] as Map<String, dynamic>)
+        .toList();
+    
+    final favoritePodcasts = state.favorites
+        .where((f) => f['item_type'] == 'podcast' && f['item'] != null)
+        .map((f) => f['item'] as Map<String, dynamic>)
+        .toList();
+
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        if (favoriteBooks.isNotEmpty) ...[
+          Text(
+            LocalizationService.getLocalizedText(
+              englishText: 'Favorite Books',
+              somaliText: 'Kutubta Jeceshaha',
+            ),
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 16),
+          ...favoriteBooks.map((book) => _buildFavoriteItemCard(book, 'book')),
+          const SizedBox(height: 24),
+        ],
+        if (favoritePodcasts.isNotEmpty) ...[
+          Text(
+            LocalizationService.getLocalizedText(
+              englishText: 'Favorite Podcasts',
+              somaliText: 'Podkaastada Jeceshaha',
+            ),
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 16),
+          ...favoritePodcasts.map((podcast) => _buildFavoriteItemCard(podcast, 'podcast')),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildFavoriteItemCard(Map<String, dynamic> item, String type) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: ListTile(
+        leading: Container(
+          width: 60,
+          height: 60,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            color: Theme.of(context).colorScheme.surfaceVariant,
+          ),
+          child: item['cover_image_url'] != null
+              ? ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Image.network(
+                    item['cover_image_url'],
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) => Icon(
+                      type == 'book' ? Icons.book : Icons.podcasts,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                )
+              : Icon(
+                  type == 'book' ? Icons.book : Icons.podcasts,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+        ),
+        title: Text(
+          item['title'] ?? item['title_somali'] ?? 'Unknown',
+          style: const TextStyle(fontWeight: FontWeight.w600),
+        ),
+        subtitle: Text(
+          type == 'book' 
+              ? (item['author'] ?? 'Unknown Author')
+              : (item['host'] ?? item['host_somali'] ?? 'Unknown Host'),
+        ),
+        trailing: IconButton(
+          icon: const Icon(Icons.favorite, color: Colors.red),
+          onPressed: () {
+            context.read<LibraryBloc>().add(
+              ToggleFavorite(
+                _userId,
+                item['id'],
+                itemType: type,
+              ),
+            );
+          },
+        ),
+        onTap: () {
+          if (type == 'book') {
+            context.go('/book/${item['id']}');
+          } else {
+            context.go('/podcast/${item['id']}');
+          }
+        },
+      ),
+    );
   }
 
   @override
@@ -76,6 +260,10 @@ class _LibraryPageState extends State<LibraryPage> {
                     if (state is LibrarySearchResults) {
                       print('🔍 LibraryPage: Showing search results - ${state.results.length} results');
                       return _buildSearchResults(state);
+                    } else if (state is LibraryLoaded) {
+                      return _buildLibraryContent(state);
+                    } else if (state is LibraryLoading) {
+                      return const Center(child: CircularProgressIndicator());
                     } else {
                       // Show premium offline message when not searching
                       return _buildPremiumOfflineMessage();
