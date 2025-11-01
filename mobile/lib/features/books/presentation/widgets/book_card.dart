@@ -369,8 +369,39 @@ class _BookCardState extends State<BookCard> with TickerProviderStateMixin {
                   ),
                 ),
               ),
-                
-              // Action buttons removed for cleaner design
+              
+              // Favorite button
+              if (widget.showLibraryActions)
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () => _toggleFavorite(context),
+                      borderRadius: BorderRadius.circular(20),
+                      child: Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.surface.withOpacity(0.9),
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.2),
+                              blurRadius: 4,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Icon(
+                          widget.isFavorite ? Icons.favorite : Icons.favorite_border,
+                          size: widget.compact ? 16 : 18,
+                          color: widget.isFavorite ? Colors.red : Theme.of(context).colorScheme.onSurface,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
               ],
             ),
             
@@ -594,25 +625,61 @@ class _BookCardState extends State<BookCard> with TickerProviderStateMixin {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(10),
-              child: Container(
-                width: 72,
-                height: 96,
-                color: Theme.of(context).colorScheme.surface,
-                child: widget.book.coverImageUrl != null
-                    ? CachedNetworkImage(
-                        imageUrl: _buildFullImageUrl(widget.book.coverImageUrl!),
-                        fit: BoxFit.cover,
-                        width: 72,
-                        height: 96,
-                        placeholder: (context, url) => _buildGradientBackground(72),
-                        errorWidget: (context, url, error) => _buildGradientBackground(72),
-                        fadeInDuration: const Duration(milliseconds: 200),
-                        fadeOutDuration: const Duration(milliseconds: 100),
-                      )
-                    : _buildGradientBackground(72),
-              ),
+            Stack(
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: Container(
+                    width: 72,
+                    height: 96,
+                    color: Theme.of(context).colorScheme.surface,
+                    child: widget.book.coverImageUrl != null
+                        ? CachedNetworkImage(
+                            imageUrl: _buildFullImageUrl(widget.book.coverImageUrl!),
+                            fit: BoxFit.cover,
+                            width: 72,
+                            height: 96,
+                            placeholder: (context, url) => _buildGradientBackground(72),
+                            errorWidget: (context, url, error) => _buildGradientBackground(72),
+                            fadeInDuration: const Duration(milliseconds: 200),
+                            fadeOutDuration: const Duration(milliseconds: 100),
+                          )
+                        : _buildGradientBackground(72),
+                  ),
+                ),
+                // Favorite button for compact view
+                if (widget.showLibraryActions)
+                  Positioned(
+                    top: 4,
+                    right: 4,
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: () => _toggleFavorite(context),
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.surface.withOpacity(0.9),
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.2),
+                                blurRadius: 3,
+                                offset: const Offset(0, 1),
+                              ),
+                            ],
+                          ),
+                          child: Icon(
+                            widget.isFavorite ? Icons.favorite : Icons.favorite_border,
+                            size: 14,
+                            color: widget.isFavorite ? Colors.red : Theme.of(context).colorScheme.onSurface,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
             ),
             const SizedBox(width: 12),
             Expanded(

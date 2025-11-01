@@ -809,8 +809,9 @@ class _BooksPageState extends State<BooksPage> {
                 
                 if (libraryState is LibraryLoaded) {
                   isInLibrary = libraryState.library.any((item) => item['bookId'] == book.id);
-                  isFavorite = libraryState.library.any((item) => 
-                    item['bookId'] == book.id && (item['isFavorite'] == true || item['status'] == 'favorite')
+                  // Check favorites from favorites list
+                  isFavorite = libraryState.favorites.any((fav) => 
+                    fav['item_type'] == 'book' && fav['item_id'] == book.id
                   );
                 }
                 
@@ -920,19 +921,45 @@ final podcasts = _allContent.where((e) => e is Podcast).cast<Podcast>().toList()
           itemBuilder: (context, index) {
             final item = feedCards[index];
             if (item is Book) {
-              return BookCard(
-                book: item,
-                onTap: () => _navigateToBookDetail(item),
-                compact: false,
-                width: cardWidth,
-                userId: 'current_user',
+              return BlocBuilder<LibraryBloc, LibraryState>(
+                builder: (context, libraryState) {
+                  bool isFavorite = false;
+                  if (libraryState is LibraryLoaded) {
+                    isFavorite = libraryState.favorites.any((fav) => 
+                      fav['item_type'] == 'book' && fav['item_id'] == item.id
+                    );
+                  }
+                  
+                  return BookCard(
+                    book: item,
+                    onTap: () => _navigateToBookDetail(item),
+                    compact: false,
+                    width: cardWidth,
+                    userId: 'current_user',
+                    showLibraryActions: true,
+                    isFavorite: isFavorite,
+                  );
+                },
               );
             } else if (item is Podcast) {
-              return PodcastCard(
-                podcast: item,
-                onTap: () => _navigateToPodcastDetail(item),
-                width: cardWidth,
-                userId: 'current_user',
+              return BlocBuilder<LibraryBloc, LibraryState>(
+                builder: (context, libraryState) {
+                  bool isFavorite = false;
+                  if (libraryState is LibraryLoaded) {
+                    isFavorite = libraryState.favorites.any((fav) => 
+                      fav['item_type'] == 'podcast' && fav['item_id'] == item.id
+                    );
+                  }
+                  
+                  return PodcastCard(
+                    podcast: item,
+                    onTap: () => _navigateToPodcastDetail(item),
+                    width: cardWidth,
+                    userId: 'current_user',
+                    showLibraryActions: true,
+                    isFavorite: isFavorite,
+                  );
+                },
               );
             } else {
               return const SizedBox.shrink();

@@ -16,8 +16,7 @@ router.get('/', asyncHandler(async (req, res) => {
   // Build query
   let query = db('user_library as ul')
     .join('books as b', 'ul.book_id', 'b.id')
-    .where('ul.user_id', userId)
-    .where('b.status', 'published');
+    .where('ul.user_id', userId);
   
   // Apply filters
   if (status) {
@@ -85,10 +84,9 @@ router.post('/', asyncHandler(async (req, res) => {
     });
   }
   
-  // Check if book exists and is published
+  // Check if book exists
   const book = await db('books')
     .where('id', bookId)
-    .where('status', 'published')
     .first();
   
   if (!book) {
@@ -512,10 +510,9 @@ router.put('/favorites/books/:bookId', asyncHandler(async (req, res) => {
   const { bookId } = req.params;
   const userId = req.userId;
   
-  // Check if book exists and is published
+  // Check if book exists
   const book = await db('books')
     .where('id', bookId)
-    .where('status', 'published')
     .first();
   
   if (!book) {
@@ -690,8 +687,7 @@ router.get('/favorites', asyncHandler(async (req, res) => {
   const books = bookIds.length > 0 
     ? await db('books')
         .whereIn('id', bookIds)
-        .where('status', 'published')
-        .select('id', 'title', 'title_somali', 'author', 'cover_image_url', 'language', 'format', 'is_free', 'price')
+        .select('id', 'title', 'title_somali', 'authors', 'authors_somali', 'cover_image_url', 'language', 'format', 'is_free')
     : [];
   
   // Get podcast details for podcast favorites

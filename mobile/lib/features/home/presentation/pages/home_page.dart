@@ -117,7 +117,7 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin<
       context.read<BooksBloc>().add(const LoadCategories());
     }
     
-    // Load library data
+    // Load library data (this also loads favorites)
     _loadLibraryData();
     
     // Load additional data with delays to prevent overwhelming the system
@@ -214,6 +214,7 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin<
 
   void _loadLibraryData() {
     // Load library data to show correct status on book cards
+    // This will also load favorites in the same event
     context.read<LibraryBloc>().add(const LoadLibrary('current_user'));
   }
 
@@ -691,15 +692,16 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin<
                   
                   if (libraryState is LibraryLoaded) {
                     isInLibrary = libraryState.library.any((item) => item['bookId'] == book.id);
-                    isFavorite = libraryState.library.any((item) => 
-                      item['bookId'] == book.id && (item['isFavorite'] == true || item['status'] == 'favorite')
+                    // Check favorites from favorites list
+                    isFavorite = libraryState.favorites.any((fav) => 
+                      fav['item_type'] == 'book' && fav['item_id'] == book.id
                     );
                   }
                   
                   return BookCard(
                     book: book,
                     onTap: () => _navigateToBookDetail(book),
-                    showLibraryActions: false, // Disabled for cleaner design
+                    showLibraryActions: true, // Enable favorite button
                     isInLibrary: isInLibrary,
                     isFavorite: isFavorite,
                     userId: 'current_user', // TODO: Get from auth service
@@ -960,15 +962,16 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin<
                 
                 if (libraryState is LibraryLoaded) {
                   isInLibrary = libraryState.library.any((item) => item['bookId'] == book.id);
-                  isFavorite = libraryState.library.any((item) => 
-                    item['bookId'] == book.id && (item['isFavorite'] == true || item['status'] == 'favorite')
+                  // Check favorites from favorites list
+                  isFavorite = libraryState.favorites.any((fav) => 
+                    fav['item_type'] == 'book' && fav['item_id'] == book.id
                   );
                 }
                 
                 return BookCard(
                   book: book,
                   onTap: () => _navigateToBookDetail(book),
-                  showLibraryActions: false, // Disabled for cleaner design
+                  showLibraryActions: true, // Enable favorite button
                   isInLibrary: isInLibrary,
                   isFavorite: isFavorite,
                   userId: 'current_user', // TODO: Get from auth service
@@ -1049,15 +1052,16 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin<
                       
                       if (libraryState is LibraryLoaded) {
                         isInLibrary = libraryState.library.any((item) => item['bookId'] == book.id);
-                        isFavorite = libraryState.library.any((item) => 
-                          item['bookId'] == book.id && (item['isFavorite'] == true || item['status'] == 'favorite')
+                        // Check favorites from favorites list
+                        isFavorite = libraryState.favorites.any((fav) => 
+                          fav['item_type'] == 'book' && fav['item_id'] == book.id
                         );
                       }
                       
                       return BookCard(
                         book: book,
                         onTap: () => _navigateToBookDetail(book),
-                        showLibraryActions: false, // Disabled for cleaner design
+                        showLibraryActions: true, // Enable favorite button
                         isInLibrary: isInLibrary,
                         isFavorite: isFavorite,
                         userId: 'current_user', // TODO: Get from auth service
@@ -1205,14 +1209,25 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin<
           ] else if (_featuredPodcasts.isNotEmpty) ...[
             SizedBox(
               width: double.infinity,
-              child: PodcastCard(
-                podcast: _featuredPodcasts.first,
-                onTap: () => _navigateToPodcastDetail(_featuredPodcasts.first),
-                showLibraryActions: false,
-                isInLibrary: false,
-                isFavorite: false,
-                userId: 'current_user',
-                enableAnimations: true,
+              child: BlocBuilder<LibraryBloc, LibraryState>(
+                builder: (context, libraryState) {
+                  bool isFavorite = false;
+                  if (libraryState is LibraryLoaded) {
+                    isFavorite = libraryState.favorites.any((fav) => 
+                      fav['item_type'] == 'podcast' && fav['item_id'] == _featuredPodcasts.first.id
+                    );
+                  }
+                  
+                  return PodcastCard(
+                    podcast: _featuredPodcasts.first,
+                    onTap: () => _navigateToPodcastDetail(_featuredPodcasts.first),
+                    showLibraryActions: true, // Enable favorite button
+                    isInLibrary: false,
+                    isFavorite: isFavorite,
+                    userId: 'current_user',
+                    enableAnimations: true,
+                  );
+                },
               ),
             ),
           ] else ...[
@@ -1362,15 +1377,27 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin<
               final podcast = podcasts[index];
               print('🎨 _buildPodcastsHorizontalScroll: Building item $index for podcast: ${podcast.title}');
               
-              return PodcastCard(
-                podcast: podcast,
-                onTap: () => _navigateToPodcastDetail(podcast),
-                showLibraryActions: false,
-                isInLibrary: false,
-                isFavorite: false,
-                userId: 'current_user',
-                width: _getResponsiveHorizontalCardWidth(),
-                enableAnimations: !kIsWeb,
+              return BlocBuilder<LibraryBloc, LibraryState>(
+                builder: (context, libraryState) {
+                  bool isFavorite = false;
+                  if (libraryState is LibraryLoaded) {
+                    // Check favorites from favorites list
+                    isFavorite = libraryState.favorites.any((fav) => 
+                      fav['item_type'] == 'podcast' && fav['item_id'] == podcast.id
+                    );
+                  }
+                  
+                  return PodcastCard(
+                    podcast: podcast,
+                    onTap: () => _navigateToPodcastDetail(podcast),
+                    showLibraryActions: true, // Enable favorite button
+                    isInLibrary: false,
+                    isFavorite: isFavorite,
+                    userId: 'current_user',
+                    width: _getResponsiveHorizontalCardWidth(),
+                    enableAnimations: !kIsWeb,
+                  );
+                },
               );
             },
           ),

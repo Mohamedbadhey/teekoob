@@ -1,10 +1,13 @@
 import 'package:dio/dio.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:teekoob/core/config/app_config.dart';
 
 class NetworkService {
   late Dio _dio;
   final Connectivity _connectivity = Connectivity();
+  static const FlutterSecureStorage _secureStorage = FlutterSecureStorage();
+  static const String _tokenKey = 'auth_token';
 
   NetworkService();
 
@@ -22,7 +25,15 @@ class NetworkService {
     // Add interceptors
     _dio.interceptors.add(InterceptorsWrapper(
       onRequest: (options, handler) async {
-        // Note: Auth token handling removed - no local storage
+        // Auto-load auth token from secure storage
+        try {
+          final token = await _secureStorage.read(key: _tokenKey);
+          if (token != null && token.isNotEmpty) {
+            options.headers['Authorization'] = 'Bearer $token';
+          }
+        } catch (e) {
+          print('⚠️ NetworkService: Could not load auth token: $e');
+        }
         handler.next(options);
       },
       onResponse: (response, handler) {

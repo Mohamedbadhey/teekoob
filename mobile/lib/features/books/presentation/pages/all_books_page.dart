@@ -189,15 +189,16 @@ class _AllBooksPageState extends State<AllBooksPage> {
                 
                 if (libraryState is LibraryLoaded) {
                   isInLibrary = libraryState.library.any((item) => item['bookId'] == book.id);
-                  isFavorite = libraryState.library.any((item) => 
-                    item['bookId'] == book.id && (item['isFavorite'] == true || item['status'] == 'favorite')
+                  // Check favorites from favorites list
+                  isFavorite = libraryState.favorites.any((fav) => 
+                    fav['item_type'] == 'book' && fav['item_id'] == book.id
                   );
                 }
                 
                 return BookCard(
                   book: book,
                   onTap: () => _navigateToBookDetail(book),
-                  showLibraryActions: false, // Disabled for cleaner design
+                  showLibraryActions: true, // Enable favorite button
                   isInLibrary: isInLibrary,
                   isFavorite: isFavorite,
                   userId: 'current_user',
