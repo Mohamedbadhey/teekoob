@@ -112,75 +112,134 @@ class _SettingsPageState extends State<SettingsPage> {
   Widget _buildProfileSection() {
     return BlocBuilder<AuthBloc, AuthState>(
       builder: (context, authState) {
-        // Only show profile section if user is authenticated
-        if (authState is! Authenticated) {
-          return const SizedBox.shrink();
-        }
+        // Show profile section - with user data if authenticated, or login prompt if not
+        if (authState is Authenticated) {
+          final userName = authState.user.displayName;
+          final userEmail = authState.user.email;
+          final avatarUrl = authState.user.profilePicture;
+          
+          print('🔍 Profile Section Debug:');
+          print('   - User authenticated: true');
+          print('   - User name: $userName');
+          print('   - User email: $userEmail');
+          print('   - Avatar URL: $avatarUrl');
+          print('   - Profile picture field: ${authState.user.profilePicture}');
 
-        final userName = authState.user.displayName;
-        final userEmail = authState.user.email;
-        final avatarUrl = authState.user.profilePicture;
-        
-        print('🔍 Profile Section Debug:');
-        print('   - User authenticated: true');
-        print('   - User name: $userName');
-        print('   - User email: $userEmail');
-        print('   - Avatar URL: $avatarUrl');
-        print('   - Profile picture field: ${authState.user.profilePicture}');
-
-    return _buildSection(
-      title: LocalizationService.getProfileText,
-      children: [
-            Container(
-              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surface,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF0466c8).withOpacity(0.1),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: ListTile(
-                contentPadding: const EdgeInsets.all(16),
-          leading: _buildProfileAvatar(avatarUrl),
-          title: Text(
-                  userName,
-                  style: TextStyle(
-              fontWeight: FontWeight.w600,
-                    fontSize: 18,
-            color: Theme.of(context).colorScheme.onSurface,
-            ),
-          ),
-          subtitle: Text(
-                  userEmail,
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-                    fontSize: 14,
-                  ),
-                ),
-                trailing: Container(
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF0466c8).withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: IconButton(
-                    icon: const Icon(
-                      Icons.edit_rounded,
-                      color: Color(0xFF0466c8),
+          return _buildSection(
+            title: LocalizationService.getProfileText,
+            children: [
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surface,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF0466c8).withOpacity(0.1),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
                     ),
-            onPressed: () {
-                      _showEditProfileDialog(context, authState);
-            },
+                  ],
+                ),
+                child: ListTile(
+                  contentPadding: const EdgeInsets.all(16),
+                  leading: _buildProfileAvatar(avatarUrl),
+                  title: Text(
+                    userName,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 18,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                  ),
+                  subtitle: Text(
+                    userEmail,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                      fontSize: 14,
+                    ),
+                  ),
+                  trailing: Container(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF0466c8).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: IconButton(
+                      icon: const Icon(
+                        Icons.edit_rounded,
+                        color: Color(0xFF0466c8),
+                      ),
+                      onPressed: () {
+                        if (authState is Authenticated) {
+                          context.push('/edit-profile');
+                        }
+                      },
+                    ),
                   ),
                 ),
-          ),
-        ),
-      ],
-        );
+              ),
+            ],
+          );
+        } else {
+          // Show login prompt when not authenticated
+          return _buildSection(
+            title: LocalizationService.getProfileText,
+            children: [
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surface,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF0466c8).withOpacity(0.1),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    const Icon(
+                      Icons.person_outline,
+                      size: 48,
+                      color: Colors.grey,
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      LocalizationService.getLocalizedText(
+                        englishText: 'Please log in to view your profile',
+                        somaliText: 'Fadlan soo gal si aad u aragto profile-kaaga',
+                      ),
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 16),
+                    ElevatedButton(
+                      onPressed: () {
+                        context.go('/login');
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF0466c8),
+                        foregroundColor: Colors.white,
+                      ),
+                      child: Text(
+                        LocalizationService.getLocalizedText(
+                          englishText: 'Log In',
+                          somaliText: 'Soo Gal',
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          );
+        }
       },
     );
   }

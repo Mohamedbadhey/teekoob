@@ -15,6 +15,10 @@ import 'package:teekoob/features/library/presentation/pages/library_page.dart';
 import 'package:teekoob/features/settings/presentation/pages/settings_page.dart';
 import 'package:teekoob/core/presentation/widgets/floating_audio_player.dart';
 import 'package:teekoob/core/services/global_audio_player_service.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:teekoob/features/auth/bloc/auth_bloc.dart';
+import 'package:teekoob/features/auth/services/auth_service.dart';
+import 'package:teekoob/core/services/network_service.dart';
 
 class AppScaffold extends StatefulWidget {
   const AppScaffold({super.key});
@@ -43,6 +47,23 @@ class _AppScaffoldState extends State<AppScaffold> with WidgetsBindingObserver {
     _networkService.initialize();
     _checkConnectivity();
     _listenToConnectivity();
+    _checkAuthToken();
+    _setupAuthListener();
+  }
+  
+  void _checkAuthToken() async {
+    // Check token on app start and periodically
+    final authService = AuthService();
+    final isAuthenticated = await authService.isAuthenticated();
+    if (!isAuthenticated && mounted) {
+      // No token found, ensure user is logged out
+      context.read<AuthBloc>().add(const LogoutRequested());
+      context.go('/login');
+    }
+  }
+  
+  void _setupAuthListener() {
+    // Auth state is checked via BlocListener in build method
   }
 
   Future<void> _checkConnectivity() async {
@@ -207,15 +228,22 @@ class _AppScaffoldState extends State<AppScaffold> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
-    return PopScope(
-      canPop: false,
-      onPopInvokedWithResult: (didPop, result) async {
-        if (!didPop) {
-          // Show exit confirmation dialog when Android back button is pressed
-          await _showExitConfirmationDialog(context);
+    return BlocListener<AuthBloc, AuthState>(
+      listener: (context, state) {
+        // If user becomes unauthenticated, redirect to login
+        if (state is Unauthenticated && mounted) {
+          context.go('/login');
         }
       },
-      child: Consumer<LanguageService>(
+      child: PopScope(
+        canPop: false,
+        onPopInvokedWithResult: (didPop, result) async {
+          if (!didPop) {
+            // Show exit confirmation dialog when Android back button is pressed
+            await _showExitConfirmationDialog(context);
+          }
+        },
+        child: Consumer<LanguageService>(
         builder: (context, languageService, child) {
           return ChangeNotifierProvider<GlobalAudioPlayerService>(
             create: (context) => GlobalAudioPlayerService(),
@@ -310,6 +338,7 @@ class _AppScaffoldState extends State<AppScaffold> with WidgetsBindingObserver {
             ),
           );
         },
+      ),
       ),
     );
   }

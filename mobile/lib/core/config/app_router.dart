@@ -17,6 +17,10 @@ import 'package:teekoob/features/subscription/presentation/pages/subscription_pa
 import 'package:teekoob/features/books/presentation/pages/book_audio_player_page.dart';
 import 'package:teekoob/features/podcasts/presentation/pages/podcast_detail_page.dart';
 import 'package:teekoob/features/podcasts/presentation/pages/podcast_episode_page.dart';
+import 'package:teekoob/features/profile/presentation/pages/edit_profile_page.dart';
+import 'package:teekoob/features/auth/services/auth_service.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:teekoob/features/auth/bloc/auth_bloc.dart';
 
 class AppRouter {
   static const String splash = '/';
@@ -54,6 +58,13 @@ class AppRouter {
         path: register,
         name: 'register',
         builder: (context, state) => const RegisterPage(),
+      ),
+      
+      // Edit Profile Route (Protected)
+      GoRoute(
+        path: '/edit-profile',
+        name: 'editProfile',
+        builder: (context, state) => const EditProfilePage(),
       ),
       
       // Main App Routes (Protected) - All handled by AppScaffold
@@ -163,10 +174,25 @@ class AppRouter {
     ],
     
     // Redirect logic for authentication
-    redirect: (context, state) {
-      // Add authentication logic here
-      // For now, always allow access
-      return null;
+    redirect: (context, state) async {
+      final authService = AuthService();
+      final isAuthenticated = await authService.isAuthenticated();
+      
+      // Public routes that don't require authentication
+      final publicRoutes = ['/', '/login', '/register'];
+      final isPublicRoute = publicRoutes.contains(state.uri.path);
+      
+      // If not authenticated and trying to access protected route, redirect to login
+      if (!isAuthenticated && !isPublicRoute) {
+        return '/login';
+      }
+      
+      // If authenticated and on login/register, redirect to home
+      if (isAuthenticated && (state.uri.path == '/login' || state.uri.path == '/register')) {
+        return '/home';
+      }
+      
+      return null; // Allow navigation
     },
     
     // Error handling

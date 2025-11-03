@@ -333,6 +333,9 @@ class _BookDetailPageState extends State<BookDetailPage> {
                     // Reading Time & Rating
                     _buildTimeAndRating(),
                     
+                    // Action Buttons
+                    _buildActionButtons(),
+                    
                     const SizedBox(height: 24),
                     
                     // Text Blocks
@@ -532,6 +535,83 @@ class _BookDetailPageState extends State<BookDetailPage> {
           ],
         ),
       ],
+    );
+  }
+
+  Widget _buildActionButtons() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 24),
+      child: Row(
+        children: [
+          Expanded(
+            child: ElevatedButton(
+              onPressed: () {
+                if (book != null) {
+                  context.push('/home/books/${book!.id}/read', extra: book);
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF0466c8), // Blue - same as home page
+                foregroundColor: Colors.white, // White text on orange background
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                padding: const EdgeInsets.symmetric(vertical: 16),
+              ),
+              child: const Text(
+                'Read',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
+          
+          const SizedBox(width: 16),
+          
+          Expanded(
+            child: Consumer<GlobalAudioPlayerService>(
+              builder: (context, audioService, child) {
+                final bool isCurrentBook = audioService.currentItem?.id == book?.id;
+                final bool isPlaying = audioService.isPlaying && isCurrentBook;
+                
+                return OutlinedButton.icon(
+                  onPressed: () {
+                    if (book != null) {
+                      if (isCurrentBook && isPlaying) {
+                        audioService.pause();
+                      } else {
+                        audioService.playBook(book!);
+                        context.push('/book/${book!.id}/audio-player', extra: book);
+                      }
+                    }
+                  },
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFF1E3A8A), // Dark blue text
+                    side: const BorderSide(color: Color(0xFF1E3A8A), width: 2), // Dark blue border
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                  ),
+                  icon: Icon(
+                    (isCurrentBook && isPlaying) ? Icons.pause : Icons.play_arrow,
+                    color: const Color(0xFF1E3A8A),
+                  ),
+                  label: Text(
+                    (isCurrentBook && isPlaying) ? 'Pause' : 'Listen',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
     );
   }
 

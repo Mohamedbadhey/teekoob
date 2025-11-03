@@ -6,6 +6,7 @@ import 'dart:io';
 import 'package:teekoob/features/auth/bloc/auth_bloc.dart';
 import 'package:teekoob/core/models/user_model.dart';
 import 'package:teekoob/features/profile/services/profile_service.dart';
+import 'package:teekoob/features/auth/services/auth_service.dart';
 
 class EditProfilePage extends StatefulWidget {
   const EditProfilePage({super.key});
@@ -239,9 +240,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
                       radius: 60,
                       backgroundColor: Colors.grey[200],
                       backgroundImage: _imageFile != null
-                          ? FileImage(_imageFile!)
+                          ? FileImage(_imageFile!) as ImageProvider
                           : _currentImageUrl != null
-                              ? NetworkImage(_currentImageUrl!)
+                              ? NetworkImage(_currentImageUrl!) as ImageProvider
                               : null,
                       child: _imageFile == null && _currentImageUrl == null
                           ? const Icon(Icons.person, size: 60, color: Colors.grey)

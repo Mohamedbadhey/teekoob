@@ -39,7 +39,13 @@ class NetworkService {
       onResponse: (response, handler) {
         handler.next(response);
       },
-      onError: (error, handler) {
+      onError: (error, handler) async {
+        // Handle 401 (Unauthorized) - token expired or invalid
+        if (error.response?.statusCode == 401) {
+          // Clear token and notify listeners
+          await _secureStorage.delete(key: _tokenKey);
+          clearAuthToken();
+        }
         handler.next(error);
       },
     ));

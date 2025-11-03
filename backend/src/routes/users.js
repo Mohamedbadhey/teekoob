@@ -41,7 +41,7 @@ router.get('/profile', asyncHandler(async (req, res) => {
   const user = await db('users')
     .select(
       'id', 'email', 'first_name', 'last_name', 'avatar_url',
-      'preferred_language', 'subscription_plan', 'subscription_expires_at',
+      'language_preference', 'subscription_plan', 'subscription_expires_at',
       'is_verified', 'created_at', 'last_login_at'
     )
     .where('id', userId)
@@ -95,7 +95,7 @@ router.put('/profile', asyncHandler(async (req, res) => {
     }
   }
   if (lastName) updateData.last_name = lastName.trim();
-  if (preferredLanguage) updateData.preferred_language = preferredLanguage;
+  if (preferredLanguage) updateData.language_preference = preferredLanguage;
   
   if (Object.keys(updateData).length === 0) {
     return res.status(400).json({ 
@@ -116,7 +116,7 @@ router.put('/profile', asyncHandler(async (req, res) => {
   const updatedUser = await db('users')
     .select(
       'id', 'email', 'first_name', 'last_name', 'display_name', 'avatar_url',
-      'preferred_language', 'subscription_plan', 'subscription_expires_at',
+      'language_preference', 'subscription_plan', 'subscription_expires_at',
       'is_verified', 'created_at', 'last_login_at'
     )
     .where('id', userId)
@@ -158,7 +158,7 @@ router.put('/avatar', upload.single('avatar'), asyncHandler(async (req, res) => 
     const updatedUser = await db('users')
       .select(
         'id', 'email', 'first_name', 'last_name', 'display_name', 'avatar_url',
-        'preferred_language', 'subscription_plan', 'subscription_expires_at',
+        'language_preference', 'subscription_plan', 'subscription_expires_at',
         'is_verified', 'created_at', 'last_login_at'
       )
       .where('id', userId)
@@ -498,7 +498,7 @@ router.get('/export', asyncHandler(async (req, res) => {
       email: user.email,
       firstName: user.first_name,
       lastName: user.last_name,
-      preferredLanguage: user.preferred_language,
+      preferredLanguage: user.language_preference,
       subscriptionPlan: user.subscription_plan,
       createdAt: user.created_at
     },
