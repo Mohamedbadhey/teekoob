@@ -85,7 +85,15 @@ router.put('/profile', asyncHandler(async (req, res) => {
   }
   
   const updateData = {};
-  if (firstName) updateData.first_name = firstName.trim();
+  if (firstName) {
+    updateData.first_name = firstName.trim();
+    // Also update display_name if it exists
+    if (lastName) {
+      updateData.display_name = `${firstName.trim()} ${lastName.trim()}`;
+    } else {
+      updateData.display_name = firstName.trim();
+    }
+  }
   if (lastName) updateData.last_name = lastName.trim();
   if (preferredLanguage) updateData.preferred_language = preferredLanguage;
   
@@ -104,8 +112,19 @@ router.put('/profile', asyncHandler(async (req, res) => {
   
   logger.info('User profile updated:', { userId, updateData });
   
+  // Fetch and return updated user
+  const updatedUser = await db('users')
+    .select(
+      'id', 'email', 'first_name', 'last_name', 'display_name', 'avatar_url',
+      'preferred_language', 'subscription_plan', 'subscription_expires_at',
+      'is_verified', 'created_at', 'last_login_at'
+    )
+    .where('id', userId)
+    .first();
+  
   res.json({
-    message: 'Profile updated successfully'
+    message: 'Profile updated successfully',
+    user: updatedUser
   });
 }));
 
@@ -135,9 +154,20 @@ router.put('/avatar', upload.single('avatar'), asyncHandler(async (req, res) => 
     
     logger.info('Avatar uploaded:', { userId, avatarUrl });
     
+    // Fetch updated user to return
+    const updatedUser = await db('users')
+      .select(
+        'id', 'email', 'first_name', 'last_name', 'display_name', 'avatar_url',
+        'preferred_language', 'subscription_plan', 'subscription_expires_at',
+        'is_verified', 'created_at', 'last_login_at'
+      )
+      .where('id', userId)
+      .first();
+    
     res.json({
       message: 'Avatar uploaded successfully',
-      avatarUrl
+      avatarUrl,
+      user: updatedUser
     });
     
   } catch (error) {

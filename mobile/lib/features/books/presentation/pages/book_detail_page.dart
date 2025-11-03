@@ -12,7 +12,6 @@ import 'package:teekoob/core/config/app_router.dart';
 import 'package:teekoob/features/books/presentation/pages/book_read_page.dart';
 import 'package:teekoob/features/player/presentation/pages/audio_player_page.dart';
 import 'package:teekoob/features/player/services/audio_state_manager.dart';
-import 'package:teekoob/core/presentation/widgets/book_reminder_widget.dart';
 import 'package:teekoob/core/services/global_audio_player_service.dart';
 import 'package:teekoob/core/services/download_service.dart';
 import 'package:teekoob/features/library/bloc/library_bloc.dart';
@@ -334,15 +333,6 @@ class _BookDetailPageState extends State<BookDetailPage> {
                     // Reading Time & Rating
                     _buildTimeAndRating(),
                     
-                    // Action Buttons
-                    _buildActionButtons(),
-                    
-                    // Rating Section
-                    _buildRatingSection(),
-                    
-                    // Book Reminder Widget
-                    BookReminderWidget(book: book!),
-                    
                     const SizedBox(height: 24),
                     
                     // Text Blocks
@@ -542,156 +532,6 @@ class _BookDetailPageState extends State<BookDetailPage> {
           ],
         ),
       ],
-    );
-  }
-
-  Widget _buildActionButtons() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 24),
-      child: Row(
-        children: [
-          Expanded(
-            child: ElevatedButton(
-              onPressed: () {
-                if (book != null) {
-                  context.push('/home/books/${book!.id}/read', extra: book);
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF0466c8), // Blue - same as home page
-                foregroundColor: Colors.white, // White text on orange background
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                padding: const EdgeInsets.symmetric(vertical: 16),
-              ),
-              child: const Text(
-                'Read',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ),
-          
-          const SizedBox(width: 16),
-          
-          Expanded(
-            child: Consumer<GlobalAudioPlayerService>(
-              builder: (context, audioService, child) {
-                final bool isCurrentBook = audioService.currentItem?.id == book?.id;
-                final bool isPlaying = audioService.isPlaying && isCurrentBook;
-                
-                return OutlinedButton.icon(
-                  onPressed: () {
-                    if (book != null) {
-                      if (isCurrentBook && isPlaying) {
-                        audioService.pause();
-                      } else {
-                        audioService.playBook(book!);
-                        context.push('/book/${book!.id}/audio-player', extra: book);
-                      }
-                    }
-                  },
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: const Color(0xFF1E3A8A), // Dark blue text
-                    side: const BorderSide(color: Color(0xFF1E3A8A), width: 2), // Dark blue border
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                  ),
-                  icon: Icon(
-                    (isCurrentBook && isPlaying) ? Icons.pause : Icons.play_arrow,
-                    color: const Color(0xFF1E3A8A),
-                  ),
-                  label: Text(
-                    (isCurrentBook && isPlaying) ? 'Pause' : 'Listen',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildRatingSection() {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 24),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey[300]!),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        children: [
-          // Left Side - Add Rating
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Add rating',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.black87,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: List.generate(5, (index) => 
-                    Icon(
-                      Icons.star_border,
-                      size: 20,
-                      color: Colors.grey[400],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          
-          // Vertical Divider
-          Container(
-            width: 1,
-            height: 60,
-            color: Colors.grey[300],
-          ),
-          
-          // Right Side - Language
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                const Text(
-                  'Language',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.black87,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  book?.language == 'somali' ? 'Somali' : 'English',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey[600],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
     );
   }
 

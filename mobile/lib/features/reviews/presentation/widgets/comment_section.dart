@@ -90,14 +90,21 @@ class _CommentSectionState extends State<CommentSection> {
       
       setState(() {
         _userReview = review;
-        if (review != null) {
-          _selectedRating = review.rating;
-          _commentController.text = review.comment ?? '';
-        }
+        // Don't auto-populate form - only populate when user clicks edit
+        // Form stays empty for new reviews
       });
     } catch (e) {
       print('Error loading user review: $e');
     }
+  }
+
+  Future<void> _loadUserReviewForEditing(Review review) async {
+    // Load the specific review for editing
+    setState(() {
+      _userReview = review;
+      _selectedRating = review.rating;
+      _commentController.text = review.comment ?? '';
+    });
   }
 
   Future<void> _submitReview() async {
@@ -111,9 +118,20 @@ class _CommentSectionState extends State<CommentSection> {
       return;
     }
 
+    // Prevent multiple submissions
+    if (_isSubmitting) return;
+
     setState(() => _isSubmitting = true);
 
     try {
+      // Check if user already has a review before submitting
+      final existingReview = await _reviewsService.getUserReview(
+        itemId: widget.itemId,
+        itemType: widget.itemType,
+      );
+
+      final isUpdating = existingReview != null;
+      
       final review = await _reviewsService.createOrUpdateReview(
         itemId: widget.itemId,
         itemType: widget.itemType,
@@ -123,19 +141,30 @@ class _CommentSectionState extends State<CommentSection> {
             : null,
       );
 
+      // Refresh reviews list
       setState(() {
-        _userReview = review;
-        // Refresh reviews list
         _currentPage = 1;
         _hasMore = true;
-        _loadReviews();
+        _reviews = []; // Clear existing reviews
+      });
+      
+      // Reload both reviews list and user review
+      await Future.wait([
+        _loadReviews(),
+        _loadUserReview(),
+      ]);
+
+      // Always clear form after submission - user must click edit to modify
+      setState(() {
+        _selectedRating = 0.0;
+        _commentController.clear();
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(_userReview == null 
-              ? 'Review submitted successfully!' 
-              : 'Review updated successfully!'),
+          content: Text(isUpdating 
+              ? 'Review updated successfully!' 
+              : 'Review submitted successfully!'),
           backgroundColor: Colors.green,
         ),
       );
@@ -278,112 +307,167 @@ class _CommentSectionState extends State<CommentSection> {
         
         const SizedBox(height: 24),
         
-        // Write a review section
-        Text(
-          _userReview == null ? 'Write a Review' : 'Edit Your Review',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: Theme.of(context).colorScheme.onSurface,
-          ),
-        ),
-        const SizedBox(height: 16),
-        
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surface,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: Theme.of(context).colorScheme.outline.withOpacity(0.1),
-            ),
-          ),
-          child: Column(
+        // Write a review section - only show if no review exists or user is editing
+        if (_userReview == null || (_selectedRating > 0 || _commentController.text.isNotEmpty))
+          Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Rating selection
               Text(
-                'Your Rating',
+                _userReview == null ? 'Write a Review' : 'Edit Your Review',
                 style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
                   color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
-              const SizedBox(height: 8),
-              RatingWidget(
-                rating: _selectedRating,
-                size: 32,
-                allowInteraction: true,
-                userRating: _selectedRating,
-                onRatingChanged: (rating) {
-                  setState(() => _selectedRating = rating);
-                },
-                showRatingText: false,
-              ),
-              
-              const SizedBox(height: 16),
-              
-              // Comment text field
-              Text(
-                'Your Comment',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: Theme.of(context).colorScheme.onSurface,
-                ),
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: _commentController,
-                maxLines: 5,
-                decoration: InputDecoration(
-                  hintText: 'Share your thoughts about this ${widget.itemType}...',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
+              if (_userReview != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(
+                    'Make your changes and click "Update Review"',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                      fontStyle: FontStyle.italic,
+                    ),
                   ),
-                  filled: true,
-                  fillColor: Theme.of(context).colorScheme.background,
                 ),
-              ),
-              
               const SizedBox(height: 16),
               
-              // Submit button
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  if (_userReview != null)
-                    TextButton(
-                      onPressed: _isSubmitting ? null : _deleteReview,
-                      child: const Text(
-                        'Delete',
-                        style: TextStyle(color: Colors.red),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surface,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: Theme.of(context).colorScheme.outline.withOpacity(0.1),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Rating selection
+                    Text(
+                      'Your Rating',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
                     ),
-                  ElevatedButton(
-                    onPressed: _isSubmitting ? null : _submitReview,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Theme.of(context).colorScheme.primary,
-                      foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    const SizedBox(height: 8),
+                    RatingWidget(
+                      rating: _selectedRating,
+                      size: 32,
+                      allowInteraction: true,
+                      userRating: _selectedRating,
+                      onRatingChanged: (rating) {
+                        setState(() => _selectedRating = rating);
+                      },
+                      showRatingText: false,
                     ),
-                    child: _isSubmitting
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    
+                    const SizedBox(height: 16),
+                    
+                    // Comment text field
+                    Text(
+                      'Your Comment',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: _commentController,
+                      maxLines: 5,
+                      decoration: InputDecoration(
+                        hintText: 'Share your thoughts about this ${widget.itemType}...',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        filled: true,
+                        fillColor: Theme.of(context).colorScheme.background,
+                      ),
+                    ),
+                    
+                    const SizedBox(height: 16),
+                    
+                    // Submit button
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        if (_userReview != null && (_selectedRating > 0 || _commentController.text.isNotEmpty))
+                          TextButton(
+                            onPressed: _isSubmitting ? null : () {
+                              setState(() {
+                                _selectedRating = 0.0;
+                                _commentController.clear();
+                              });
+                            },
+                            child: const Text(
+                              'Cancel',
+                              style: TextStyle(color: Colors.grey),
                             ),
-                          )
-                        : Text(_userReview == null ? 'Submit Review' : 'Update Review'),
-                  ),
-                ],
+                          ),
+                        ElevatedButton(
+                          onPressed: (_isSubmitting || (_selectedRating == 0.0 && _commentController.text.trim().isEmpty)) 
+                              ? null 
+                              : _submitReview,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Theme.of(context).colorScheme.primary,
+                            foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                          ),
+                          child: _isSubmitting
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                  ),
+                                )
+                              : Text(_userReview == null ? 'Submit Review' : 'Update Review'),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
-        ),
+        if (_userReview != null && (_selectedRating == 0.0 && _commentController.text.isEmpty))
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surface.withOpacity(0.5),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: Theme.of(context).colorScheme.outline.withOpacity(0.1),
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.check_circle,
+                  color: Colors.green,
+                  size: 20,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'You have already reviewed this ${widget.itemType}. Click "Edit" on your review below to modify it.',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         
         const SizedBox(height: 24),
         
@@ -456,19 +540,16 @@ class _CommentSectionState extends State<CommentSection> {
                 review: review,
                 showActions: isUserReview,
                 onEdit: isUserReview ? () {
-                  setState(() {
-                    _userReview = review;
-                    _selectedRating = review.rating;
-                    _commentController.text = review.comment ?? '';
-                  });
-                  // Scroll to top
+                  // Load the user's review and populate form for editing
+                  _loadUserReviewForEditing(review);
+                  // Scroll to top to show the form
                   _scrollController.animateTo(
                     0,
                     duration: const Duration(milliseconds: 300),
                     curve: Curves.easeInOut,
                   );
                 } : null,
-                onDelete: isUserReview ? _deleteReview : null,
+                onDelete: isUserReview ? () => _deleteReview() : null,
               );
             },
           ),

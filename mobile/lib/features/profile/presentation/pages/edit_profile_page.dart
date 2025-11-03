@@ -157,22 +157,28 @@ class _EditProfilePageState extends State<EditProfilePage> {
         setState(() => _isImageUploading = false);
       }
 
-      // Update profile
-      await profileService.updateProfile(
-        userId: userId,
-        displayName: _nameController.text.trim(),
-        email: _emailController.text.trim(),
-        phoneNumber: _phoneController.text.trim().isEmpty ? null : _phoneController.text.trim(),
-        bio: _bioController.text.trim().isEmpty ? null : _bioController.text.trim(),
+      // Update profile using AuthService
+      final authService = AuthService();
+      final updatedUser = await authService.updateProfile(
+        firstName: _nameController.text.trim().split(' ').first,
+        lastName: _nameController.text.trim().split(' ').length > 1 
+            ? _nameController.text.trim().split(' ').sublist(1).join(' ') 
+            : null,
         profilePicture: newImageUrl,
       );
 
-      // Update local auth state
+      // Update local auth state with the updated user
       context.read<AuthBloc>().add(UpdateProfileRequested(
         displayName: _nameController.text.trim(),
         phoneNumber: _phoneController.text.trim().isEmpty ? null : _phoneController.text.trim(),
         avatarUrl: newImageUrl,
       ));
+      
+      // Refresh user data to ensure state is up to date
+      final refreshedUser = await authService.getCurrentUser();
+      if (refreshedUser != null) {
+        context.read<AuthBloc>().add(CheckAuthStatus());
+      }
 
       if (mounted) {
         _showSuccess('Profile updated successfully!');

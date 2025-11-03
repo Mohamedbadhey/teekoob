@@ -534,22 +534,31 @@ class AuthService {
     String? bio,
   }) async {
     try {
-      final response = await _networkService.put('/auth/profile', data: {
+      final response = await _networkService.put('/users/profile', data: {
         'firstName': firstName,
         'lastName': lastName,
-        'profilePicture': profilePicture,
         'preferredLanguage': preferredLanguage,
-        'phoneNumber': phoneNumber,
-        'dateOfBirth': dateOfBirth?.toIso8601String(),
-        'country': country,
-        'city': city,
-        'bio': bio,
       });
 
       if (response.statusCode == 200) {
-        // Return updated user data from response
-        final userData = response.data['user'] as Map<String, dynamic>;
-        return User.fromJson(userData);
+        // Try to get user from response first
+        if (response.data['user'] != null) {
+          final userData = response.data['user'] as Map<String, dynamic>;
+          return User.fromJson(userData);
+        }
+        // Otherwise fetch updated user data
+        final userResponse = await _networkService.get('/users/profile');
+        if (userResponse.statusCode == 200) {
+          final userData = userResponse.data['user'] as Map<String, dynamic>;
+          return User.fromJson(userData);
+        } else {
+          // If fetch fails, get current user from /auth/me
+          final user = await getCurrentUser();
+          if (user == null) {
+            throw Exception('Failed to get updated user');
+          }
+          return user;
+        }
       } else {
         throw Exception('Profile update failed');
       }

@@ -43,16 +43,29 @@ class Review extends Equatable {
       userId: json['user_id'] as String? ?? json['userId'] as String? ?? '',
       itemId: json['item_id'] as String? ?? json['itemId'] as String? ?? '',
       itemType: json['item_type'] as String? ?? json['itemType'] as String? ?? 'book',
-      rating: (json['rating'] != null) 
-          ? (json['rating'] is double 
-              ? json['rating'] 
-              : (json['rating'] is int 
-                  ? json['rating'].toDouble() 
-                  : double.parse(json['rating'].toString())))
-          : 0.0,
+      rating: (() {
+        final value = json['rating'];
+        if (value == null) return 0.0;
+        if (value is double) return value;
+        if (value is int) return value.toDouble();
+        if (value is String) return double.tryParse(value) ?? 0.0;
+        return 0.0;
+      })(),
       comment: json['comment'] as String?,
-      isApproved: json['is_approved'] as bool? ?? json['isApproved'] as bool? ?? true,
-      isEdited: json['is_edited'] as bool? ?? json['isEdited'] as bool? ?? false,
+      isApproved: (() {
+        final value = json['is_approved'] ?? json['isApproved'];
+        if (value is bool) return value;
+        if (value is int) return value == 1;
+        if (value is String) return value == '1' || value.toLowerCase() == 'true';
+        return true;
+      })(),
+      isEdited: (() {
+        final value = json['is_edited'] ?? json['isEdited'];
+        if (value is bool) return value;
+        if (value is int) return value == 1;
+        if (value is String) return value == '1' || value.toLowerCase() == 'true';
+        return false;
+      })(),
       createdAt: json['created_at'] != null
           ? (json['created_at'] is DateTime
               ? json['created_at']

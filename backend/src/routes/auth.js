@@ -362,7 +362,7 @@ router.post('/refresh', asyncHandler(async (req, res) => {
     const newToken = jwt.sign(
       { userId: user.id },
       process.env.JWT_SECRET,
-      { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+      { expiresIn: process.env.JWT_EXPIRES_IN || '365d' }
     );
 
     res.json({
@@ -553,7 +553,7 @@ router.post('/google-web', asyncHandler(async (req, res) => {
     const token = jwt.sign(
       { userId: user.id },
       process.env.JWT_SECRET,
-      { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+      { expiresIn: process.env.JWT_EXPIRES_IN || '365d' }
     );
 
     const transformedUser = {
@@ -796,7 +796,7 @@ router.post('/google', asyncHandler(async (req, res) => {
     const token = jwt.sign(
       { userId: user.id },
       process.env.JWT_SECRET,
-      { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+      { expiresIn: process.env.JWT_EXPIRES_IN || '365d' }
     );
 
     const transformedUser = {

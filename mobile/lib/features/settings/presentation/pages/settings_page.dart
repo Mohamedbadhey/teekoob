@@ -112,24 +112,21 @@ class _SettingsPageState extends State<SettingsPage> {
   Widget _buildProfileSection() {
     return BlocBuilder<AuthBloc, AuthState>(
       builder: (context, authState) {
-        String userName = 'Guest User';
-        String userEmail = 'guest@example.com';
-        String? avatarUrl;
-
-        if (authState is Authenticated) {
-          userName = authState.user.displayName;
-          userEmail = authState.user.email;
-          avatarUrl = authState.user.profilePicture;
-          
-          print('🔍 Profile Section Debug:');
-          print('   - User authenticated: true');
-          print('   - User name: $userName');
-          print('   - User email: $userEmail');
-          print('   - Avatar URL: $avatarUrl');
-          print('   - Profile picture field: ${authState.user.profilePicture}');
-        } else {
-          print('🔍 Profile Section Debug: User not authenticated');
+        // Only show profile section if user is authenticated
+        if (authState is! Authenticated) {
+          return const SizedBox.shrink();
         }
+
+        final userName = authState.user.displayName;
+        final userEmail = authState.user.email;
+        final avatarUrl = authState.user.profilePicture;
+        
+        print('🔍 Profile Section Debug:');
+        print('   - User authenticated: true');
+        print('   - User name: $userName');
+        print('   - User email: $userEmail');
+        print('   - Avatar URL: $avatarUrl');
+        print('   - Profile picture field: ${authState.user.profilePicture}');
 
     return _buildSection(
       title: LocalizationService.getProfileText,

@@ -140,7 +140,7 @@ router.post('/', authenticateToken, [
     let isNewReview = false;
 
     if (existingReview) {
-      // Update existing review
+      // Update existing review (prevents multiple reviews)
       reviewId = existingReview.id;
       await db('reviews')
         .where('id', reviewId)
@@ -152,20 +152,49 @@ router.post('/', authenticateToken, [
         });
     } else {
       // Create new review
-      reviewId = crypto.randomUUID();
-      isNewReview = true;
-      await db('reviews').insert({
-        id: reviewId,
-        user_id: userId,
-        item_id: itemId,
-        item_type: itemType,
-        rating,
-        comment: comment || null,
-        is_approved: true,
-        is_edited: false,
-        created_at: db.fn.now(),
-        updated_at: db.fn.now()
-      });
+      try {
+        reviewId = crypto.randomUUID();
+        isNewReview = true;
+        await db('reviews').insert({
+          id: reviewId,
+          user_id: userId,
+          item_id: itemId,
+          item_type: itemType,
+          rating,
+          comment: comment || null,
+          is_approved: true,
+          is_edited: false,
+          created_at: db.fn.now(),
+          updated_at: db.fn.now()
+        });
+      } catch (insertError) {
+        // If unique constraint violation (duplicate review), update instead
+        if (insertError.code === 'ER_DUP_ENTRY' || insertError.message?.includes('unique_user_item_review')) {
+          const duplicateReview = await db('reviews')
+            .where({
+              user_id: userId,
+              item_id: itemId,
+              item_type: itemType
+            })
+            .first();
+          
+          if (duplicateReview) {
+            reviewId = duplicateReview.id;
+            await db('reviews')
+              .where('id', reviewId)
+              .update({
+                rating,
+                comment: comment || null,
+                is_edited: true,
+                updated_at: db.fn.now()
+              });
+          } else {
+            throw insertError;
+          }
+        } else {
+          throw insertError;
+        }
+      }
     }
 
     // Update item rating and review count
