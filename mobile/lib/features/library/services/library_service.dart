@@ -1,5 +1,6 @@
 import 'package:teekoob/core/models/book_model.dart';
 import 'package:teekoob/core/services/network_service.dart';
+import 'package:teekoob/core/services/download_service.dart';
 
 class LibraryService {
   final NetworkService _networkService;
@@ -499,33 +500,31 @@ class LibraryService {
   }
 
   // Sync library with server
+  // NOTE: This endpoint causes rate limiting issues. We skip the actual sync call
+  // and just reload the library data instead.
   Future<void> syncLibrary(String userId) async {
     try {
-      // Get local library
-      // Note: No local storage - return empty library
+      // Skip the sync API call to avoid rate limiting
+      // The LoadLibrary event already loads all necessary data including favorites
+      print('📚 LibraryService: Sync requested but skipped to avoid rate limiting');
+      
+      // Get local library (empty since we have no local storage)
       final localLibrary = <Map<String, dynamic>>[];
       
-      // Get server library
-      final response = await _networkService.get('/library/sync/$userId');
-      if (response.statusCode == 200) {
-        final serverLibrary = response.data['library'] as List;
-        
-        // Merge and resolve conflicts
-        for (final serverItem in serverLibrary) {
-          final localItem = localLibrary.firstWhere(
-            (item) => item['bookId'] == serverItem['bookId'],
-            orElse: () => serverItem,
-          );
-          
-          // Use server data if it's newer
-          if (localItem == serverItem || 
-              DateTime.parse(serverItem['updatedAt']).isAfter(DateTime.parse(localItem['updatedAt'] ?? '1900-01-01'))) {
-            // Note: No local storage - library item not saved locally
-          }
-        }
-      }
+      // Don't call the sync endpoint - just return
+      // The LoadLibrary will fetch fresh data from the server
+      return;
+      
+      // OLD CODE - commented out to prevent rate limiting
+      // final response = await _networkService.get('/library/sync/$userId');
+      // if (response.statusCode == 200) {
+      //   final serverLibrary = response.data['library'] as List;
+      //   // ... merge logic
+      // }
     } catch (e) {
-      throw Exception('Failed to sync library: $e');
+      // Silently fail - don't throw to avoid breaking the UI
+      print('📚 LibraryService: Sync failed (expected): $e');
+      // Don't throw - just return
     }
   }
 
@@ -614,18 +613,34 @@ class LibraryService {
       final List<Book> books = [];
       final List<String> missingIds = [];
       
-      // First, try to get from local storage
+      // Import DownloadService to check for local metadata
+      final downloadService = DownloadService();
+      
+      // First, try to get from local metadata (downloaded books)
       for (final bookId in bookIds) {
-        // Note: No local storage - cannot get book
-      final localBook = null;
-        if (localBook != null) {
-          books.add(localBook);
-        } else {
-          missingIds.add(bookId);
+        try {
+          final metadata = await downloadService.getBookMetadata(bookId);
+          if (metadata != null) {
+            try {
+              final book = Book.fromJson(metadata);
+              books.add(book);
+              print('📚 LibraryService: Found book $bookId in local metadata');
+              continue;
+            } catch (e) {
+              print('❌ LibraryService: Error parsing local metadata for $bookId: $e');
+              // Fall through to fetch from API
+            }
+          }
+        } catch (e) {
+          print('❌ LibraryService: Error checking local metadata for $bookId: $e');
+          // Fall through to fetch from API
         }
+        
+        // If not found locally, mark for API fetch
+        missingIds.add(bookId);
       }
       
-      print('📚 LibraryService: Found ${books.length} books in local storage, fetching ${missingIds.length} from database');
+      print('📚 LibraryService: Found ${books.length} books in local metadata, fetching ${missingIds.length} from API');
       
       // Fetch missing books from database
       if (missingIds.isNotEmpty) {

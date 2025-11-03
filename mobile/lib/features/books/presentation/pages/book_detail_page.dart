@@ -14,6 +14,8 @@ import 'package:teekoob/features/player/presentation/pages/audio_player_page.dar
 import 'package:teekoob/features/player/services/audio_state_manager.dart';
 import 'package:teekoob/core/presentation/widgets/book_reminder_widget.dart';
 import 'package:teekoob/core/services/global_audio_player_service.dart';
+import 'package:teekoob/core/services/download_service.dart';
+import 'package:teekoob/features/library/bloc/library_bloc.dart';
 
 class BookDetailPage extends StatefulWidget {
   final String bookId;
@@ -31,11 +33,91 @@ class _BookDetailPageState extends State<BookDetailPage> {
   Book? book;
   bool isLoading = true;
   String? error;
+  final DownloadService _downloadService = DownloadService();
+  bool _isDownloading = false;
+  bool _isDownloaded = false;
 
   @override
   void initState() {
     super.initState();
+    _downloadService.initialize();
     _loadBookDetails();
+    _checkDownloadStatus();
+  }
+
+  Future<void> _checkDownloadStatus() async {
+    if (book != null) {
+      final audioDownloaded = await _downloadService.isDownloaded(
+        book!.id,
+        DownloadType.bookAudio,
+      );
+      final ebookDownloaded = await _downloadService.isDownloaded(
+        book!.id,
+        DownloadType.bookEbook,
+      );
+      final metadataExists = await _downloadService.getBookMetadata(book!.id) != null;
+      
+      setState(() {
+        _isDownloaded = audioDownloaded || ebookDownloaded || metadataExists;
+      });
+    }
+  }
+  
+  Future<void> _handleDownload() async {
+    if (book == null) {
+      print('❌ Cannot download: book is null');
+      return;
+    }
+    
+    print('📥 Download button clicked for book: ${book!.id}');
+    
+    setState(() {
+      _isDownloading = true;
+    });
+    
+    try {
+      // Dispatch download event
+      if (mounted) {
+        print('📤 Dispatching DownloadBook event...');
+        context.read<LibraryBloc>().add(DownloadBook(book!));
+      }
+      
+      // Show success message
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Download started! The book will be available offline soon.'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+      
+      // Wait a bit then check status
+      await Future.delayed(const Duration(seconds: 3));
+      await _checkDownloadStatus();
+      
+      setState(() {
+        _isDownloading = false;
+      });
+    } catch (e, stackTrace) {
+      print('❌ Download error: $e');
+      print('❌ Stack trace: $stackTrace');
+      
+      setState(() {
+        _isDownloading = false;
+      });
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Download failed: ${e.toString()}'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      }
+    }
   }
 
   void _loadBookDetails() async {
@@ -46,6 +128,40 @@ class _BookDetailPageState extends State<BookDetailPage> {
       });
 
       print('🔍 BookDetailPage: Loading book details for ID: ${widget.bookId}');
+
+      // First, check if book is available offline
+      final offlineMetadata = await _downloadService.getBookMetadata(widget.bookId);
+      if (offlineMetadata != null) {
+        print('📦 BookDetailPage: Found offline metadata, using cached book');
+        try {
+          final cachedBook = Book.fromJson(offlineMetadata);
+          if (mounted) {
+            setState(() {
+              book = cachedBook;
+              isLoading = false;
+            });
+            _checkDownloadStatus();
+          }
+          
+          // Still try to refresh from network in background (optional)
+          try {
+            final booksService = BooksService();
+            final fetchedBook = await booksService.getBookById(widget.bookId);
+            if (fetchedBook != null && mounted) {
+              setState(() {
+                book = fetchedBook;
+              });
+              _checkDownloadStatus();
+            }
+          } catch (e) {
+            // Ignore network errors if we have offline data
+            print('⚠️ BookDetailPage: Could not refresh from network, using cached: $e');
+          }
+          return;
+        } catch (e) {
+          print('❌ BookDetailPage: Error parsing cached book, fetching from network: $e');
+        }
+      }
 
       // Fetch book details from the backend
       final booksService = BooksService();
@@ -67,6 +183,9 @@ class _BookDetailPageState extends State<BookDetailPage> {
           book = fetchedBook;
           isLoading = false;
         });
+        
+        // Check download status after loading book
+        _checkDownloadStatus();
       } else {
         print('❌ BookDetailPage: Book not found in API');
         setState(() {
@@ -247,10 +366,27 @@ class _BookDetailPageState extends State<BookDetailPage> {
               ),
             ),
             IconButton(
+              onPressed: _handleDownload,
+              icon: _isDownloading
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                  : Icon(
+                      _isDownloaded ? Icons.download_done : Icons.download,
+                      color: Colors.white,
+                    ),
+              tooltip: _isDownloaded ? 'Downloaded' : 'Download for offline',
+            ),
+            IconButton(
               onPressed: () {
                 // TODO: Implement share functionality
               },
-              icon: const Icon(Icons.share, color: Colors.white), // White on orange
+              icon: const Icon(Icons.share, color: Colors.white),
             ),
           ],
         ),

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:provider/provider.dart';
@@ -32,7 +33,9 @@ import 'package:teekoob/core/bloc/notification_bloc.dart';
 import 'package:teekoob/features/podcasts/services/podcasts_service.dart';
 import 'package:teekoob/features/podcasts/bloc/podcasts_bloc.dart';
 import 'package:teekoob/core/services/global_audio_player_service.dart';
-import 'package:just_audio_background/just_audio_background.dart';
+import 'package:audio_service/audio_service.dart';
+import 'package:just_audio/just_audio.dart';
+import 'package:teekoob/core/services/teekoob_audio_handler.dart';
 
 void main() async {
   print('🚀 ===== APP STARTUP =====');
@@ -46,16 +49,51 @@ void main() async {
     await LocalizationService.initialize();
     print('🚀 ✅ Localization initialized');
     
-    // Initialize just_audio_background
-    await JustAudioBackground.init(
-      androidNotificationChannelId: 'com.teekoob.app.audio',
-      androidNotificationChannelName: 'Teekoob Audio Player',
-      androidNotificationOngoing: true,
-      androidNotificationIcon: 'mipmap/ic_launcher',
-    );
-    
     print('🚀 Starting TeekoobApp...');
     runApp(TeekoobApp());
+    
+    // Initialize audio_service AFTER runApp() so FlutterEngine exists
+    // Use addPostFrameCallback to ensure the engine is fully ready
+    final audioHandlerCompleter = Completer<AudioHandler>();
+    
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      try {
+        // Additional delay to ensure FlutterEngine is completely ready
+        await Future.delayed(const Duration(milliseconds: 800));
+        
+        print('🚀 Initializing AudioService...');
+        // Initialize AudioService - the GlobalAudioPlayerService will create its own handler
+        final globalService = GlobalAudioPlayerService();
+        // Trigger initialization in the service
+        await globalService.initializeAudioHandler();
+        final audioHandler = globalService.audioHandler;
+        
+        if (audioHandler != null) {
+          print('🚀 ✅ AudioService initialized successfully');
+          if (!audioHandlerCompleter.isCompleted) {
+            audioHandlerCompleter.complete(audioHandler);
+          }
+        } else {
+          print('🚀 ⚠️ AudioHandler is null, but this may be OK - will retry on first playback');
+          // Don't complete with error - allow lazy initialization on first playback
+          if (!audioHandlerCompleter.isCompleted) {
+            // Complete with a placeholder - GlobalAudioPlayerService will handle retry
+            audioHandlerCompleter.completeError(Exception('AudioHandler not ready yet'));
+          }
+        }
+      } catch (e) {
+        print('🚀 ❌ Failed to initialize AudioService: $e');
+        print('🚀 ⚠️ This is often a timing issue and may not affect playback');
+        print('🚀 ⚠️ Audio playback will still work, but background controls may be limited');
+        // Complete with error so audio operations know to wait/retry
+        if (!audioHandlerCompleter.isCompleted) {
+          audioHandlerCompleter.completeError(e);
+        }
+      }
+    });
+    
+    // Store the completer in GlobalAudioPlayerService so it can wait for init
+    GlobalAudioPlayerService().setAudioHandlerCompleter(audioHandlerCompleter);
     
     // Initialize Firebase notification service in background (non-blocking)
     print('🚀 Initializing Firebase Notification Service in background...');
@@ -135,10 +173,15 @@ class _TeekoobAppState extends State<TeekoobApp> with WidgetsBindingObserver {
 
   Future<void> _initializeGlobalAudioService() async {
     try {
+      // Wait a bit longer to ensure JustAudioBackground is fully ready
+      // even if init() had an error, it might still work
+      await Future.delayed(const Duration(milliseconds: 300));
+      
       await GlobalAudioPlayerService().initialize();
       print('🎵 ✅ Global Audio Service initialized for background playback');
     } catch (e) {
       print('🎵 ❌ Failed to initialize Global Audio Service: $e');
+      print('🎵 ⚠️ Audio playback may still work, but with limited background support');
     }
   }
 

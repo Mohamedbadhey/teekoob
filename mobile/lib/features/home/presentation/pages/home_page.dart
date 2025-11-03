@@ -80,15 +80,6 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin<
   String? _freePodcastsError;
   String? _randomPodcastsError;
 
-  @override
-  void initState() {
-    super.initState();
-    // Initialize only once to avoid repeated API storms when revisiting
-    if (!_initialized) {
-      _initialized = true;
-      _loadEssentialData();
-    }
-  }
 
   @override
   void dispose() {
@@ -125,17 +116,35 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin<
   }
 
   void _loadAdditionalDataWithDelay() {
-    // Load new releases after a short delay
-    _scheduledTimers.add(Timer(const Duration(milliseconds: 300), () {
+    // Reduce initial load - only load essential sections
+    // Other sections will load as user scrolls (lazy loading)
+    
+    // Load new releases after a longer delay (only if user hasn't scrolled away)
+    _scheduledTimers.add(Timer(const Duration(seconds: 2), () {
       if (!mounted) return;
       if (!_isLoadingNewReleases && _newReleases.isEmpty) {
         setState(() => _isLoadingNewReleases = true);
-        context.read<BooksBloc>().add(const LoadNewReleases(limit: 10));
+        context.read<BooksBloc>().add(const LoadNewReleases(limit: 6));
       }
     }));
     
-    // Load recent books after another delay
-    _scheduledTimers.add(Timer(const Duration(milliseconds: 600), () {
+    // Load featured podcasts (important content)
+    _scheduledTimers.add(Timer(const Duration(seconds: 3), () {
+      if (!mounted) return;
+      if (!_isLoadingFeaturedPodcasts && _featuredPodcasts.isEmpty) {
+        setState(() => _isLoadingFeaturedPodcasts = true);
+        context.read<PodcastsBloc>().add(const LoadFeaturedPodcasts(limit: 6));
+      }
+    }));
+    
+    // Load remaining content with much longer delays or on scroll
+    // These will be lazy-loaded when sections come into view
+    _loadLazyContent();
+  }
+  
+  void _loadLazyContent() {
+    // Load recent books - only after initial content is shown
+    _scheduledTimers.add(Timer(const Duration(seconds: 5), () {
       if (!mounted) return;
       if (!_isLoadingRecentBooks && _recentBooks.isEmpty) {
         setState(() => _isLoadingRecentBooks = true);
@@ -144,73 +153,52 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin<
     }));
     
     // Load free books
-    _scheduledTimers.add(Timer(const Duration(milliseconds: 900), () {
+    _scheduledTimers.add(Timer(const Duration(seconds: 7), () {
       if (!mounted) return;
       if (!_isLoadingFreeBooks && _freeBooks.isEmpty) {
         setState(() => _isLoadingFreeBooks = true);
         context.read<BooksBloc>().add(const LoadFreeBooks(limit: 6));
       }
     }));
-    
-    // Load random books
-    _scheduledTimers.add(Timer(const Duration(milliseconds: 1200), () {
-      if (!mounted) return;
-      if (!_isLoadingRandomBooks && _randomBooks.isEmpty) {
-        setState(() => _isLoadingRandomBooks = true);
-        context.read<BooksBloc>().add(const LoadRandomBooks(limit: 5));
-      }
-    }));
-    
-    // Load podcasts with further delays
-    _loadPodcastsWithDelay();
+  }
+  
+  // Load content when section comes into view (lazy loading)
+  void _loadSectionIfNeeded(String sectionType) {
+    switch (sectionType) {
+      case 'random_books':
+        if (!_isLoadingRandomBooks && _randomBooks.isEmpty) {
+          setState(() => _isLoadingRandomBooks = true);
+          context.read<BooksBloc>().add(const LoadRandomBooks(limit: 5));
+        }
+        break;
+      case 'new_release_podcasts':
+        if (!_isLoadingNewReleasePodcasts && _newReleasePodcasts.isEmpty) {
+          setState(() => _isLoadingNewReleasePodcasts = true);
+          context.read<PodcastsBloc>().add(const LoadNewReleasePodcasts(limit: 6));
+        }
+        break;
+      case 'recent_podcasts':
+        if (!_isLoadingRecentPodcasts && _recentPodcasts.isEmpty) {
+          setState(() => _isLoadingRecentPodcasts = true);
+          context.read<PodcastsBloc>().add(const LoadRecentPodcasts(limit: 6));
+        }
+        break;
+      case 'free_podcasts':
+        if (!_isLoadingFreePodcasts && _freePodcasts.isEmpty) {
+          setState(() => _isLoadingFreePodcasts = true);
+          context.read<PodcastsBloc>().add(const LoadFreePodcasts(limit: 6));
+        }
+        break;
+      case 'random_podcasts':
+        if (!_isLoadingRandomPodcasts && _randomPodcasts.isEmpty) {
+          setState(() => _isLoadingRandomPodcasts = true);
+          context.read<PodcastsBloc>().add(const LoadRandomPodcasts(limit: 5));
+        }
+        break;
+    }
   }
 
-  void _loadPodcastsWithDelay() {
-    // Load featured podcasts
-    _scheduledTimers.add(Timer(const Duration(milliseconds: 1500), () {
-      if (!mounted) return;
-      if (!_isLoadingFeaturedPodcasts && _featuredPodcasts.isEmpty) {
-        setState(() => _isLoadingFeaturedPodcasts = true);
-        context.read<PodcastsBloc>().add(const LoadFeaturedPodcasts(limit: 6));
-      }
-    }));
-    
-    // Load new release podcasts
-    _scheduledTimers.add(Timer(const Duration(milliseconds: 1800), () {
-      if (!mounted) return;
-      if (!_isLoadingNewReleasePodcasts && _newReleasePodcasts.isEmpty) {
-        setState(() => _isLoadingNewReleasePodcasts = true);
-        context.read<PodcastsBloc>().add(const LoadNewReleasePodcasts(limit: 10));
-      }
-    }));
-    
-    // Load recent podcasts
-    _scheduledTimers.add(Timer(const Duration(milliseconds: 2100), () {
-      if (!mounted) return;
-      if (!_isLoadingRecentPodcasts && _recentPodcasts.isEmpty) {
-        setState(() => _isLoadingRecentPodcasts = true);
-        context.read<PodcastsBloc>().add(const LoadRecentPodcasts(limit: 6));
-      }
-    }));
-    
-    // Load free podcasts
-    _scheduledTimers.add(Timer(const Duration(milliseconds: 2400), () {
-      if (!mounted) return;
-      if (!_isLoadingFreePodcasts && _freePodcasts.isEmpty) {
-        setState(() => _isLoadingFreePodcasts = true);
-        context.read<PodcastsBloc>().add(const LoadFreePodcasts(limit: 6));
-      }
-    }));
-    
-    // Load random podcasts
-    _scheduledTimers.add(Timer(const Duration(milliseconds: 2700), () {
-      if (!mounted) return;
-      if (!_isLoadingRandomPodcasts && _randomPodcasts.isEmpty) {
-        setState(() => _isLoadingRandomPodcasts = true);
-        context.read<PodcastsBloc>().add(const LoadRandomPodcasts(limit: 5));
-      }
-    }));
-  }
+  // Removed - content now loads lazily
 
   void _loadLibraryData() {
     // Load library data to show correct status on book cards
@@ -283,11 +271,41 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin<
     print('🏠 HomePage: Filtered results - Featured: ${filteredFeatured.length}, New Releases: ${filteredNewReleases.length}, Recent: ${filteredRecent.length}, Random: ${filteredRandom.length}');
   }
 
+  // Cache library state to avoid rebuilding during layout
+  LibraryState? _cachedLibraryState;
+  // Track lazy loading to prevent duplicate calls
+  final Set<String> _lazyLoadTriggered = {};
+  
+  @override
+  void initState() {
+    super.initState();
+    // Initialize only once to avoid repeated API storms when revisiting
+    if (!_initialized) {
+      _initialized = true;
+      // Initialize cache with current state (read without watching)
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          final libraryState = context.read<LibraryBloc>().state;
+          _cachedLibraryState = libraryState;
+          _loadEssentialData();
+        }
+      });
+    }
+  }
+  
   @override
   Widget build(BuildContext context) {
     super.build(context);
+    
     return MultiBlocListener(
       listeners: [
+        // Library Bloc Listener - cache state to avoid rebuilds during layout
+        BlocListener<LibraryBloc, LibraryState>(
+          listener: (context, state) {
+            if (!mounted) return;
+            _cachedLibraryState = state;
+          },
+        ),
         // Books Bloc Listener
         BlocListener<BooksBloc, BooksState>(
           listener: (context, state) {
@@ -336,22 +354,40 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin<
               print('🏠 Categories loaded: ${state.categories.length}');
             } else if (state is BooksError) {
               print('❌ Books error: ${state.message}');
+              // Handle error gracefully - check if it's rate limiting
+              final isRateLimit = state.message.contains('429') || 
+                                  state.message.contains('Too many requests') ||
+                                  state.message.contains('rate limit');
+              
               // Handle error gracefully - set loading states to false and store error
               setState(() {
+                // Store errors before clearing loading flags
+                if (_isLoadingFeatured) _featuredBooksError = isRateLimit 
+                    ? 'Rate limit reached. Please wait a moment.' 
+                    : state.message;
+                if (_isLoadingNewReleases) _newReleasesError = isRateLimit 
+                    ? 'Rate limit reached. Please wait a moment.' 
+                    : state.message;
+                if (_isLoadingRecentBooks) _recentBooksError = isRateLimit 
+                    ? 'Rate limit reached. Please wait a moment.' 
+                    : state.message;
+                if (_isLoadingFreeBooks) _freeBooksError = isRateLimit 
+                    ? 'Rate limit reached. Please wait a moment.' 
+                    : state.message;
+                if (_isLoadingRandomBooks) _randomBooksError = isRateLimit 
+                    ? 'Rate limit reached. Please wait a moment.' 
+                    : state.message;
+                if (_isLoadingCategories) _categoriesError = isRateLimit 
+                    ? 'Rate limit reached. Please wait a moment.' 
+                    : state.message;
+                
+                // Clear loading states
                 _isLoadingFeatured = false;
                 _isLoadingNewReleases = false;
                 _isLoadingRecentBooks = false;
                 _isLoadingFreeBooks = false;
                 _isLoadingRandomBooks = false;
                 _isLoadingCategories = false;
-                
-                // Set appropriate error messages based on context
-                if (_isLoadingFeatured) _featuredBooksError = state.message;
-                if (_isLoadingNewReleases) _newReleasesError = state.message;
-                if (_isLoadingRecentBooks) _recentBooksError = state.message;
-                if (_isLoadingFreeBooks) _freeBooksError = state.message;
-                if (_isLoadingRandomBooks) _randomBooksError = state.message;
-                if (_isLoadingCategories) _categoriesError = state.message;
               });
             }
           },
@@ -398,20 +434,36 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin<
               print('🏠 Random podcasts loaded: ${state.podcasts.length}');
             } else if (state is PodcastsError) {
               print('❌ Podcasts error: ${state.message}');
+              // Handle error gracefully - check if it's rate limiting
+              final isRateLimit = state.message.contains('429') || 
+                                  state.message.contains('Too many requests') ||
+                                  state.message.contains('rate limit');
+              
               // Handle error gracefully - set loading states to false and store error
               setState(() {
+                // Store errors before clearing loading flags
+                if (_isLoadingFeaturedPodcasts) _featuredPodcastsError = isRateLimit 
+                    ? 'Rate limit reached. Please wait a moment.' 
+                    : state.message;
+                if (_isLoadingNewReleasePodcasts) _newReleasePodcastsError = isRateLimit 
+                    ? 'Rate limit reached. Please wait a moment.' 
+                    : state.message;
+                if (_isLoadingRecentPodcasts) _recentPodcastsError = isRateLimit 
+                    ? 'Rate limit reached. Please wait a moment.' 
+                    : state.message;
+                if (_isLoadingFreePodcasts) _freePodcastsError = isRateLimit 
+                    ? 'Rate limit reached. Please wait a moment.' 
+                    : state.message;
+                if (_isLoadingRandomPodcasts) _randomPodcastsError = isRateLimit 
+                    ? 'Rate limit reached. Please wait a moment.' 
+                    : state.message;
+                
+                // Clear loading states
                 _isLoadingFeaturedPodcasts = false;
                 _isLoadingNewReleasePodcasts = false;
                 _isLoadingRecentPodcasts = false;
                 _isLoadingFreePodcasts = false;
                 _isLoadingRandomPodcasts = false;
-                
-                // Set appropriate error messages based on context
-                if (_isLoadingFeaturedPodcasts) _featuredPodcastsError = state.message;
-                if (_isLoadingNewReleasePodcasts) _newReleasePodcastsError = state.message;
-                if (_isLoadingRecentPodcasts) _recentPodcastsError = state.message;
-                if (_isLoadingFreePodcasts) _freePodcastsError = state.message;
-                if (_isLoadingRandomPodcasts) _randomPodcastsError = state.message;
               });
             }
           },
@@ -426,7 +478,9 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin<
               _buildCategoryFiltersSection(),
               Expanded(
                 child: SingleChildScrollView(
+                  physics: const ClampingScrollPhysics(),
                   child: Column(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       _buildFeaturedBookSection(),
                       const SizedBox(height: 32),
@@ -684,16 +738,17 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin<
           ] else if (_featuredBooks.isNotEmpty) ...[
             SizedBox(
               width: double.infinity,
-              child: BlocBuilder<LibraryBloc, LibraryState>(
-                builder: (context, libraryState) {
+              child: Builder(
+                builder: (context) {
                   final book = _featuredBooks.first;
                   bool isInLibrary = false;
                   bool isFavorite = false;
                   
-                  if (libraryState is LibraryLoaded) {
-                    isInLibrary = libraryState.library.any((item) => item['bookId'] == book.id);
+                  if (_cachedLibraryState is LibraryLoaded) {
+                    final libraryLoaded = _cachedLibraryState as LibraryLoaded;
+                    isInLibrary = libraryLoaded.library.any((item) => item['bookId'] == book.id);
                     // Check favorites from favorites list
-                    isFavorite = libraryState.favorites.any((fav) => 
+                    isFavorite = libraryLoaded.favorites.any((fav) => 
                       fav['item_type'] == 'book' && fav['item_id'] == book.id
                     );
                   }
@@ -776,11 +831,14 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin<
   }
 
   Widget _buildRecommendedBooksSection() {
-    print('🏗️ Building Recommended Books Section');
-    print('📊 _randomBooks count: ${_randomBooks.length}');
-    print('📚 _randomBooks titles: ${_randomBooks.map((b) => b.title).toList()}');
-    print('⏳ _isLoadingRandomBooks: $_isLoadingRandomBooks');
-    print('🔍 _randomBooks data: ${_randomBooks.map((b) => {'id': b.id, 'title': b.title, 'coverImageUrl': b.coverImageUrl}).toList()}');
+    // Lazy load - only load when section is built (prevent duplicate calls)
+    if (!_isLoadingRandomBooks && _randomBooks.isEmpty && _randomBooksError == null && !_lazyLoadTriggered.contains('random_books')) {
+      _lazyLoadTriggered.add('random_books');
+      // Use Future.microtask to defer the call after the build completes
+      Future.microtask(() {
+        if (mounted) _loadSectionIfNeeded('random_books');
+      });
+    }
     
     if (_isLoadingRandomBooks)
       return _buildLoadingHorizontalScroll();
@@ -955,29 +1013,27 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin<
           itemCount: books.length,
           itemBuilder: (context, index) {
             final book = books[index];
-            return BlocBuilder<LibraryBloc, LibraryState>(
-              builder: (context, libraryState) {
-                bool isInLibrary = false;
-                bool isFavorite = false;
-                
-                if (libraryState is LibraryLoaded) {
-                  isInLibrary = libraryState.library.any((item) => item['bookId'] == book.id);
-                  // Check favorites from favorites list
-                  isFavorite = libraryState.favorites.any((fav) => 
-                    fav['item_type'] == 'book' && fav['item_id'] == book.id
-                  );
-                }
-                
-                return BookCard(
-                  book: book,
-                  onTap: () => _navigateToBookDetail(book),
-                  showLibraryActions: true, // Enable favorite button
-                  isInLibrary: isInLibrary,
-                  isFavorite: isFavorite,
-                  userId: 'current_user', // TODO: Get from auth service
-                  enableAnimations: true,
-                );
-              },
+            // Use cached library state to avoid rebuilds during layout
+            bool isInLibrary = false;
+            bool isFavorite = false;
+            
+            if (_cachedLibraryState is LibraryLoaded) {
+              final libraryLoaded = _cachedLibraryState as LibraryLoaded;
+              isInLibrary = libraryLoaded.library.any((item) => item['bookId'] == book.id);
+              // Check favorites from favorites list
+              isFavorite = libraryLoaded.favorites.any((fav) => 
+                fav['item_type'] == 'book' && fav['item_id'] == book.id
+              );
+            }
+            
+            return BookCard(
+              book: book,
+              onTap: () => _navigateToBookDetail(book),
+              showLibraryActions: true, // Enable favorite button
+              isInLibrary: isInLibrary,
+              isFavorite: isFavorite,
+              userId: 'current_user', // TODO: Get from auth service
+              enableAnimations: true,
             );
           },
         );
@@ -1035,43 +1091,38 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin<
         // Horizontal scrollable books - Dynamic height with overflow protection
         SizedBox(
           height: _getResponsiveHorizontalCardHeight() + 20, // Card height + padding
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              return ListView.builder(
-                padding: const EdgeInsets.only(left: 20),
-                scrollDirection: Axis.horizontal,
-                itemCount: books.length,
-                itemBuilder: (context, index) {
-                  final book = books[index];
-                  print('🎨 _buildBooksHorizontalScroll: Building item $index for book: ${book.title}');
-                  
-                  return BlocBuilder<LibraryBloc, LibraryState>(
-                    builder: (context, libraryState) {
-                      bool isInLibrary = false;
-                      bool isFavorite = false;
-                      
-                      if (libraryState is LibraryLoaded) {
-                        isInLibrary = libraryState.library.any((item) => item['bookId'] == book.id);
-                        // Check favorites from favorites list
-                        isFavorite = libraryState.favorites.any((fav) => 
-                          fav['item_type'] == 'book' && fav['item_id'] == book.id
-                        );
-                      }
-                      
-                      return BookCard(
-                        book: book,
-                        onTap: () => _navigateToBookDetail(book),
-                        showLibraryActions: true, // Enable favorite button
-                        isInLibrary: isInLibrary,
-                        isFavorite: isFavorite,
-                        userId: 'current_user', // TODO: Get from auth service
-                        width: _getResponsiveHorizontalCardWidth(), // Responsive width based on screen size
-                        // No fixed height - uses responsive height from BookCard component
-                        enableAnimations: !kIsWeb,
-                      );
-                    },
-                  );
-                },
+          child: ListView.builder(
+            padding: const EdgeInsets.only(left: 20),
+            scrollDirection: Axis.horizontal,
+            physics: const ClampingScrollPhysics(),
+            itemCount: books.length,
+            itemBuilder: (context, index) {
+              final book = books[index];
+              print('🎨 _buildBooksHorizontalScroll: Building item $index for book: ${book.title}');
+              
+              // Use cached library state to avoid rebuilds during layout
+              bool isInLibrary = false;
+              bool isFavorite = false;
+              
+              if (_cachedLibraryState is LibraryLoaded) {
+                final libraryLoaded = _cachedLibraryState as LibraryLoaded;
+                isInLibrary = libraryLoaded.library.any((item) => item['bookId'] == book.id);
+                // Check favorites from favorites list
+                isFavorite = libraryLoaded.favorites.any((fav) => 
+                  fav['item_type'] == 'book' && fav['item_id'] == book.id
+                );
+              }
+              
+              return BookCard(
+                book: book,
+                onTap: () => _navigateToBookDetail(book),
+                showLibraryActions: true, // Enable favorite button
+                isInLibrary: isInLibrary,
+                isFavorite: isFavorite,
+                userId: 'current_user', // TODO: Get from auth service
+                width: _getResponsiveHorizontalCardWidth(), // Responsive width based on screen size
+                // No fixed height - uses responsive height from BookCard component
+                enableAnimations: !kIsWeb,
               );
             },
           ),
@@ -1209,11 +1260,12 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin<
           ] else if (_featuredPodcasts.isNotEmpty) ...[
             SizedBox(
               width: double.infinity,
-              child: BlocBuilder<LibraryBloc, LibraryState>(
-                builder: (context, libraryState) {
+              child: Builder(
+                builder: (context) {
                   bool isFavorite = false;
-                  if (libraryState is LibraryLoaded) {
-                    isFavorite = libraryState.favorites.any((fav) => 
+                  if (_cachedLibraryState is LibraryLoaded) {
+                    final libraryLoaded = _cachedLibraryState as LibraryLoaded;
+                    isFavorite = libraryLoaded.favorites.any((fav) => 
                       fav['item_type'] == 'podcast' && fav['item_id'] == _featuredPodcasts.first.id
                     );
                   }
@@ -1239,7 +1291,14 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin<
   }
 
   Widget _buildFreePodcastsSection() {
-    print('Building Free Podcasts Section - _freePodcasts: ${_freePodcasts.length}, _isLoadingFreePodcasts: $_isLoadingFreePodcasts');
+    // Lazy load - only load when section is built (prevent duplicate calls)
+    if (!_isLoadingFreePodcasts && _freePodcasts.isEmpty && _freePodcastsError == null && !_lazyLoadTriggered.contains('free_podcasts')) {
+      _lazyLoadTriggered.add('free_podcasts');
+      // Use Future.microtask to defer the call after the build completes
+      Future.microtask(() {
+        if (mounted) _loadSectionIfNeeded('free_podcasts');
+      });
+    }
     
     if (_isLoadingFreePodcasts)
       return _buildLoadingPodcastHorizontalScroll();
@@ -1258,7 +1317,14 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin<
   }
 
   Widget _buildRecentPodcastsSection() {
-    print('Building Recent Podcasts Section - _recentPodcasts: ${_recentPodcasts.length}, _isLoadingRecentPodcasts: $_isLoadingRecentPodcasts');
+    // Lazy load - only load when section is built (prevent duplicate calls)
+    if (!_isLoadingRecentPodcasts && _recentPodcasts.isEmpty && _recentPodcastsError == null && !_lazyLoadTriggered.contains('recent_podcasts')) {
+      _lazyLoadTriggered.add('recent_podcasts');
+      // Use Future.microtask to defer the call after the build completes
+      Future.microtask(() {
+        if (mounted) _loadSectionIfNeeded('recent_podcasts');
+      });
+    }
     
     if (_isLoadingRecentPodcasts)
       return _buildLoadingPodcastHorizontalScroll();
@@ -1277,7 +1343,14 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin<
   }
 
   Widget _buildNewReleasePodcastsSection() {
-    print('Building New Release Podcasts Section - _newReleasePodcasts: ${_newReleasePodcasts.length}, _isLoadingNewReleasePodcasts: $_isLoadingNewReleasePodcasts');
+    // Lazy load - only load when section is built (prevent duplicate calls)
+    if (!_isLoadingNewReleasePodcasts && _newReleasePodcasts.isEmpty && _newReleasePodcastsError == null && !_lazyLoadTriggered.contains('new_release_podcasts')) {
+      _lazyLoadTriggered.add('new_release_podcasts');
+      // Use Future.microtask to defer the call after the build completes
+      Future.microtask(() {
+        if (mounted) _loadSectionIfNeeded('new_release_podcasts');
+      });
+    }
     
     if (_isLoadingNewReleasePodcasts)
       return _buildLoadingPodcastHorizontalScroll();
@@ -1287,7 +1360,7 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin<
           _newReleasePodcastsError = null;
           _isLoadingNewReleasePodcasts = true;
         });
-        context.read<PodcastsBloc>().add(const LoadNewReleasePodcasts(limit: 10));
+        context.read<PodcastsBloc>().add(const LoadNewReleasePodcasts(limit: 6));
       });
     else if (_newReleasePodcasts.isNotEmpty)
       return _buildPodcastsHorizontalScroll(_newReleasePodcasts, LocalizationService.getNewReleasePodcastsText);
@@ -1296,10 +1369,14 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin<
   }
 
   Widget _buildRecommendedPodcastsSection() {
-    print('🏗️ Building Recommended Podcasts Section');
-    print('📊 _randomPodcasts count: ${_randomPodcasts.length}');
-    print('📚 _randomPodcasts titles: ${_randomPodcasts.map((p) => p.title).toList()}');
-    print('⏳ _isLoadingRandomPodcasts: $_isLoadingRandomPodcasts');
+    // Lazy load - only load when section is built (prevent duplicate calls)
+    if (!_isLoadingRandomPodcasts && _randomPodcasts.isEmpty && _randomPodcastsError == null && !_lazyLoadTriggered.contains('random_podcasts')) {
+      _lazyLoadTriggered.add('random_podcasts');
+      // Use Future.microtask to defer the call after the build completes
+      Future.microtask(() {
+        if (mounted) _loadSectionIfNeeded('random_podcasts');
+      });
+    }
     
     if (_isLoadingRandomPodcasts)
       return _buildLoadingPodcastHorizontalScroll();
@@ -1372,32 +1449,31 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin<
           child: ListView.builder(
             padding: const EdgeInsets.only(left: 20),
             scrollDirection: Axis.horizontal,
+            physics: const ClampingScrollPhysics(),
             itemCount: podcasts.length,
             itemBuilder: (context, index) {
               final podcast = podcasts[index];
               print('🎨 _buildPodcastsHorizontalScroll: Building item $index for podcast: ${podcast.title}');
               
-              return BlocBuilder<LibraryBloc, LibraryState>(
-                builder: (context, libraryState) {
-                  bool isFavorite = false;
-                  if (libraryState is LibraryLoaded) {
-                    // Check favorites from favorites list
-                    isFavorite = libraryState.favorites.any((fav) => 
-                      fav['item_type'] == 'podcast' && fav['item_id'] == podcast.id
-                    );
-                  }
-                  
-                  return PodcastCard(
-                    podcast: podcast,
-                    onTap: () => _navigateToPodcastDetail(podcast),
-                    showLibraryActions: true, // Enable favorite button
-                    isInLibrary: false,
-                    isFavorite: isFavorite,
-                    userId: 'current_user',
-                    width: _getResponsiveHorizontalCardWidth(),
-                    enableAnimations: !kIsWeb,
-                  );
-                },
+              // Use cached library state to avoid rebuilds during layout
+              bool isFavorite = false;
+              if (_cachedLibraryState is LibraryLoaded) {
+                final libraryLoaded = _cachedLibraryState as LibraryLoaded;
+                // Check favorites from favorites list
+                isFavorite = libraryLoaded.favorites.any((fav) => 
+                  fav['item_type'] == 'podcast' && fav['item_id'] == podcast.id
+                );
+              }
+              
+              return PodcastCard(
+                podcast: podcast,
+                onTap: () => _navigateToPodcastDetail(podcast),
+                showLibraryActions: true, // Enable favorite button
+                isInLibrary: false,
+                isFavorite: isFavorite,
+                userId: 'current_user',
+                width: _getResponsiveHorizontalCardWidth(),
+                enableAnimations: !kIsWeb,
               );
             },
           ),

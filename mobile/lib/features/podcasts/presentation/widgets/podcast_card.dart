@@ -14,6 +14,7 @@ class PodcastCard extends StatelessWidget {
   final bool showLibraryActions;
   final bool isInLibrary;
   final bool isFavorite;
+  final bool isDownloaded;
   final String userId;
 
   const PodcastCard({
@@ -26,6 +27,7 @@ class PodcastCard extends StatelessWidget {
     this.showLibraryActions = true,
     this.isInLibrary = false,
     this.isFavorite = false,
+    this.isDownloaded = false,
     required this.userId,
   });
 

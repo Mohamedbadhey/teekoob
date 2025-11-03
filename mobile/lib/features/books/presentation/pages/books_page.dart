@@ -77,16 +77,16 @@ class _BooksPageState extends State<BooksPage> {
     print('🚀 BooksPage: Loading initial data - dispatching events');
     _hasLoadedInitialData = true;
     
-    print('📚 BooksPage: Dispatching LoadBooks event');
-    context.read<BooksBloc>().add(const LoadBooks());
+    // Only load metadata (genres, languages) - not all content
     print('🏷️ BooksPage: Dispatching LoadGenres event');
     context.read<BooksBloc>().add(const LoadGenres());
     print('🌍 BooksPage: Dispatching LoadLanguages event');
     context.read<BooksBloc>().add(const LoadLanguages());
     print('📖 BooksPage: Dispatching LoadLibrary event');
     context.read<LibraryBloc>().add(const LoadLibrary('current_user'));
-    // Load both books and podcasts into the feed
-    _loadCombinedContent();
+    
+    // Don't load all books/podcasts immediately - wait for user interaction
+    // Content will load when user searches or applies filters
   }
 
   void _searchBooks(String query) {
@@ -881,11 +881,82 @@ class _BooksPageState extends State<BooksPage> {
       return Center(child: CircularProgressIndicator());
     }
     if (_contentError != null) {
-      return Center(child: Text('Error: $_contentError', style: TextStyle(color: Colors.red)));
+      final isRateLimit = _contentError!.contains('429') || 
+                          _contentError!.contains('Too many requests') ||
+                          _contentError!.contains('rate limit');
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.error_outline,
+                size: 64,
+                color: Theme.of(context).colorScheme.error,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                isRateLimit 
+                    ? 'Too many requests. Please wait a moment and try again.'
+                    : 'Error loading content',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                _contentError!,
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                  fontSize: 14,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      );
     }
     if (_allContent.isEmpty) {
-      // Instead of _buildEmptyState(), show nothing/no UI
-      return const SizedBox.shrink();
+      // Show helpful message prompting user to search
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.search_rounded,
+                size: 64,
+                color: Theme.of(context).colorScheme.primary.withOpacity(0.6),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Search for books or podcasts',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Use the search bar above to find content, or apply filters to browse',
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                  fontSize: 14,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      );
     }
     // Separate by type
    final books = _allContent.where((e) => e is Book).cast<Book>().toList();

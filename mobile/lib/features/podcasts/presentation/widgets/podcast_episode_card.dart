@@ -6,11 +6,15 @@ import 'package:teekoob/core/services/localization_service.dart';
 class PodcastEpisodeCard extends StatelessWidget {
   final PodcastEpisode episode;
   final VoidCallback onTap;
+  final bool isDownloaded;
+  final VoidCallback? onDownload;
 
   const PodcastEpisodeCard({
     super.key,
     required this.episode,
     required this.onTap,
+    this.isDownloaded = false,
+    this.onDownload,
   });
 
   @override
@@ -107,9 +111,25 @@ class PodcastEpisodeCard extends StatelessWidget {
               ),
             ),
             
-            // Episode Status Indicators
+            // Episode Status Indicators and Download Button
             Column(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
+                // Download button
+                if (onDownload != null)
+                  IconButton(
+                    onPressed: onDownload,
+                    icon: Icon(
+                      isDownloaded ? Icons.download_done : Icons.download,
+                      color: isDownloaded 
+                          ? Theme.of(context).colorScheme.primary
+                          : Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                      size: 20,
+                    ),
+                    tooltip: isDownloaded ? 'Downloaded' : 'Download for offline',
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
                 if (episode.isFeatured)
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -125,7 +145,7 @@ class PodcastEpisodeCard extends StatelessWidget {
                       ),
                     ),
                   ),
-                const SizedBox(height: 4),
+                if (episode.isFeatured && episode.isPremium) const SizedBox(height: 4),
                 if (episode.isPremium)
                   Icon(
                     Icons.star,

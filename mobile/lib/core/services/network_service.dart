@@ -228,6 +228,7 @@ class NetworkService {
     ProgressCallback? onReceiveProgress,
   }) async {
     try {
+      // Check connectivity - but allow download if already cached/started
       if (!await isConnected()) {
         throw DioException(
           requestOptions: RequestOptions(path: url),
@@ -235,10 +236,19 @@ class NetworkService {
         );
       }
 
+      // Ensure URL is full URL
+      final fullUrl = url.startsWith('http') 
+          ? url 
+          : '${AppConfig.mediaBaseUrl}$url';
+
       final response = await _dio.download(
-        url,
+        fullUrl,
         savePath,
-        options: options,
+        options: options ?? Options(
+          responseType: ResponseType.bytes,
+          followRedirects: false,
+          validateStatus: (status) => status! < 500,
+        ),
         onReceiveProgress: onReceiveProgress,
       );
       return response;

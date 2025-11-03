@@ -98,10 +98,10 @@ class Podcast {
                     ? json['review_count'].toInt() 
                     : 0))
             : 0,
-        isFeatured: json['is_featured'] == true || json['is_featured'] == 1,
-        isNewRelease: json['is_new_release'] == true || json['is_new_release'] == 1,
-        isPremium: json['is_premium'] == true || json['is_premium'] == 1,
-        isFree: json['is_free'] == true || json['is_free'] == 1,
+        isFeatured: json['is_featured'] == true || json['is_featured'] == 1 || json['isFeatured'] == true || json['isFeatured'] == 1,
+        isNewRelease: json['is_new_release'] == true || json['is_new_release'] == 1 || json['isNewRelease'] == true || json['isNewRelease'] == 1,
+        isPremium: json['is_premium'] == true || json['is_premium'] == 1 || json['isPremium'] == true || json['isPremium'] == 1,
+        isFree: json['is_free'] == true || json['is_free'] == 1 || json['isFree'] == true || json['isFree'] == 1,
         categories: json['categories'] != null 
             ? (json['categories'] is String 
                 ? List<String>.from(jsonDecode(json['categories']))
@@ -119,10 +119,14 @@ class Podcast {
             : null,
         createdAt: json['created_at'] != null 
             ? DateTime.parse(json['created_at'])
-            : DateTime.now(),
+            : (json['createdAt'] != null 
+                ? DateTime.parse(json['createdAt'])
+                : DateTime.now()),
         updatedAt: json['updated_at'] != null 
             ? DateTime.parse(json['updated_at'])
-            : DateTime.now(),
+            : (json['updatedAt'] != null 
+                ? DateTime.parse(json['updatedAt'])
+                : DateTime.now()),
       );
       
       print('✅ Podcast.fromJson: Successfully parsed podcast: ${podcast.title}');

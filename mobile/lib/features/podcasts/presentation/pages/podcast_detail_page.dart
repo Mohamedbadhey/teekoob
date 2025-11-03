@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:teekoob/core/models/podcast_model.dart';
 import 'package:teekoob/core/config/app_config.dart';
 import 'package:teekoob/core/services/localization_service.dart';
+import 'package:teekoob/core/services/download_service.dart';
+import 'package:teekoob/features/library/bloc/library_bloc.dart';
 import 'package:teekoob/features/podcasts/bloc/podcasts_bloc.dart';
 import 'package:teekoob/features/podcasts/presentation/widgets/podcast_episode_card.dart';
 
@@ -27,6 +29,10 @@ class _PodcastDetailPageState extends State<PodcastDetailPage>
   bool _isLoadingEpisodes = true;
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
+  final DownloadService _downloadService = DownloadService();
+  bool _isDownloading = false;
+  bool _isDownloaded = false;
+  final Map<String, bool> _episodeDownloadStatus = {};
 
   @override
   void initState() {
@@ -43,7 +49,129 @@ class _PodcastDetailPageState extends State<PodcastDetailPage>
       curve: Curves.easeInOut,
     ));
 
+    _downloadService.initialize();
     _loadPodcastData();
+    _checkDownloadStatus();
+  }
+
+  Future<void> _checkDownloadStatus() async {
+    if (_podcast != null) {
+      final metadataExists = await _downloadService.getPodcastMetadata(_podcast!.id) != null;
+      
+      setState(() {
+        _isDownloaded = metadataExists;
+      });
+      
+      // Check each episode download status
+      for (final episode in _episodes) {
+        final episodeDownloaded = await _downloadService.isDownloaded(
+          episode.id,
+          DownloadType.podcastEpisode,
+        );
+        _episodeDownloadStatus[episode.id] = episodeDownloaded;
+      }
+      if (mounted) setState(() {});
+    }
+  }
+  
+  Future<void> _handleDownloadPodcast() async {
+    if (_podcast == null || _episodes.isEmpty) return;
+    
+    setState(() {
+      _isDownloading = true;
+    });
+    
+    try {
+      // Dispatch download event for complete podcast
+      if (mounted) {
+        context.read<LibraryBloc>().add(DownloadCompletePodcast(_podcast!, _episodes));
+      }
+      
+      // Show success message
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Download started! All episodes will be available offline soon.'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+      
+      // Wait a bit then check status
+      await Future.delayed(const Duration(seconds: 2));
+      await _checkDownloadStatus();
+      
+      setState(() {
+        _isDownloading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isDownloading = false;
+      });
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Download failed: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+  
+  Future<void> _handleDownloadEpisode(PodcastEpisode episode) async {
+    if (episode.audioUrl == null || episode.audioUrl!.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Episode has no audio available'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+    
+    setState(() {
+      _episodeDownloadStatus[episode.id] = true; // Show as downloading
+    });
+    
+    try {
+      // Dispatch download event for single episode
+      if (mounted) {
+        context.read<LibraryBloc>().add(DownloadPodcastEpisode(
+          episode.id,
+          episode.audioUrl!,
+          podcastId: _podcast?.id,
+        ));
+      }
+      
+      // Show success message
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Episode download started!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+      
+      // Wait a bit then check status
+      await Future.delayed(const Duration(seconds: 2));
+      await _checkDownloadStatus();
+    } catch (e) {
+      setState(() {
+        _episodeDownloadStatus[episode.id] = false;
+      });
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Download failed: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -110,6 +238,9 @@ class _PodcastDetailPageState extends State<PodcastDetailPage>
                   _isLoadingEpisodes = false;
                 });
                 
+                // Check download status for all episodes
+                _checkDownloadStatus();
+                
                 print('✅ PodcastDetailPage: Episodes state updated successfully');
               } else if (state is PodcastsError) {
                 print('💥 PodcastDetailPage: Error state received: ${state.message}');
@@ -147,6 +278,23 @@ class _PodcastDetailPageState extends State<PodcastDetailPage>
                 onPressed: () => context.pop(),
               ),
               actions: [
+                IconButton(
+                  onPressed: _handleDownloadPodcast,
+                  icon: _isDownloading
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                        )
+                      : Icon(
+                          _isDownloaded ? Icons.download_done : Icons.download,
+                          color: Colors.white,
+                        ),
+                  tooltip: _isDownloaded ? 'Downloaded' : 'Download all episodes for offline',
+                ),
                 IconButton(
                   icon: Icon(
                     Icons.share,
@@ -499,6 +647,8 @@ class _PodcastDetailPageState extends State<PodcastDetailPage>
         child: PodcastEpisodeCard(
           episode: episode,
           onTap: () => _navigateToEpisode(episode),
+          isDownloaded: _episodeDownloadStatus[episode.id] ?? false,
+          onDownload: () => _handleDownloadEpisode(episode),
         ),
       )).toList(),
     );

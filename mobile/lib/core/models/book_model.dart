@@ -142,21 +142,25 @@ class Book {
                     ? json['reviewCount'].toInt() 
                     : 0))
             : 0,
-        isFeatured: json['isFeatured'] == true || json['isFeatured'] == 1,
-        isNewRelease: json['isNewRelease'] == true || json['isNewRelease'] == 1,
-        isPremium: json['isPremium'] == true || json['isPremium'] == 1,
-        isFree: json['isFree'] == true || json['isFree'] == 1,
+        isFeatured: json['is_featured'] == true || json['is_featured'] == 1 || json['isFeatured'] == true || json['isFeatured'] == 1,
+        isNewRelease: json['is_new_release'] == true || json['is_new_release'] == 1 || json['isNewRelease'] == true || json['isNewRelease'] == 1,
+        isPremium: json['is_premium'] == true || json['is_premium'] == 1 || json['isPremium'] == true || json['isPremium'] == 1,
+        isFree: json['is_free'] == true || json['is_free'] == 1 || json['isFree'] == true || json['isFree'] == 1,
         metadata: json['metadata'] != null 
             ? (json['metadata'] is String 
                 ? jsonDecode(json['metadata'])
                 : json['metadata'])
             : null,
-        createdAt: json['createdAt'] != null 
-            ? DateTime.parse(json['createdAt'])
-            : DateTime.now(),
-        updatedAt: json['updatedAt'] != null 
-            ? DateTime.parse(json['updatedAt'])
-            : DateTime.now(),
+        createdAt: json['created_at'] != null 
+            ? DateTime.parse(json['created_at'])
+            : (json['createdAt'] != null 
+                ? DateTime.parse(json['createdAt'])
+                : DateTime.now()),
+        updatedAt: json['updated_at'] != null 
+            ? DateTime.parse(json['updated_at'])
+            : (json['updatedAt'] != null 
+                ? DateTime.parse(json['updatedAt'])
+                : DateTime.now()),
       );
       
       print('✅ Book.fromJson: Successfully parsed book: ${book.title}');

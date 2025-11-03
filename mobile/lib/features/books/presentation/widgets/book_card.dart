@@ -14,6 +14,7 @@ class BookCard extends StatefulWidget {
   final bool showLibraryActions;
   final bool isInLibrary;
   final bool isFavorite;
+  final bool isDownloaded;
   final String userId;
   final bool enableAnimations;
   final bool compact;
@@ -28,6 +29,7 @@ class BookCard extends StatefulWidget {
     this.showLibraryActions = false,
     this.isInLibrary = false,
     this.isFavorite = false,
+    this.isDownloaded = false,
     this.userId = 'current_user',
     this.enableAnimations = true,
     this.compact = false,

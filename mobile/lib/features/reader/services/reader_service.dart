@@ -2,34 +2,70 @@ import 'dart:io';
 import 'package:flutter_pdfview/flutter_pdfview.dart';
 import 'package:teekoob/core/models/book_model.dart';
 import 'package:teekoob/core/services/network_service.dart';
+import 'package:teekoob/core/services/download_service.dart';
 
 class ReaderService {
   final NetworkService _networkService;
+  final DownloadService _downloadService = DownloadService();
 
   ReaderService() : _networkService = NetworkService() {
     _networkService.initialize();
+    _downloadService.initialize();
   }
 
-  // Get book content
+  // Get book content - checks local files first, then network
   Future<String> getBookContent(Book book) async {
     try {
-      // First, try to get the ebook content (text content)
+      // First, check if ebook is downloaded locally
+      final localEbookPath = await _downloadService.getBookEbookPath(book.id);
+      if (localEbookPath != null) {
+        final file = File(localEbookPath);
+        if (await file.exists()) {
+          // Read from local file
+          return await file.readAsString();
+        }
+      }
+
+      // If not downloaded, try to get the ebook content from book object
       if (book.ebookContent != null && book.ebookContent!.isNotEmpty) {
         return book.ebookContent!;
       }
 
       // Try to get from network if ebookUrl exists (for PDF files)
       if (book.ebookUrl != null) {
-        final response = await _networkService.get(book.ebookUrl!);
-        if (response.statusCode == 200) {
-          final content = response.data.toString();
-          return content;
+        try {
+          final response = await _networkService.get(book.ebookUrl!);
+          if (response.statusCode == 200) {
+            final content = response.data.toString();
+            return content;
+          }
+        } catch (e) {
+          // Network error - try to use local file as fallback
+          final localEbookPath = await _downloadService.getBookEbookPath(book.id);
+          if (localEbookPath != null) {
+            final file = File(localEbookPath);
+            if (await file.exists()) {
+              return await file.readAsString();
+            }
+          }
         }
       }
 
       // Return description as fallback
       return book.description ?? 'Content not available';
     } catch (e) {
+      // Final fallback - try local file
+      try {
+        final localEbookPath = await _downloadService.getBookEbookPath(book.id);
+        if (localEbookPath != null) {
+          final file = File(localEbookPath);
+          if (await file.exists()) {
+            return await file.readAsString();
+          }
+        }
+      } catch (_) {
+        // Ignore
+      }
       return book.description ?? 'Content not available';
     }
   }

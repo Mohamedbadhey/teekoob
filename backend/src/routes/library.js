@@ -537,15 +537,6 @@ router.put('/favorites/books/:bookId', asyncHandler(async (req, res) => {
       .where('item_type', 'book')
       .del();
     
-    // Also update user_library if exists
-    await db('user_library')
-      .where('user_id', userId)
-      .where('book_id', bookId)
-      .update({
-        is_favorite: false,
-        updated_at: new Date()
-      });
-    
     logger.info('Book removed from favorites:', { userId, bookId });
     
     res.json({
@@ -563,32 +554,6 @@ router.put('/favorites/books/:bookId', asyncHandler(async (req, res) => {
       created_at: new Date(),
       updated_at: new Date()
     });
-    
-    // Also update user_library if exists, or create entry
-    const libraryEntry = await db('user_library')
-      .where('user_id', userId)
-      .where('book_id', bookId)
-      .first();
-    
-    if (libraryEntry) {
-      await db('user_library')
-        .where('user_id', userId)
-        .where('book_id', bookId)
-        .update({
-          is_favorite: true,
-          updated_at: new Date()
-        });
-    } else {
-      // Create library entry
-      await db('user_library').insert({
-        user_id: userId,
-        book_id: bookId,
-        status: 'wishlist',
-        is_favorite: true,
-        created_at: new Date(),
-        updated_at: new Date()
-      });
-    }
     
     logger.info('Book added to favorites:', { userId, bookId, favoriteId });
     

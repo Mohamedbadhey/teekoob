@@ -1,6 +1,8 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:teekoob/core/models/book_model.dart';
+import 'package:teekoob/core/models/podcast_model.dart';
+import 'package:teekoob/core/services/download_service.dart';
 import 'package:teekoob/features/library/services/library_service.dart';
 
 // Events
@@ -202,6 +204,54 @@ class LoadReadingStats extends LibraryEvent {
   List<Object> get props => [userId];
 }
 
+class DownloadBook extends LibraryEvent {
+  final Book book; // Use Book object instead of separate URLs
+
+  const DownloadBook(this.book);
+
+  @override
+  List<Object?> get props => [book];
+}
+
+class DownloadPodcastEpisode extends LibraryEvent {
+  final String episodeId;
+  final String audioUrl;
+  final String? podcastId;
+
+  const DownloadPodcastEpisode(this.episodeId, this.audioUrl, {this.podcastId});
+
+  @override
+  List<Object?> get props => [episodeId, audioUrl, podcastId];
+}
+
+class DownloadCompletePodcast extends LibraryEvent {
+  final Podcast podcast;
+  final List<PodcastEpisode> episodes;
+
+  const DownloadCompletePodcast(this.podcast, this.episodes);
+
+  @override
+  List<Object> get props => [podcast, episodes];
+}
+
+class DeleteDownload extends LibraryEvent {
+  final String downloadId;
+  final String itemId;
+  final String type; // 'bookAudio', 'bookEbook', 'podcastEpisode'
+
+  const DeleteDownload(this.downloadId, this.itemId, this.type);
+
+  @override
+  List<Object> get props => [downloadId, itemId, type];
+}
+
+class LoadDownloads extends LibraryEvent {
+  const LoadDownloads();
+
+  @override
+  List<Object> get props => [];
+}
+
 // States
 abstract class LibraryState extends Equatable {
   const LibraryState();
@@ -223,16 +273,42 @@ class LibraryLoaded extends LibraryState {
   final List<Map<String, dynamic>> favorites;
   final List<Map<String, dynamic>> recentlyRead;
   final Map<String, dynamic> stats;
+  final List<Map<String, dynamic>> downloads;
+  final List<Map<String, dynamic>> downloadedBooks;
+  final List<Map<String, dynamic>> downloadedPodcasts;
 
   const LibraryLoaded({
     required this.library,
     required this.favorites,
     required this.recentlyRead,
     required this.stats,
+    this.downloads = const [],
+    this.downloadedBooks = const [],
+    this.downloadedPodcasts = const [],
   });
 
+  LibraryLoaded copyWith({
+    List<Map<String, dynamic>>? library,
+    List<Map<String, dynamic>>? favorites,
+    List<Map<String, dynamic>>? recentlyRead,
+    Map<String, dynamic>? stats,
+    List<Map<String, dynamic>>? downloads,
+    List<Map<String, dynamic>>? downloadedBooks,
+    List<Map<String, dynamic>>? downloadedPodcasts,
+  }) {
+    return LibraryLoaded(
+      library: library ?? this.library,
+      favorites: favorites ?? this.favorites,
+      recentlyRead: recentlyRead ?? this.recentlyRead,
+      stats: stats ?? this.stats,
+      downloads: downloads ?? this.downloads,
+      downloadedBooks: downloadedBooks ?? this.downloadedBooks,
+      downloadedPodcasts: downloadedPodcasts ?? this.downloadedPodcasts,
+    );
+  }
+
   @override
-  List<Object?> get props => [library, favorites, recentlyRead, stats];
+  List<Object?> get props => [library, favorites, recentlyRead, stats, downloads, downloadedBooks, downloadedPodcasts];
 }
 
 class LibrarySearchResults extends LibraryState {
@@ -273,10 +349,12 @@ class LibraryError extends LibraryState {
 // BLoC
 class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
   final LibraryService _libraryService;
+  final DownloadService _downloadService = DownloadService();
 
   LibraryBloc({required LibraryService libraryService})
       : _libraryService = libraryService,
         super(const LibraryInitial()) {
+    _downloadService.initialize();
     on<LoadLibrary>(_onLoadLibrary);
     on<AddBookToLibrary>(_onAddBookToLibrary);
     on<RemoveBookFromLibrary>(_onRemoveBookFromLibrary);
@@ -292,6 +370,11 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
     on<SearchLibrary>(_onSearchLibrary);
     on<SyncLibrary>(_onSyncLibrary);
     on<LoadReadingStats>(_onLoadReadingStats);
+    on<DownloadBook>(_onDownloadBook);
+    on<DownloadPodcastEpisode>(_onDownloadPodcastEpisode);
+    on<DownloadCompletePodcast>(_onDownloadCompletePodcast);
+    on<DeleteDownload>(_onDeleteDownload);
+    on<LoadDownloads>(_onLoadDownloads);
   }
 
   Future<void> _onLoadLibrary(
@@ -319,12 +402,47 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
       final stats = _libraryService.getReadingStats(event.userId);
       print('🎯 LibraryBloc: Reading stats retrieved: $stats');
 
+      // Load downloads
+      final allDownloads = await _downloadService.getAllDownloads();
+      final completedDownloads = await _downloadService.getCompletedDownloads();
+      
+      // Group downloads by item_id to avoid duplicates (a book can have both audio and ebook)
+      final bookDownloadsMap = <String, Map<String, dynamic>>{};
+      for (final d in completedDownloads.where((d) => d.type == DownloadType.bookAudio || d.type == DownloadType.bookEbook)) {
+        if (!bookDownloadsMap.containsKey(d.itemId)) {
+          bookDownloadsMap[d.itemId] = {
+            'download_id': d.id,
+            'item_id': d.itemId,
+            'type': 'book',
+            'local_path': d.localPath,
+            'completed_at': d.completedAt?.toIso8601String(),
+          };
+        }
+      }
+      final downloadedBooks = bookDownloadsMap.values.toList();
+      
+      final downloadedPodcasts = completedDownloads
+          .where((d) => d.type == DownloadType.podcastEpisode)
+          .map((d) => {
+                'download_id': d.id,
+                'item_id': d.itemId,
+                'type': d.type.toString().split('.').last,
+                'local_path': d.localPath,
+                'completed_at': d.completedAt?.toIso8601String(),
+              })
+          .toList();
+
+      final downloads = allDownloads.map((d) => d.toJson()).toList();
+
       print('🎯 LibraryBloc: Emitting LibraryLoaded state');
       emit(LibraryLoaded(
         library: library,
         favorites: favorites,
         recentlyRead: recentlyRead,
         stats: stats,
+        downloads: downloads,
+        downloadedBooks: downloadedBooks,
+        downloadedPodcasts: downloadedPodcasts,
       ));
 
       print('🎯 LibraryBloc: LibraryLoaded state emitted successfully');
@@ -632,19 +750,27 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
     Emitter<LibraryState> emit,
   ) async {
     try {
-      emit(const LibraryLoading());
-
-      await _libraryService.syncLibrary(event.userId);
-
+      // Don't emit loading state for sync to avoid UI flicker
+      // Just reload the library data which will update favorites and other data
+      
+      // Skip the sync API call as it causes rate limiting
+      // Instead, just reload the library data
+      print('🔄 LibraryBloc: Sync requested, reloading library data instead of calling sync endpoint');
+      
+      // Reload library data directly (this includes favorites)
+      add(LoadLibrary(event.userId));
+      
       emit(const LibraryOperationSuccess(
-        message: 'Library synced successfully',
+        message: 'Library refreshed successfully',
         operation: 'sync',
       ));
-
-      // Reload library
-      add(LoadLibrary(event.userId));
     } catch (e) {
-      emit(LibraryError('Failed to sync library: $e'));
+      print('❌ LibraryBloc: Error syncing library: $e');
+      // Don't emit error state - just silently fail since we're reloading anyway
+      emit(const LibraryOperationSuccess(
+        message: 'Library refreshed',
+        operation: 'sync',
+      ));
     }
   }
 
@@ -678,5 +804,201 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
   // Public method to fetch multiple books by IDs
   Future<List<Book>> fetchBooksByIds(List<String> bookIds) async {
     return await _libraryService.fetchBooksByIds(bookIds);
+  }
+
+  Future<void> _onDownloadBook(
+    DownloadBook event,
+    Emitter<LibraryState> emit,
+  ) async {
+    try {
+      print('📥 LibraryBloc: Starting download for book: ${event.book.id}');
+      
+      // Download complete book (metadata, ebook content, and audio)
+      await _downloadService.downloadCompleteBook(event.book);
+      
+      print('✅ LibraryBloc: Book download completed');
+
+      // Reload library state with updated downloads
+      final currentState = state;
+      if (currentState is LibraryLoaded) {
+        // Reload downloads and update the state
+        final allDownloads = await _downloadService.getAllDownloads();
+        final completedDownloads = await _downloadService.getCompletedDownloads();
+        
+        // Group downloads by item_id to avoid duplicates
+        final bookDownloadsMap = <String, Map<String, dynamic>>{};
+        for (final d in completedDownloads.where((d) => d.type == DownloadType.bookAudio || d.type == DownloadType.bookEbook)) {
+          if (!bookDownloadsMap.containsKey(d.itemId)) {
+            bookDownloadsMap[d.itemId] = {
+              'download_id': d.id,
+              'item_id': d.itemId,
+              'type': 'book',
+              'local_path': d.localPath,
+              'completed_at': d.completedAt?.toIso8601String(),
+            };
+          }
+        }
+        final downloadedBooks = bookDownloadsMap.values.toList();
+        
+        final downloadedPodcasts = completedDownloads
+            .where((d) => d.type == DownloadType.podcastEpisode)
+            .map((d) => {
+                  'download_id': d.id,
+                  'item_id': d.itemId,
+                  'type': d.type.toString().split('.').last,
+                  'local_path': d.localPath,
+                  'completed_at': d.completedAt?.toIso8601String(),
+                })
+            .toList();
+
+        final downloads = allDownloads.map((d) => d.toJson()).toList();
+
+        print('📥 LibraryBloc: Updated downloads - Books: ${downloadedBooks.length}, Podcasts: ${downloadedPodcasts.length}');
+        print('📥 LibraryBloc: Downloaded book IDs: ${downloadedBooks.map((d) => d['item_id']).toList()}');
+        
+        // Update the state with new downloads - this will trigger UI refresh
+        emit(currentState.copyWith(
+          downloads: downloads,
+          downloadedBooks: downloadedBooks,
+          downloadedPodcasts: downloadedPodcasts,
+        ));
+        
+        // Note: We don't emit LibraryOperationSuccess here to avoid replacing the LibraryLoaded state
+        // The UI should see the updated LibraryLoaded state with the new downloads
+      } else {
+        // If state is not LibraryLoaded, just emit success
+        emit(const LibraryOperationSuccess(
+          message: 'Download completed successfully!',
+          operation: 'download_book',
+        ));
+        // Also trigger a full library reload
+        add(LoadLibrary('current_user'));
+      }
+    } catch (e, stackTrace) {
+      print('❌ LibraryBloc: Download failed: $e');
+      print('❌ Stack trace: $stackTrace');
+      emit(LibraryError('Failed to download book: ${e.toString()}'));
+    }
+  }
+
+  Future<void> _onDownloadPodcastEpisode(
+    DownloadPodcastEpisode event,
+    Emitter<LibraryState> emit,
+  ) async {
+    try {
+      await _downloadService.downloadPodcastEpisode(
+        event.episodeId,
+        event.audioUrl,
+        podcastId: event.podcastId,
+      );
+      
+      // Reload downloads
+      add(const LoadDownloads());
+      
+      emit(const LibraryOperationSuccess(
+        message: 'Download started successfully',
+        operation: 'download_podcast',
+      ));
+    } catch (e) {
+      emit(LibraryError('Failed to download podcast episode: $e'));
+    }
+  }
+
+  Future<void> _onDownloadCompletePodcast(
+    DownloadCompletePodcast event,
+    Emitter<LibraryState> emit,
+  ) async {
+    try {
+      // Download complete podcast (metadata + all episodes)
+      await _downloadService.downloadCompletePodcast(event.podcast, event.episodes);
+
+      // Reload downloads
+      add(const LoadDownloads());
+      
+      emit(const LibraryOperationSuccess(
+        message: 'Podcast download started successfully',
+        operation: 'download_podcast_complete',
+      ));
+    } catch (e) {
+      emit(LibraryError('Failed to download podcast: $e'));
+    }
+  }
+
+  Future<void> _onDeleteDownload(
+    DeleteDownload event,
+    Emitter<LibraryState> emit,
+  ) async {
+    try {
+      await _downloadService.deleteDownload(event.downloadId);
+      
+      // Reload downloads
+      add(const LoadDownloads());
+      
+      emit(const LibraryOperationSuccess(
+        message: 'Download deleted successfully',
+        operation: 'delete_download',
+      ));
+    } catch (e) {
+      emit(LibraryError('Failed to delete download: $e'));
+    }
+  }
+
+  Future<void> _onLoadDownloads(
+    LoadDownloads event,
+    Emitter<LibraryState> emit,
+  ) async {
+    try {
+      final allDownloads = await _downloadService.getAllDownloads();
+      final completedDownloads = await _downloadService.getCompletedDownloads();
+      
+      // Group downloads by item_id to avoid duplicates (a book can have both audio and ebook)
+      final bookDownloadsMap = <String, Map<String, dynamic>>{};
+      for (final d in completedDownloads.where((d) => d.type == DownloadType.bookAudio || d.type == DownloadType.bookEbook)) {
+        if (!bookDownloadsMap.containsKey(d.itemId)) {
+          bookDownloadsMap[d.itemId] = {
+            'download_id': d.id,
+            'item_id': d.itemId,
+            'type': 'book',
+            'local_path': d.localPath,
+            'completed_at': d.completedAt?.toIso8601String(),
+          };
+        }
+      }
+      final downloadedBooks = bookDownloadsMap.values.toList();
+      
+      final downloadedPodcasts = completedDownloads
+          .where((d) => d.type == DownloadType.podcastEpisode)
+          .map((d) => {
+                'download_id': d.id,
+                'item_id': d.itemId,
+                'type': d.type.toString().split('.').last,
+                'local_path': d.localPath,
+                'completed_at': d.completedAt?.toIso8601String(),
+              })
+          .toList();
+
+      final downloads = allDownloads.map((d) => d.toJson()).toList();
+
+      if (state is LibraryLoaded) {
+        final currentState = state as LibraryLoaded;
+        emit(currentState.copyWith(
+          downloads: downloads,
+          downloadedBooks: downloadedBooks,
+          downloadedPodcasts: downloadedPodcasts,
+        ));
+      } else {
+        emit(LibraryLoaded(
+          library: [],
+          favorites: [],
+          recentlyRead: [],
+          stats: {},
+          downloads: downloads,
+          downloadedBooks: downloadedBooks,
+          downloadedPodcasts: downloadedPodcasts,
+        ));
+      }
+    } catch (e) {
+      emit(LibraryError('Failed to load downloads: $e'));
+    }
   }
 }
