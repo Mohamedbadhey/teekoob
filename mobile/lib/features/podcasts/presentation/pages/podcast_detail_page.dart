@@ -8,6 +8,8 @@ import 'package:teekoob/core/services/download_service.dart';
 import 'package:teekoob/features/library/bloc/library_bloc.dart';
 import 'package:teekoob/features/podcasts/bloc/podcasts_bloc.dart';
 import 'package:teekoob/features/podcasts/presentation/widgets/podcast_episode_card.dart';
+import 'package:teekoob/features/reviews/presentation/widgets/comment_section.dart';
+import 'package:teekoob/features/auth/services/auth_service.dart';
 
 class PodcastDetailPage extends StatefulWidget {
   final String podcastId;
@@ -30,9 +32,11 @@ class _PodcastDetailPageState extends State<PodcastDetailPage>
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   final DownloadService _downloadService = DownloadService();
+  final AuthService _authService = AuthService();
   bool _isDownloading = false;
   bool _isDownloaded = false;
   final Map<String, bool> _episodeDownloadStatus = {};
+  String? _userId;
 
   @override
   void initState() {
@@ -52,6 +56,18 @@ class _PodcastDetailPageState extends State<PodcastDetailPage>
     _downloadService.initialize();
     _loadPodcastData();
     _checkDownloadStatus();
+    _loadUserId();
+  }
+
+  Future<void> _loadUserId() async {
+    try {
+      final user = await _authService.getCurrentUser();
+      if (user != null) {
+        setState(() => _userId = user.id);
+      }
+    } catch (e) {
+      print('Error loading user ID: $e');
+    }
   }
 
   Future<void> _checkDownloadStatus() async {
@@ -588,6 +604,18 @@ class _PodcastDetailPageState extends State<PodcastDetailPage>
             _buildNoEpisodesState()
           else
             _buildEpisodesList(),
+          
+          const SizedBox(height: 32),
+          
+          // Reviews and Comments Section
+          if (_userId != null && _podcast != null)
+            CommentSection(
+              itemId: _podcast!.id,
+              itemType: 'podcast',
+              userId: _userId!,
+              currentRating: _podcast!.rating,
+              reviewCount: _podcast!.reviewCount,
+            ),
         ],
       ),
     );

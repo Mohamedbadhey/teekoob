@@ -77,7 +77,7 @@ class _BooksPageState extends State<BooksPage> {
     print('🚀 BooksPage: Loading initial data - dispatching events');
     _hasLoadedInitialData = true;
     
-    // Only load metadata (genres, languages) - not all content
+    // Load metadata (genres, languages) and library
     print('🏷️ BooksPage: Dispatching LoadGenres event');
     context.read<BooksBloc>().add(const LoadGenres());
     print('🌍 BooksPage: Dispatching LoadLanguages event');
@@ -85,8 +85,9 @@ class _BooksPageState extends State<BooksPage> {
     print('📖 BooksPage: Dispatching LoadLibrary event');
     context.read<LibraryBloc>().add(const LoadLibrary('current_user'));
     
-    // Don't load all books/podcasts immediately - wait for user interaction
-    // Content will load when user searches or applies filters
+    // Load initial books and podcasts on page load
+    print('📚 BooksPage: Loading initial books and podcasts');
+    _loadCombinedContent();
   }
 
   void _searchBooks(String query) {
@@ -138,26 +139,45 @@ class _BooksPageState extends State<BooksPage> {
   }
 
  Future<void> _loadCombinedContent() async {
+  print('📚 BooksPage: _loadCombinedContent called');
   setState(() { _isLoadingContent = true; _contentError = null; });
   try {
+    print('📚 BooksPage: Fetching books...');
     final booksFut = _booksService.getBooks(
       search: _currentSearchQuery,
       categories: _selectedCategories,
       year: _selectedYear.isNotEmpty ? _selectedYear : null,
       sortBy: _sortBy,
       sortOrder: _sortOrder,
-    ).then((res) => res['books'] as List);
+    ).then((res) {
+      print('📚 BooksPage: Books response received: ${res['books']?.length ?? 0} books');
+      return res['books'] as List;
+    });
+    
+    print('📚 BooksPage: Fetching podcasts...');
     final podcastsFut = _podcastsService.getPodcasts(
       search: _currentSearchQuery,
       categories: _selectedCategories,
       sortBy: _sortBy,
       sortOrder: _sortOrder,
-    ).then((res) => res['podcasts'] as List);
+    ).then((res) {
+      print('📚 BooksPage: Podcasts response received: ${res['podcasts']?.length ?? 0} podcasts');
+      return res['podcasts'] as List;
+    });
+    
     final books = await booksFut;
     final podcasts = await podcastsFut;
+    
+    print('📚 BooksPage: Combining content - ${books.length} books, ${podcasts.length} podcasts');
     final allContent = [...books, ...podcasts];
-    setState(() => _allContent = allContent);
-  } catch (e) {
+    
+    setState(() {
+      _allContent = allContent;
+      print('📚 BooksPage: State updated with ${_allContent.length} total items');
+    });
+  } catch (e, stackTrace) {
+    print('❌ BooksPage: Error loading combined content: $e');
+    print('❌ BooksPage: Stack trace: $stackTrace');
     setState(() => _contentError = e.toString());
   } finally {
     setState(() => _isLoadingContent = false);
@@ -981,12 +1001,12 @@ final podcasts = _allContent.where((e) => e is Podcast).cast<Podcast>().toList()
         else if (screenWidth > 600) crossAxisCount = 3;
         final cardWidth = (screenWidth - 24 - (crossAxisCount-1)*16) / crossAxisCount;
         return GridView.builder(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: crossAxisCount,
-            mainAxisSpacing: 16,
-            crossAxisSpacing: 16,
-            childAspectRatio: 0.68,
+            mainAxisSpacing: 8,
+            crossAxisSpacing: 8,
+            childAspectRatio: 0.82, // More compact - wider cards, less tall
           ),
           itemCount: feedCards.length,
           itemBuilder: (context, index) {

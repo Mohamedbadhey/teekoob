@@ -1,10 +1,13 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:teekoob/core/services/localization_service.dart';
 import 'package:teekoob/core/services/language_service.dart';
 import 'package:teekoob/core/services/navigation_service.dart';
+import 'package:teekoob/core/services/network_service.dart';
 import 'package:teekoob/core/config/app_router.dart';
 import 'package:teekoob/features/home/presentation/pages/home_page.dart';
 import 'package:teekoob/features/books/presentation/pages/books_page.dart';
@@ -22,6 +25,9 @@ class AppScaffold extends StatefulWidget {
 
 class _AppScaffoldState extends State<AppScaffold> with WidgetsBindingObserver {
   int _currentIndex = 0;
+  bool _isOffline = false;
+  final NetworkService _networkService = NetworkService();
+  late StreamSubscription<ConnectivityResult> _connectivitySubscription;
 
   final List<Widget> _pages = [
     const HomePage(),
@@ -34,11 +40,91 @@ class _AppScaffoldState extends State<AppScaffold> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _networkService.initialize();
+    _checkConnectivity();
+    _listenToConnectivity();
+  }
+
+  Future<void> _checkConnectivity() async {
+    final isConnected = await _networkService.isConnected();
+    if (!isConnected && !_isOffline) {
+      _handleOffline();
+    } else if (isConnected && _isOffline) {
+      _handleOnline();
+    }
+  }
+
+  void _listenToConnectivity() {
+    _connectivitySubscription = _networkService.connectivityStream.listen((result) {
+      final isConnected = result != ConnectivityResult.none;
+      if (!isConnected && !_isOffline) {
+        _handleOffline();
+      } else if (isConnected && _isOffline) {
+        _handleOnline();
+      }
+    });
+  }
+
+  void _handleOffline() {
+    if (mounted) {
+      setState(() {
+        _isOffline = true;
+      });
+      print('📴 AppScaffold: Offline detected - redirecting to offline tab');
+      
+      // Navigate to library page (index 2) with offline tab
+      if (_currentIndex != 2) {
+        setState(() {
+          _currentIndex = 2;
+        });
+        context.go('/home/library?tab=offline');
+      } else {
+        // Already on library page, just switch to offline tab
+        context.go('/home/library?tab=offline');
+      }
+      
+      // Show offline banner
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            LocalizationService.getLocalizedText(
+              englishText: 'No internet connection. Showing offline content.',
+              somaliText: 'Ma jiro internet. Waxaan tusaynaa waxa lagu kaydiyay.',
+            ),
+          ),
+          duration: const Duration(seconds: 3),
+          backgroundColor: Colors.orange,
+        ),
+      );
+    }
+  }
+
+  void _handleOnline() {
+    if (mounted) {
+      setState(() {
+        _isOffline = false;
+      });
+      print('📶 AppScaffold: Online detected');
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            LocalizationService.getLocalizedText(
+              englishText: 'Internet connection restored.',
+              somaliText: 'Internetka waa la soo celiyay.',
+            ),
+          ),
+          duration: const Duration(seconds: 2),
+          backgroundColor: Colors.green,
+        ),
+      );
+    }
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _connectivitySubscription.cancel();
     super.dispose();
   }
 

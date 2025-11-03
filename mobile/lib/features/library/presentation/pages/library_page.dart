@@ -19,23 +19,41 @@ class LibraryPage extends StatefulWidget {
   State<LibraryPage> createState() => _LibraryPageState();
 }
 
-class _LibraryPageState extends State<LibraryPage> {
+class _LibraryPageState extends State<LibraryPage> with SingleTickerProviderStateMixin {
   final TextEditingController _searchController = TextEditingController();
   bool _isSearching = false;
   String _searchQuery = '';
   String _userId = 'current_user'; // TODO: Get from auth service
+  late TabController _tabController;
 
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 3, vsync: this, initialIndex: 0);
     
     // Load library data
     _loadLibraryData();
+    
+    // Check if we should show offline tab (e.g., when redirected from offline detection)
+    _checkForOfflineRedirect();
+  }
+  
+  Future<void> _checkForOfflineRedirect() async {
+    // Small delay to ensure context is ready
+    await Future.delayed(const Duration(milliseconds: 100));
+    if (mounted) {
+      // Check if there's a query parameter or flag to show offline tab
+      final uri = GoRouterState.of(context).uri;
+      if (uri.queryParameters['tab'] == 'offline') {
+        _tabController.animateTo(2);
+      }
+    }
   }
 
   @override
   void dispose() {
     _searchController.dispose();
+    _tabController.dispose();
     super.dispose();
   }
 
@@ -51,32 +69,31 @@ class _LibraryPageState extends State<LibraryPage> {
   }
 
   Widget _buildLibraryContent(LibraryLoaded state) {
-    return DefaultTabController(
-      length: 3,
-      child: Column(
-        children: [
-          TabBar(
-            labelColor: Theme.of(context).colorScheme.primary,
-            unselectedLabelColor: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-            indicatorColor: Theme.of(context).colorScheme.primary,
-            isScrollable: true,
-            tabs: const [
-              Tab(text: 'Library'),
-              Tab(text: 'Favorites'),
-              Tab(text: 'Offline'),
+    return Column(
+      children: [
+        TabBar(
+          controller: _tabController,
+          labelColor: Theme.of(context).colorScheme.primary,
+          unselectedLabelColor: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+          indicatorColor: Theme.of(context).colorScheme.primary,
+          isScrollable: true,
+          tabs: const [
+            Tab(text: 'Library'),
+            Tab(text: 'Favorites'),
+            Tab(text: 'Offline'),
+          ],
+        ),
+        Expanded(
+          child: TabBarView(
+            controller: _tabController,
+            children: [
+              _buildLibraryTab(state),
+              _buildFavoritesTab(state),
+              _buildOfflineTab(state),
             ],
           ),
-          Expanded(
-            child: TabBarView(
-              children: [
-                _buildLibraryTab(state),
-                _buildFavoritesTab(state),
-                _buildOfflineTab(state),
-              ],
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -169,9 +186,9 @@ class _LibraryPageState extends State<LibraryPage> {
                 physics: const NeverScrollableScrollPhysics(),
                 gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: crossAxisCount,
-                  mainAxisSpacing: 16,
-                  crossAxisSpacing: 16,
-                  childAspectRatio: 0.68,
+                  mainAxisSpacing: 8,
+                  crossAxisSpacing: 8,
+                  childAspectRatio: 0.82, // More compact - wider cards, less tall
                 ),
                 itemCount: favoriteBooks.length,
                 itemBuilder: (context, index) {
@@ -232,9 +249,9 @@ class _LibraryPageState extends State<LibraryPage> {
                 physics: const NeverScrollableScrollPhysics(),
                 gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: crossAxisCount,
-                  mainAxisSpacing: 16,
-                  crossAxisSpacing: 16,
-                  childAspectRatio: 0.68,
+                  mainAxisSpacing: 8,
+                  crossAxisSpacing: 8,
+                  childAspectRatio: 0.82, // More compact - wider cards, less tall
                 ),
                 itemCount: favoritePodcasts.length,
                 itemBuilder: (context, index) {
@@ -374,7 +391,7 @@ class _LibraryPageState extends State<LibraryPage> {
                       crossAxisCount: crossAxisCount,
                       mainAxisSpacing: 16,
                       crossAxisSpacing: 16,
-                      childAspectRatio: 0.68,
+                      childAspectRatio: 0.82, // More compact - wider cards, less tall
                     ),
                     itemCount: books.length,
                     itemBuilder: (context, index) {
@@ -438,9 +455,9 @@ class _LibraryPageState extends State<LibraryPage> {
                     physics: const NeverScrollableScrollPhysics(),
                     gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: crossAxisCount,
-                      mainAxisSpacing: 16,
-                      crossAxisSpacing: 16,
-                      childAspectRatio: 0.68,
+                      mainAxisSpacing: 8,
+                      crossAxisSpacing: 8,
+                      childAspectRatio: 0.82, // More compact - wider cards, less tall
                     ),
                     itemCount: podcasts.length,
                     itemBuilder: (context, index) {
@@ -596,6 +613,42 @@ class _LibraryPageState extends State<LibraryPage> {
                       return _buildLibraryContent(state);
                     } else if (state is LibraryLoading) {
                       return const Center(child: CircularProgressIndicator());
+                    } else if (state is LibraryError) {
+                      // Show error message
+                      return Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(24.0),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.error_outline,
+                                size: 64,
+                                color: Theme.of(context).colorScheme.error,
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                'Error loading library',
+                                style: Theme.of(context).textTheme.headlineSmall,
+                                textAlign: TextAlign.center,
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                state.message,
+                                style: Theme.of(context).textTheme.bodyMedium,
+                                textAlign: TextAlign.center,
+                              ),
+                              const SizedBox(height: 24),
+                              ElevatedButton(
+                                onPressed: () {
+                                  _loadLibraryData();
+                                },
+                                child: const Text('Retry'),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
                     } else {
                       // Show premium offline message when not searching
                       return _buildPremiumOfflineMessage();
@@ -974,31 +1027,31 @@ class _LibraryPageState extends State<LibraryPage> {
         if (screenWidth < 360) {
           // Small phones
           crossAxisCount = 2;
-          childAspectRatio = 0.65;
+          childAspectRatio = 0.78; // Wider cards (less tall)
           crossAxisSpacing = 12;
           mainAxisSpacing = 12;
         } else if (screenWidth < 400) {
           // Medium phones
           crossAxisCount = 2;
-          childAspectRatio = 0.68;
+          childAspectRatio = 0.80; // Wider cards (less tall)
           crossAxisSpacing = 14;
           mainAxisSpacing = 14;
         } else if (screenWidth < 480) {
           // Large phones
           crossAxisCount = 2;
-          childAspectRatio = 0.70;
+          childAspectRatio = 0.82; // Wider cards (less tall)
           crossAxisSpacing = 16;
           mainAxisSpacing = 16;
         } else if (screenWidth < 600) {
           // Very large phones
           crossAxisCount = 2;
-          childAspectRatio = 0.72;
+          childAspectRatio = 0.84; // Wider cards (less tall)
           crossAxisSpacing = 18;
           mainAxisSpacing = 18;
         } else {
           // Tablets and larger
           crossAxisCount = 3;
-          childAspectRatio = 0.75;
+          childAspectRatio = 0.85; // Wider cards (less tall)
           crossAxisSpacing = 20;
           mainAxisSpacing = 20;
         }

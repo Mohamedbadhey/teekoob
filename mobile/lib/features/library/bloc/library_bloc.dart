@@ -402,9 +402,35 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
       final stats = _libraryService.getReadingStats(event.userId);
       print('🎯 LibraryBloc: Reading stats retrieved: $stats');
 
-      // Load downloads
-      final allDownloads = await _downloadService.getAllDownloads();
-      final completedDownloads = await _downloadService.getCompletedDownloads();
+      // Load downloads with error handling
+      List<DownloadItem> allDownloads = [];
+      List<DownloadItem> completedDownloads = [];
+      
+      try {
+        allDownloads = await _downloadService.getAllDownloads().timeout(
+          const Duration(seconds: 10),
+          onTimeout: () {
+            print('⚠️ LibraryBloc: Timeout loading all downloads');
+            return <DownloadItem>[];
+          },
+        );
+      } catch (e) {
+        print('❌ LibraryBloc: Error loading all downloads: $e');
+        allDownloads = [];
+      }
+      
+      try {
+        completedDownloads = await _downloadService.getCompletedDownloads().timeout(
+          const Duration(seconds: 10),
+          onTimeout: () {
+            print('⚠️ LibraryBloc: Timeout loading completed downloads');
+            return <DownloadItem>[];
+          },
+        );
+      } catch (e) {
+        print('❌ LibraryBloc: Error loading completed downloads: $e');
+        completedDownloads = [];
+      }
       
       // Group downloads by item_id to avoid duplicates (a book can have both audio and ebook)
       final bookDownloadsMap = <String, Map<String, dynamic>>{};

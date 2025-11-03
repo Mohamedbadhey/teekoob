@@ -142,11 +142,34 @@ class DownloadService {
         databaseFactory = databaseFactoryFfiWeb;
         _databaseFactoryInitialized = true;
         print('🔧 DownloadService: Initialized databaseFactoryFfiWeb for web platform');
+      } else if (!kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS) && !_databaseFactoryInitialized) {
+        // Initialize FFI for desktop platforms (Linux, Windows, macOS)
+        // Note: sqfliteFfiInit() may not be needed in newer versions, but try it
+        try {
+          sqfliteFfiInit();
+        } catch (e) {
+          print('⚠️ DownloadService: sqfliteFfiInit() failed (might not be needed): $e');
+        }
+        databaseFactory = databaseFactoryFfi;
+        _databaseFactoryInitialized = true;
+        print('🔧 DownloadService: Initialized databaseFactoryFfi for desktop platform');
+      }
+      // Note: For Android/iOS, use the default databaseFactory (no initialization needed)
+      
+      // For web, use a simple string path. For mobile/desktop, use getDatabasesPath()
+      String dbPath;
+      if (kIsWeb) {
+        // Web uses a simple string for the database name
+        dbPath = 'downloads.db';
+        print('🔧 DownloadService: Using web database path: $dbPath');
+      } else {
+        // Mobile and desktop use full path
+        dbPath = path.join(await getDatabasesPath(), 'downloads.db');
+        print('🔧 DownloadService: Using platform database path: $dbPath');
       }
       
-      final dbPath = await getDatabasesPath();
       _database = await openDatabase(
-        path.join(dbPath, 'downloads.db'),
+        dbPath,
         version: 2, // Incremented to trigger onUpgrade for existing databases
       onCreate: (db, version) async {
         await db.execute('''
@@ -239,6 +262,12 @@ class DownloadService {
   }
 
   Future<bool> _requestStoragePermission() async {
+    // On web, storage permissions work differently - we can proceed
+    if (kIsWeb) {
+      print('🔐 Web platform: Storage permissions not required');
+      return true;
+    }
+    
     if (Platform.isAndroid) {
       print('🔐 Requesting storage permissions...');
       
@@ -288,6 +317,14 @@ class DownloadService {
   }
 
   Future<String> _getDownloadDirectory() async {
+    // On web, we can't use traditional file system paths
+    // Use a virtual path that works with browser storage
+    if (kIsWeb) {
+      // For web, we'll use a virtual path format
+      // The actual storage will be handled differently (IndexedDB or browser download)
+      return '/downloads';
+    }
+    
     if (Platform.isAndroid) {
       // Use app-specific external directory
       final directory = await getExternalStorageDirectory();
@@ -555,9 +592,14 @@ class DownloadService {
     // Check if already downloaded
     final existing = await getDownload(downloadId);
     if (existing != null && existing.status == DownloadStatus.completed && existing.localPath != null) {
-      final file = File(existing.localPath!);
-      if (await file.exists()) {
+      if (kIsWeb) {
+        // On web, check database instead of file system
         return existing.localPath!;
+      } else {
+        final file = File(existing.localPath!);
+        if (await file.exists()) {
+          return existing.localPath!;
+        }
       }
     }
 
@@ -580,12 +622,14 @@ class DownloadService {
 
     try {
       print('⬇️ Starting audio file download...');
-      final file = File(filePath);
       
-      // Ensure parent directory exists
-      final parentDir = file.parent;
-      if (!await parentDir.exists()) {
-        await parentDir.create(recursive: true);
+      if (!kIsWeb) {
+        // On mobile/desktop, ensure parent directory exists
+        final file = File(filePath);
+        final parentDir = file.parent;
+        if (!await parentDir.exists()) {
+          await parentDir.create(recursive: true);
+        }
       }
       
       final response = await _networkService.download(
@@ -616,7 +660,16 @@ class DownloadService {
       );
 
       final currentItem = _activeDownloads[downloadId] ?? downloadItem;
-      final fileSize = await file.length();
+      int fileSize = currentItem.totalBytes ?? 0;
+      
+      if (!kIsWeb) {
+        // On mobile/desktop, get file size from file system
+        final file = File(filePath);
+        fileSize = await file.length();
+      } else {
+        // On web, use total bytes from download response or estimate
+        fileSize = currentItem.totalBytes ?? response.data?.length ?? 0;
+      }
       
       final completedItem = DownloadItem(
         id: downloadId,
@@ -676,9 +729,14 @@ class DownloadService {
     // Check if already downloaded
     final existing = await getDownload(downloadId);
     if (existing != null && existing.status == DownloadStatus.completed && existing.localPath != null) {
-      final file = File(existing.localPath!);
-      if (await file.exists()) {
+      if (kIsWeb) {
+        // On web, check database instead of file system
         return existing.localPath!;
+      } else {
+        final file = File(existing.localPath!);
+        if (await file.exists()) {
+          return existing.localPath!;
+        }
       }
     }
 
@@ -715,11 +773,13 @@ class DownloadService {
         // Download from URL
         print('⬇️ Downloading ebook from URL...');
         
-        // Ensure parent directory exists
-        final file = File(filePath);
-        final parentDir = file.parent;
-        if (!await parentDir.exists()) {
-          await parentDir.create(recursive: true);
+        if (!kIsWeb) {
+          // On mobile/desktop, ensure parent directory exists
+          final file = File(filePath);
+          final parentDir = file.parent;
+          if (!await parentDir.exists()) {
+            await parentDir.create(recursive: true);
+          }
         }
         
         final response = await _networkService.download(
@@ -749,18 +809,47 @@ class DownloadService {
         },
       );
       } else {
-        // Save direct content to file
-        print('📝 Saving ebook content directly to file...');
-        final file = File(filePath);
+        // Save direct content
+        print('📝 Saving ebook content...');
         
-        // Ensure parent directory exists
-        final parentDir = file.parent;
-        if (!await parentDir.exists()) {
-          await parentDir.create(recursive: true);
+        if (kIsWeb) {
+          // On web, store content in database instead of file system
+          // Store the ebook content in the book_metadata table
+          if (_database == null) await _initDatabase();
+          
+          final metadataJson = jsonEncode({
+            'content': ebookUrlOrContent,
+            'type': 'ebook',
+            'saved_at': DateTime.now().toIso8601String(),
+          });
+          
+          await _database!.insert(
+            'book_metadata',
+            {
+              'book_id': bookId,
+              'metadata': metadataJson,
+              'created_at': DateTime.now().toIso8601String(),
+              'updated_at': DateTime.now().toIso8601String(),
+            },
+            conflictAlgorithm: ConflictAlgorithm.replace,
+          );
+          
+          // Use a virtual path for web
+          filePath = '/downloads/$bookId.txt';
+          print('✅ Ebook content saved to database (${ebookUrlOrContent.length} characters)');
+        } else {
+          // On mobile/desktop, save to file system
+          final file = File(filePath);
+          
+          // Ensure parent directory exists
+          final parentDir = file.parent;
+          if (!await parentDir.exists()) {
+            await parentDir.create(recursive: true);
+          }
+          
+          await file.writeAsString(ebookUrlOrContent);
+          print('✅ Ebook content saved: $filePath (${ebookUrlOrContent.length} characters)');
         }
-        
-        await file.writeAsString(ebookUrlOrContent);
-        print('✅ Ebook content saved: $filePath (${ebookUrlOrContent.length} characters)');
         final contentLength = ebookUrlOrContent.length;
         final updatedItem = DownloadItem(
           id: downloadItem.id,
@@ -950,68 +1039,104 @@ class DownloadService {
   }
 
   Future<List<DownloadItem>> getAllDownloads({DownloadStatus? status}) async {
-    if (_database == null) await _initDatabase();
-    List<Map<String, dynamic>> maps;
-    
-    if (status != null) {
-      maps = await _database!.query(
-        'downloads',
-        where: 'status = ?',
-        whereArgs: [status.toString().split('.').last],
-        orderBy: 'created_at DESC',
-      );
-    } else {
-      maps = await _database!.query(
-        'downloads',
-        orderBy: 'created_at DESC',
-      );
-    }
+    try {
+      if (_database == null) {
+        try {
+          await _initDatabase().timeout(const Duration(seconds: 5));
+        } catch (e) {
+          print('❌ DownloadService: Failed to initialize database in getAllDownloads: $e');
+          return [];
+        }
+      }
+      
+      if (_database == null) {
+        print('⚠️ DownloadService: Database is null after initialization attempt');
+        return [];
+      }
+      
+      List<Map<String, dynamic>> maps;
+      
+      if (status != null) {
+        maps = await _database!.query(
+          'downloads',
+          where: 'status = ?',
+          whereArgs: [status.toString().split('.').last],
+          orderBy: 'created_at DESC',
+        );
+      } else {
+        maps = await _database!.query(
+          'downloads',
+          orderBy: 'created_at DESC',
+        );
+      }
 
-    return maps.map((map) => DownloadItem.fromJson(map)).toList();
+      return maps.map((map) => DownloadItem.fromJson(map)).toList();
+    } catch (e) {
+      print('❌ DownloadService: Error in getAllDownloads: $e');
+      return [];
+    }
   }
 
   Future<List<DownloadItem>> getCompletedDownloads({DownloadType? type}) async {
-    if (_database == null) await _initDatabase();
-    List<Map<String, dynamic>> maps;
-    
-    final statusString = DownloadStatus.completed.toString().split('.').last;
-    print('🔍 DownloadService: Getting completed downloads with status: $statusString');
-    
-    if (type != null) {
-      final typeString = type.toString().split('.').last;
-      maps = await _database!.query(
-        'downloads',
-        where: 'status = ? AND type = ?',
-        whereArgs: [statusString, typeString],
-        orderBy: 'completed_at DESC',
-      );
-      print('🔍 DownloadService: Found ${maps.length} completed downloads of type $typeString');
-    } else {
-      maps = await _database!.query(
-        'downloads',
-        where: 'status = ?',
-        whereArgs: [statusString],
-        orderBy: 'completed_at DESC',
-      );
-      print('🔍 DownloadService: Found ${maps.length} total completed downloads');
-    }
-
-    final items = maps.map((map) {
-      try {
-        return DownloadItem.fromJson(map);
-      } catch (e) {
-        print('❌ DownloadService: Error parsing download item: $e');
-        print('❌ DownloadService: Map data: $map');
-        return null;
+    try {
+      if (_database == null) {
+        try {
+          await _initDatabase().timeout(const Duration(seconds: 5));
+        } catch (e) {
+          print('❌ DownloadService: Failed to initialize database in getCompletedDownloads: $e');
+          return [];
+        }
       }
-    }).whereType<DownloadItem>().toList();
-    
-    print('🔍 DownloadService: Parsed ${items.length} download items');
-    for (final item in items) {
-      print('  - ${item.type} for ${item.itemId}: ${item.status}');
+      
+      if (_database == null) {
+        print('⚠️ DownloadService: Database is null after initialization attempt');
+        return [];
+      }
+      
+      List<Map<String, dynamic>> maps;
+      
+      final statusString = DownloadStatus.completed.toString().split('.').last;
+      print('🔍 DownloadService: Getting completed downloads with status: $statusString');
+      
+      if (type != null) {
+        final typeString = type.toString().split('.').last;
+        maps = await _database!.query(
+          'downloads',
+          where: 'status = ? AND type = ?',
+          whereArgs: [statusString, typeString],
+          orderBy: 'completed_at DESC',
+        );
+        print('🔍 DownloadService: Found ${maps.length} completed downloads of type $typeString');
+      } else {
+        maps = await _database!.query(
+          'downloads',
+          where: 'status = ?',
+          whereArgs: [statusString],
+          orderBy: 'completed_at DESC',
+        );
+        print('🔍 DownloadService: Found ${maps.length} total completed downloads');
+      }
+
+      final items = maps.map((map) {
+        try {
+          return DownloadItem.fromJson(map);
+        } catch (e) {
+          print('❌ DownloadService: Error parsing download item: $e');
+          print('❌ DownloadService: Map data: $map');
+          return null;
+        }
+      }).whereType<DownloadItem>().toList();
+      
+      print('🔍 DownloadService: Parsed ${items.length} download items');
+      for (final item in items) {
+        print('  - ${item.type} for ${item.itemId}: ${item.status}');
+      }
+      
+      return items;
+    } catch (e) {
+      print('❌ DownloadService: Error in getCompletedDownloads: $e');
+      return [];
     }
-    
-    return items;
   }
 
   Future<bool> isDownloaded(String itemId, DownloadType type) async {

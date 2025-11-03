@@ -16,6 +16,8 @@ import 'package:teekoob/core/presentation/widgets/book_reminder_widget.dart';
 import 'package:teekoob/core/services/global_audio_player_service.dart';
 import 'package:teekoob/core/services/download_service.dart';
 import 'package:teekoob/features/library/bloc/library_bloc.dart';
+import 'package:teekoob/features/reviews/presentation/widgets/comment_section.dart';
+import 'package:teekoob/features/auth/services/auth_service.dart';
 
 class BookDetailPage extends StatefulWidget {
   final String bookId;
@@ -34,8 +36,10 @@ class _BookDetailPageState extends State<BookDetailPage> {
   bool isLoading = true;
   String? error;
   final DownloadService _downloadService = DownloadService();
+  final AuthService _authService = AuthService();
   bool _isDownloading = false;
   bool _isDownloaded = false;
+  String? _userId;
 
   @override
   void initState() {
@@ -43,6 +47,18 @@ class _BookDetailPageState extends State<BookDetailPage> {
     _downloadService.initialize();
     _loadBookDetails();
     _checkDownloadStatus();
+    _loadUserId();
+  }
+
+  Future<void> _loadUserId() async {
+    try {
+      final user = await _authService.getCurrentUser();
+      if (user != null) {
+        setState(() => _userId = user.id);
+      }
+    } catch (e) {
+      print('Error loading user ID: $e');
+    }
   }
 
   Future<void> _checkDownloadStatus() async {
@@ -331,6 +347,18 @@ class _BookDetailPageState extends State<BookDetailPage> {
                     
                     // Text Blocks
                     _buildTextBlocks(),
+                    
+                    const SizedBox(height: 24),
+                    
+                    // Reviews and Comments Section
+                    if (_userId != null)
+                      CommentSection(
+                        itemId: book!.id,
+                        itemType: 'book',
+                        userId: _userId!,
+                        currentRating: book!.rating,
+                        reviewCount: book!.reviewCount,
+                      ),
                   ],
                 ),
               ),

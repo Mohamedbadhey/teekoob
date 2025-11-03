@@ -106,38 +106,34 @@ class _BookCardState extends State<BookCard> with TickerProviderStateMixin {
   }
 
   double _getResponsiveWidth(double screenWidth) {
-    // More granular responsive breakpoints
-    if (screenWidth < 320) {
-      return screenWidth * 0.45; // Very small phones
-    } else if (screenWidth < 360) {
-      return screenWidth * 0.42; // Small phones
+    // Compact responsive breakpoints - cards take more space
+    if (screenWidth < 360) {
+      return screenWidth * 0.48; // Small phones - nearly half screen
     } else if (screenWidth < 400) {
-      return screenWidth * 0.40; // Medium phones
+      return screenWidth * 0.47; // Medium phones
     } else if (screenWidth < 480) {
-      return screenWidth * 0.38; // Large phones
+      return screenWidth * 0.46; // Large phones
     } else if (screenWidth < 600) {
-      return screenWidth * 0.35; // Very large phones
+      return screenWidth * 0.45; // Very large phones
     } else if (screenWidth < 768) {
-      return screenWidth * 0.30; // Small tablets
+      return screenWidth * 0.32; // Small tablets
+    } else if (screenWidth < 1024) {
+      return screenWidth * 0.24; // Medium tablets
     } else {
-      return screenWidth * 0.25; // Large tablets
+      return screenWidth * 0.20; // Large tablets/desktop
     }
   }
 
   double _getResponsiveHeight(double screenHeight) {
-    // Content-fitted responsive breakpoints - height adapts to content with overflow prevention
+    // Compact responsive height - smaller cards for better fit
     if (screenHeight < 600) {
-      return screenHeight * 0.26; // Very small screens - content fitted with overflow prevention
+      return 160; // Small screens - reduced from 200
     } else if (screenHeight < 700) {
-      return screenHeight * 0.24; // Small screens - content fitted with overflow prevention
+      return 170; // Medium screens - reduced from 220
     } else if (screenHeight < 800) {
-      return screenHeight * 0.22; // Medium screens - content fitted with overflow prevention
-    } else if (screenHeight < 900) {
-      return screenHeight * 0.20; // Large screens - content fitted with overflow prevention
-    } else if (screenHeight < 1000) {
-      return screenHeight * 0.18; // Very large screens - content fitted with overflow prevention
+      return 180; // Large screens - reduced from 240
     } else {
-      return screenHeight * 0.16; // Extra large screens - content fitted with overflow prevention
+      return 190; // Extra large screens - reduced from 260
     }
   }
 
@@ -293,277 +289,269 @@ class _BookCardState extends State<BookCard> with TickerProviderStateMixin {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min, // Let content determine height
+        mainAxisSize: MainAxisSize.min,
         children: [
-          // Book Cover - FILLS ENTIRE CARD VERTICALLY
-          Stack(
-            children: [
-              // Cover Image Container - FILLS ENTIRE CARD
-              Container(
-                width: double.infinity,
-                height: widget.compact ? cardWidth * 0.35 : cardWidth * 0.8, // More compact cover in list mode
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(widget.compact ? 12 : 20)),
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      Theme.of(context).colorScheme.primary, // Primary color
-                      Theme.of(context).colorScheme.secondary, // Secondary color
-                      Theme.of(context).colorScheme.primary.withOpacity(0.7), // Light primary
-                    ],
-                    stops: [0.0, 0.5, 1.0],
+          // Cover Image Section - Top 65% of card
+          Expanded(
+            flex: 65,
+            child: Stack(
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(widget.compact ? 12 : 20),
+                    topRight: Radius.circular(widget.compact ? 12 : 20),
+                  ),
+                  child: Container(
+                    width: double.infinity,
+                    height: double.infinity,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          Theme.of(context).colorScheme.primary.withOpacity(0.2),
+                          Theme.of(context).colorScheme.secondary.withOpacity(0.2),
+                        ],
+                      ),
+                    ),
+                    child: widget.book.coverImageUrl != null
+                        ? CachedNetworkImage(
+                            imageUrl: _buildFullImageUrl(widget.book.coverImageUrl!),
+                            fit: BoxFit.cover,
+                            width: double.infinity,
+                            height: double.infinity,
+                            placeholder: (context, url) => Container(
+                              color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                              child: Center(
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    Theme.of(context).colorScheme.primary,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            errorWidget: (context, url, error) => Container(
+                              color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                              child: Icon(
+                                Icons.book,
+                                size: cardWidth * 0.3,
+                                color: Theme.of(context).colorScheme.primary.withOpacity(0.5),
+                              ),
+                            ),
+                          )
+                        : Container(
+                            color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                            child: Icon(
+                              Icons.book,
+                              size: cardWidth * 0.3,
+                              color: Theme.of(context).colorScheme.primary.withOpacity(0.5),
+                            ),
+                          ),
                   ),
                 ),
-                child: widget.book.coverImageUrl != null
-                    ? ClipRRect(
-                        borderRadius: BorderRadius.vertical(top: Radius.circular(widget.compact ? 12 : 20)),
-                        child: CachedNetworkImage(
-                          imageUrl: _buildFullImageUrl(widget.book.coverImageUrl!),
-                          fit: BoxFit.cover,
-                          width: double.infinity,
-                          height: double.infinity,
-                          placeholder: (context, url) => _buildGradientBackground(cardWidth),
-                          errorWidget: (context, url, error) => _buildGradientBackground(cardWidth),
-                          fadeInDuration: const Duration(milliseconds: 300),
-                          fadeOutDuration: const Duration(milliseconds: 100),
-                        ),
-                      )
-                    : _buildGradientBackground(cardWidth),
-              ),
                 
-              // Title overlay - positioned to not cover image content
-              Positioned(
-                bottom: 0,
-                left: 0,
-                right: 0,
-                child: Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.vertical(top: Radius.circular(widget.compact ? 12 : 20)),
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        Colors.transparent,
-                        Theme.of(context).shadowColor.withOpacity(0.7),
-                      ],
-                      stops: const [0.0, 1.0],
+                // Favorite button - top right
+                if (widget.showLibraryActions)
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: () => _toggleFavorite(context),
+                        borderRadius: BorderRadius.circular(20),
+                        child: Container(
+                          padding: EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.95),
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.15),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Icon(
+                            widget.isFavorite ? Icons.favorite : Icons.favorite_border,
+                            size: _getResponsiveFontSize(cardWidth, 0.05),
+                            color: widget.isFavorite ? Colors.red : Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                          ),
+                        ),
+                      ),
                     ),
                   ),
-                  padding: EdgeInsets.all(widget.compact ? cardWidth * 0.04 : cardWidth * 0.08),
-                  child: Text(
+              ],
+            ),
+          ),
+          
+          // Content Section - Bottom 35% with solid background
+          Expanded(
+            flex: 35,
+            child: Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surface,
+                borderRadius: BorderRadius.only(
+                  bottomLeft: Radius.circular(widget.compact ? 12 : 20),
+                  bottomRight: Radius.circular(widget.compact ? 12 : 20),
+                ),
+              ),
+              padding: EdgeInsets.symmetric(
+                horizontal: cardWidth * 0.035,
+                vertical: cardWidth * 0.025,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  // Title
+                  Text(
                     widget.book.title,
                     style: TextStyle(
-                      color: Theme.of(context).colorScheme.onSurface,
-                      fontSize: _getResponsiveFontSize(cardWidth, widget.compact ? 0.055 : 0.075),
+                      fontSize: _getResponsiveFontSize(cardWidth, widget.compact ? 0.052 : 0.058),
                       fontWeight: FontWeight.bold,
+                      color: Theme.of(context).colorScheme.onSurface,
                       height: 1.2,
-                      shadows: [
-                        Shadow(
-                          offset: const Offset(0, 1),
-                          blurRadius: 3,
-                          color: Theme.of(context).shadowColor,
-                        ),
-                      ],
                     ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
-                ),
-              ),
-              
-              // Favorite button
-              if (widget.showLibraryActions)
-                Positioned(
-                  top: 8,
-                  right: 8,
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: () => _toggleFavorite(context),
-                      borderRadius: BorderRadius.circular(20),
-                      child: Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.surface.withOpacity(0.9),
-                          borderRadius: BorderRadius.circular(20),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.2),
-                              blurRadius: 4,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: Icon(
-                          widget.isFavorite ? Icons.favorite : Icons.favorite_border,
-                          size: widget.compact ? 16 : 18,
-                          color: widget.isFavorite ? Colors.red : Theme.of(context).colorScheme.onSurface,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            
-          // Book Info below cover - Dynamic content height
-          Container(
-            padding: EdgeInsets.fromLTRB(
-              cardWidth * (widget.compact ? 0.025 : 0.03),
-              cardWidth * (widget.compact ? 0.02 : 0.03),
-              cardWidth * (widget.compact ? 0.025 : 0.03),
-              cardWidth * (widget.compact ? 0.005 : 0.01),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min, // Take only needed space
-              children: [
-                // Book title
-                Text(
-                  widget.book.title,
-                  style: TextStyle(
-                    fontSize: _getResponsiveFontSize(cardWidth, widget.compact ? 0.06 : 0.07), // Smaller font
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).colorScheme.onSurface,
-                    height: 1.1, // Tighter line height
-                  ),
-                  maxLines: 1, // Single line to save space
-                  overflow: TextOverflow.ellipsis,
-                ),
-                
-                SizedBox(height: cardWidth * (widget.compact ? 0.006 : 0.01)),
-                
-                // Author name
-                if (widget.book.authors != null && widget.book.authors!.isNotEmpty)
-                  Text(
-                    widget.book.authors!,
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.primary,
-                      fontSize: _getResponsiveFontSize(cardWidth, widget.compact ? 0.05 : 0.06),
-                      fontWeight: FontWeight.w500,
-                      height: 1.1, // Proper line height
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                
-                SizedBox(height: cardWidth * (widget.compact ? 0.006 : 0.01)),
-                
-                // Free book badge
-                if (widget.book.isFree)
-                  Container(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: cardWidth * 0.02,
-                      vertical: cardWidth * 0.005,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.green,
-                      borderRadius: BorderRadius.circular(cardWidth * 0.08),
-                    ),
-                    child: Text(
-                      'FREE',
+                  
+                  SizedBox(height: cardWidth * 0.01),
+                  
+                  // Author
+                  if (widget.book.authors != null && widget.book.authors!.isNotEmpty)
+                    Text(
+                      widget.book.authors!,
                       style: TextStyle(
-                        color: Colors.white,
-                        fontSize: _getResponsiveFontSize(cardWidth, widget.compact ? 0.04 : 0.045),
-                        fontWeight: FontWeight.bold,
+                        fontSize: _getResponsiveFontSize(cardWidth, widget.compact ? 0.042 : 0.048),
+                        fontWeight: FontWeight.w500,
+                        color: Theme.of(context).colorScheme.primary,
+                        height: 1.1,
                       ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                  ),
-                
-                SizedBox(height: cardWidth * (widget.compact ? 0.006 : 0.01)),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    // Clock icon with time - Dynamic
-                    Flexible(
-                      flex: 1,
-                      child: Container(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: cardWidth * 0.02, // Further reduced padding for grid layout
-                          vertical: cardWidth * 0.005, // Further reduced padding for grid layout
-                        ),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.primary,
-                          borderRadius: BorderRadius.circular(cardWidth * 0.08),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
-                              blurRadius: 6,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
+                  
+                  SizedBox(height: cardWidth * 0.012),
+                  
+                  // Bottom row - Duration, Rating, Badges
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      // Duration and Rating
+                      Expanded(
                         child: Row(
-                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(
-                              Icons.access_time_rounded,
-                              size: _getResponsiveFontSize(cardWidth, widget.compact ? 0.05 : 0.06),
-                              color: Theme.of(context).colorScheme.onPrimary,
-                            ),
-                            SizedBox(width: cardWidth * (widget.compact ? 0.015 : 0.02)),
-                            Flexible(
-                              child: Text(
-                                _formatDuration(widget.book.duration),
-                                style: TextStyle(
-                                  color: Theme.of(context).colorScheme.onPrimary,
-                                  fontSize: _getResponsiveFontSize(cardWidth, widget.compact ? 0.045 : 0.05),
-                                  fontWeight: FontWeight.w600,
+                            // Duration
+                            Container(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: cardWidth * 0.018,
+                                vertical: cardWidth * 0.01,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(cardWidth * 0.06),
+                                border: Border.all(
+                                  color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
+                                  width: 1,
                                 ),
-                                overflow: TextOverflow.ellipsis,
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.access_time_rounded,
+                                    size: _getResponsiveFontSize(cardWidth, 0.045),
+                                    color: Theme.of(context).colorScheme.primary,
+                                  ),
+                                  SizedBox(width: cardWidth * 0.012),
+                                  Flexible(
+                                    child: Text(
+                                      _formatDuration(widget.book.duration),
+                                      style: TextStyle(
+                                        color: Theme.of(context).colorScheme.primary,
+                                        fontSize: _getResponsiveFontSize(cardWidth, 0.038),
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            
+                            SizedBox(width: cardWidth * 0.012),
+                            
+                            // Rating
+                            Container(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: cardWidth * 0.018,
+                                vertical: cardWidth * 0.01,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.amber.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(cardWidth * 0.06),
+                                border: Border.all(
+                                  color: Colors.amber.withOpacity(0.3),
+                                  width: 1,
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.star_rounded,
+                                    size: _getResponsiveFontSize(cardWidth, 0.045),
+                                    color: Colors.amber.shade700,
+                                  ),
+                                  SizedBox(width: cardWidth * 0.012),
+                                  Flexible(
+                                    child: Text(
+                                      (widget.book.rating ?? 0.0).toStringAsFixed(1),
+                                      style: TextStyle(
+                                        color: Colors.amber.shade700,
+                                        fontSize: _getResponsiveFontSize(cardWidth, 0.038),
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ],
                         ),
                       ),
-                    ),
-                    
-                    SizedBox(width: cardWidth * (widget.compact ? 0.015 : 0.02)),
-                    
-                    // Star rating - Dynamic
-                    Flexible(
-                      flex: 1,
-                      child: Container(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: cardWidth * 0.02, // Further reduced padding for grid layout
-                          vertical: cardWidth * 0.005, // Further reduced padding for grid layout
-                        ),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(cardWidth * 0.08),
-                          border: Border.all(
-                            color: Theme.of(context).colorScheme.primary,
-                            width: 1.0,
+                      
+                      // Free badge
+                      if (widget.book.isFree)
+                        Container(
+                          margin: EdgeInsets.only(left: cardWidth * 0.015),
+                          padding: EdgeInsets.symmetric(
+                            horizontal: cardWidth * 0.02,
+                            vertical: cardWidth * 0.01,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.green,
+                            borderRadius: BorderRadius.circular(cardWidth * 0.06),
+                          ),
+                          child: Text(
+                            'FREE',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: _getResponsiveFontSize(cardWidth, 0.038),
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.star_rounded,
-                              size: _getResponsiveFontSize(cardWidth, widget.compact ? 0.05 : 0.06),
-                              color: Theme.of(context).colorScheme.primary,
-                            ),
-                            SizedBox(width: cardWidth * (widget.compact ? 0.015 : 0.02)),
-                            Flexible(
-                              child: Text(
-                                (widget.book.rating ?? 0.0).toStringAsFixed(1),
-                                style: TextStyle(
-                                  color: Theme.of(context).colorScheme.primary,
-                                  fontSize: _getResponsiveFontSize(cardWidth, widget.compact ? 0.045 : 0.05),
-                                  fontWeight: FontWeight.bold,
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
         ],

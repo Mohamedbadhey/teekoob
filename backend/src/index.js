@@ -59,6 +59,9 @@ try {
   const podcastRoutes = require('./routes/podcasts');
   console.log('✅ Podcast routes loaded');
   
+  const reviewRoutes = require('./routes/reviews');
+  console.log('✅ Review routes loaded');
+  
   console.log('📦 Loading middleware...');
   const { errorHandler } = require('./middleware/errorHandler');
   console.log('✅ Error handler loaded');
@@ -376,6 +379,9 @@ try {
   
   app.use('/api/v1/podcasts', podcastRoutes);
   console.log('✅ Podcast routes registered');
+  
+  app.use('/api/v1/reviews', reviewRoutes);
+  console.log('✅ Review routes registered');
   
   // 404 handler
   app.use('*', (req, res) => {
