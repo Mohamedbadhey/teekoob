@@ -4,6 +4,11 @@ import 'package:teekoob/core/services/network_service.dart';
 class NotificationsService {
   final NetworkService _networkService = NetworkService();
 
+  NotificationsService() {
+    // Initialize the NetworkService instance
+    _networkService.initialize();
+  }
+
   /// Get user's notifications
   Future<Map<String, dynamic>> getNotifications({
     int page = 1,
@@ -14,9 +19,9 @@ class NotificationsService {
       final response = await _networkService.get(
         '/messages',
         queryParameters: {
-          'page': page,
-          'limit': limit,
-          'unreadOnly': unreadOnly,
+          'page': page.toString(),
+          'limit': limit.toString(),
+          if (unreadOnly) 'unreadOnly': 'true',
         },
       );
 

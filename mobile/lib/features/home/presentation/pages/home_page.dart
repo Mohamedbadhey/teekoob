@@ -88,6 +88,8 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin<
 
   @override
   void dispose() {
+    // Cancel notification timer
+    _notificationTimer?.cancel();
     // Cancel any scheduled timers to prevent setState or dispatch after dispose
     for (final timer in _scheduledTimers) {
       if (timer.isActive) timer.cancel();
@@ -314,15 +316,6 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin<
         }
       });
     }
-  }
-
-  @override
-  void dispose() {
-    _notificationTimer?.cancel();
-    for (var timer in _scheduledTimers) {
-      timer.cancel();
-    }
-    super.dispose();
   }
 
   void _loadUnreadCount() async {
@@ -586,47 +579,80 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin<
             ),
           ),
           
-          // Notification bell with badge
+          // Notification bell with badge - prominent and always visible
           GestureDetector(
             onTap: () {
               context.push('/notifications');
             },
             child: Container(
-              padding: const EdgeInsets.all(8),
+              padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surface,
-                borderRadius: BorderRadius.circular(20),
+                color: _unreadCount > 0 
+                    ? Colors.red.shade50
+                    : Colors.white.withOpacity(0.25),
+                borderRadius: BorderRadius.circular(25),
+                border: Border.all(
+                  color: _unreadCount > 0 
+                      ? Colors.red.shade400
+                      : Colors.white.withOpacity(0.8),
+                  width: _unreadCount > 0 ? 2.5 : 2,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: _unreadCount > 0 
+                        ? Colors.red.withOpacity(0.4)
+                        : Colors.black.withOpacity(0.2),
+                    blurRadius: _unreadCount > 0 ? 8 : 6,
+                    spreadRadius: _unreadCount > 0 ? 1 : 0.5,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
               child: Stack(
                 clipBehavior: Clip.none,
                 children: [
                   Icon(
-                    _unreadCount > 0 ? Icons.notifications : Icons.notifications_none,
-                    size: 20,
-                    color: Theme.of(context).colorScheme.onPrimary,
+                    Icons.notifications,
+                    size: 26,
+                    color: _unreadCount > 0 
+                        ? Colors.red.shade700 
+                        : Colors.white,
                   ),
                   if (_unreadCount > 0)
                     Positioned(
-                      right: -2,
-                      top: -2,
+                      right: -4,
+                      top: -4,
                       child: Container(
                         padding: const EdgeInsets.all(4),
-                        decoration: const BoxDecoration(
-                          color: Colors.red,
+                        decoration: BoxDecoration(
+                          color: Colors.red.shade600,
                           shape: BoxShape.circle,
+                          border: Border.all(
+                            color: Colors.white,
+                            width: 2.5,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.red.withOpacity(0.6),
+                              blurRadius: 6,
+                              spreadRadius: 1,
+                            ),
+                          ],
                         ),
                         constraints: const BoxConstraints(
-                          minWidth: 16,
-                          minHeight: 16,
+                          minWidth: 20,
+                          minHeight: 20,
                         ),
-                        child: Text(
-                          _unreadCount > 99 ? '99+' : _unreadCount.toString(),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
+                        child: Center(
+                          child: Text(
+                            _unreadCount > 99 ? '99+' : _unreadCount.toString(),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            textAlign: TextAlign.center,
                           ),
-                          textAlign: TextAlign.center,
                         ),
                       ),
                     ),
