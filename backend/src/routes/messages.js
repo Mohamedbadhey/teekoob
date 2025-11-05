@@ -3,7 +3,7 @@ const router = express.Router();
 const crypto = require('crypto');
 const db = require('../config/database');
 const { authenticateToken, requireAdmin } = require('../middleware/auth');
-const asyncHandler = require('../middleware/asyncHandler');
+const { asyncHandler } = require('../middleware/errorHandler');
 const { body, validationResult } = require('express-validator');
 const logger = require('../utils/logger');
 
