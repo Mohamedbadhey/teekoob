@@ -20,6 +20,7 @@ import AnalyticsPage from './pages/Analytics/AnalyticsPage'
 import SettingsPage from './pages/Settings/SettingsPage'
 import NotFoundPage from './pages/NotFound/NotFoundPage'
 import ContentModerationPage from './pages/Moderation/ContentModerationPage'
+import SendMessagePage from './pages/Messages/SendMessagePage'
 import PlaceholderPage from './pages/PlaceholderPage'
 
 // Protected Route Component
@@ -143,7 +144,8 @@ function App() {
         <Route path="security" element={<SettingsPage />} />
         <Route path="backup" element={<SettingsPage />} />
         <Route path="health" element={<SettingsPage />} />
-        <Route path="notifications" element={<SettingsPage />} />
+        <Route path="notifications" element={<SendMessagePage />} />
+        <Route path="messages" element={<SendMessagePage />} />
         <Route path="storage" element={<SettingsPage />} />
       </Route>
       

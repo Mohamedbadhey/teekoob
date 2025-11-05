@@ -444,6 +444,19 @@ class AuthService {
         return User.fromJson(userData);
       }
       return null;
+    } on DioException catch (e) {
+      // Handle 401 - token expired or invalid
+      if (e.response?.statusCode == 401) {
+        print('🔒 Token expired or invalid - logging out');
+        // Clear token and logout
+        await _secureStorage.delete(key: _tokenKey);
+        await _secureStorage.delete(key: _userEmailKey);
+        _networkService.clearAuthToken();
+        // Return null to indicate user needs to login
+        return null;
+      }
+      print('❌ Error getting current user: $e');
+      return null;
     } catch (e) {
       print('❌ Error getting current user: $e');
       // Return null instead of throwing to allow app to continue
@@ -543,8 +556,8 @@ class AuthService {
       if (response.statusCode == 200) {
         // Try to get user from response first
         if (response.data['user'] != null) {
-          final userData = response.data['user'] as Map<String, dynamic>;
-          return User.fromJson(userData);
+        final userData = response.data['user'] as Map<String, dynamic>;
+        return User.fromJson(userData);
         }
         // Otherwise fetch updated user data
         final userResponse = await _networkService.get('/users/profile');

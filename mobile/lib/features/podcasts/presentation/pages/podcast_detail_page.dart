@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:teekoob/core/models/podcast_model.dart';
 import 'package:teekoob/core/config/app_config.dart';
+import 'package:teekoob/core/config/app_router.dart';
 import 'package:teekoob/core/services/localization_service.dart';
 import 'package:teekoob/core/services/download_service.dart';
 import 'package:teekoob/features/library/bloc/library_bloc.dart';
@@ -291,7 +292,7 @@ class _PodcastDetailPageState extends State<PodcastDetailPage>
                   Icons.arrow_back,
                   color: Theme.of(context).colorScheme.onSurface,
                 ),
-                onPressed: () => context.pop(),
+                onPressed: () => AppRouter.handleBackNavigation(context),
               ),
               actions: [
                 IconButton(

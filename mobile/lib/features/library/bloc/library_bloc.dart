@@ -572,6 +572,40 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
     ToggleFavorite event,
     Emitter<LibraryState> emit,
   ) async {
+    // Optimistic update: immediately update the UI
+    if (state is LibraryLoaded) {
+      final currentState = state as LibraryLoaded;
+      final currentFavorites = List<Map<String, dynamic>>.from(currentState.favorites);
+      
+      // Check if item is currently favorited
+      final existingIndex = currentFavorites.indexWhere((fav) => 
+        fav['item_type'] == event.itemType && fav['item_id'] == event.itemId
+      );
+      
+      // Optimistically toggle the favorite
+      if (existingIndex >= 0) {
+        // Remove from favorites
+        currentFavorites.removeAt(existingIndex);
+      } else {
+        // Add to favorites
+        currentFavorites.add({
+          'item_id': event.itemId,
+          'item_type': event.itemType,
+        });
+      }
+      
+      // Emit updated state immediately
+      emit(LibraryLoaded(
+        library: currentState.library,
+        favorites: currentFavorites,
+        recentlyRead: currentState.recentlyRead,
+        stats: currentState.stats,
+        downloads: currentState.downloads,
+        downloadedBooks: currentState.downloadedBooks,
+        downloadedPodcasts: currentState.downloadedPodcasts,
+      ));
+    }
+    
     try {
       bool isFavorite;
       if (event.itemType == 'book') {
@@ -587,7 +621,7 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
         operation: 'favorite',
       ));
 
-      // Reload favorites if in loaded state
+      // Reload favorites to ensure sync with server
       if (state is LibraryLoaded) {
         final currentState = state as LibraryLoaded;
         final favorites = await _libraryService.getFavorites();
@@ -596,9 +630,26 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
           favorites: favorites,
           recentlyRead: currentState.recentlyRead,
           stats: currentState.stats,
+          downloads: currentState.downloads,
+          downloadedBooks: currentState.downloadedBooks,
+          downloadedPodcasts: currentState.downloadedPodcasts,
         ));
       }
     } catch (e) {
+      // Revert optimistic update on error
+      if (state is LibraryLoaded) {
+        final currentState = state as LibraryLoaded;
+        final favorites = await _libraryService.getFavorites();
+        emit(LibraryLoaded(
+          library: currentState.library,
+          favorites: favorites,
+          recentlyRead: currentState.recentlyRead,
+          stats: currentState.stats,
+          downloads: currentState.downloads,
+          downloadedBooks: currentState.downloadedBooks,
+          downloadedPodcasts: currentState.downloadedPodcasts,
+        ));
+      }
       emit(LibraryError('Failed to toggle favorite: $e'));
     }
   }

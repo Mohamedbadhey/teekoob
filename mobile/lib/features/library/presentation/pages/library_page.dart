@@ -401,15 +401,45 @@ class _LibraryPageState extends State<LibraryPage> with SingleTickerProviderStat
                         orElse: () => {},
                       );
                       final isDownloaded = downloadInfo.isNotEmpty;
+                      final downloadId = downloadInfo['download_id'] as String?;
                       
-                      return BookCard(
-                        book: book,
-                        onTap: () => context.go('/book/${book.id}'),
-                        showLibraryActions: true,
-                        isDownloaded: isDownloaded,
-                        userId: _userId,
-                        width: cardWidth,
-                        enableAnimations: true,
+                      return Stack(
+                        children: [
+                          BookCard(
+                            book: book,
+                            onTap: () => context.go('/book/${book.id}'),
+                            showLibraryActions: true,
+                            isDownloaded: isDownloaded,
+                            userId: _userId,
+                            width: cardWidth,
+                            enableAnimations: true,
+                          ),
+                          // Delete button for offline book
+                          if (isDownloaded && downloadId != null)
+                            Positioned(
+                              top: 8,
+                              right: 8,
+                              child: Material(
+                                color: Colors.transparent,
+                                child: InkWell(
+                                  onTap: () => _deleteOfflineBook(downloadId, book.id),
+                                  borderRadius: BorderRadius.circular(20),
+                                  child: Container(
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: Colors.red.withOpacity(0.9),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(
+                                      Icons.delete_outline,
+                                      color: Colors.white,
+                                      size: 20,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
                       );
                     },
                   );
@@ -467,15 +497,45 @@ class _LibraryPageState extends State<LibraryPage> with SingleTickerProviderStat
                         orElse: () => {},
                       );
                       final isDownloaded = downloadInfo.isNotEmpty;
+                      final downloadId = downloadInfo['download_id'] as String?;
                       
-                      return PodcastCard(
-                        podcast: podcast,
-                        onTap: () => context.go('/podcast/${podcast.id}'),
-                        showLibraryActions: true,
-                        isDownloaded: isDownloaded,
-                        userId: _userId,
-                        width: cardWidth,
-                        enableAnimations: true,
+                      return Stack(
+                        children: [
+                          PodcastCard(
+                            podcast: podcast,
+                            onTap: () => context.go('/podcast/${podcast.id}'),
+                            showLibraryActions: true,
+                            isDownloaded: isDownloaded,
+                            userId: _userId,
+                            width: cardWidth,
+                            enableAnimations: true,
+                          ),
+                          // Delete button for offline podcast
+                          if (isDownloaded && downloadId != null)
+                            Positioned(
+                              top: 8,
+                              right: 8,
+                              child: Material(
+                                color: Colors.transparent,
+                                child: InkWell(
+                                  onTap: () => _deleteOfflinePodcast(downloadId, podcast.id),
+                                  borderRadius: BorderRadius.circular(20),
+                                  child: Container(
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: Colors.red.withOpacity(0.9),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(
+                                      Icons.delete_outline,
+                                      color: Colors.white,
+                                      size: 20,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
                       );
                     },
                   );
@@ -575,6 +635,182 @@ class _LibraryPageState extends State<LibraryPage> with SingleTickerProviderStat
     } catch (e) {
       print('❌ Error fetching podcasts: $e');
       return [];
+    }
+  }
+
+  Future<void> _deleteOfflineBook(String downloadId, String bookId) async {
+    // Show confirmation dialog
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(
+          LocalizationService.getLocalizedText(
+            englishText: 'Delete Offline Book',
+            somaliText: 'Tirtir Kutubta Offline',
+          ),
+        ),
+        content: Text(
+          LocalizationService.getLocalizedText(
+            englishText: 'Are you sure you want to delete this book from your offline library?',
+            somaliText: 'Ma hubtaa inaad ka tirtirto kutubtaan library-gaaga offline?',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text(
+              LocalizationService.getLocalizedText(
+                englishText: 'Cancel',
+                somaliText: 'Jooji',
+              ),
+            ),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.red,
+            ),
+            child: Text(
+              LocalizationService.getLocalizedText(
+                englishText: 'Delete',
+                somaliText: 'Tirtir',
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      // Dispatch delete event
+      context.read<LibraryBloc>().add(DeleteDownload(
+        downloadId,
+        bookId,
+        'book',
+      ));
+
+      // Reload library to refresh offline tab
+      _loadLibraryData();
+
+      // Show success message
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              LocalizationService.getLocalizedText(
+                englishText: 'Book deleted successfully',
+                somaliText: 'Kutubta waa la tirtiray',
+              ),
+            ),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      print('❌ Error deleting offline book: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              LocalizationService.getLocalizedText(
+                englishText: 'Failed to delete book',
+                somaliText: 'Waxaa dhacay khalad marka la tirtirayay kutubta',
+              ),
+            ),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _deleteOfflinePodcast(String downloadId, String podcastId) async {
+    // Show confirmation dialog
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(
+          LocalizationService.getLocalizedText(
+            englishText: 'Delete Offline Podcast',
+            somaliText: 'Tirtir Podcastka Offline',
+          ),
+        ),
+        content: Text(
+          LocalizationService.getLocalizedText(
+            englishText: 'Are you sure you want to delete this podcast from your offline library?',
+            somaliText: 'Ma hubtaa inaad ka tirtirto podcastkaan library-gaaga offline?',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text(
+              LocalizationService.getLocalizedText(
+                englishText: 'Cancel',
+                somaliText: 'Jooji',
+              ),
+            ),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.red,
+            ),
+            child: Text(
+              LocalizationService.getLocalizedText(
+                englishText: 'Delete',
+                somaliText: 'Tirtir',
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      // Dispatch delete event
+      context.read<LibraryBloc>().add(DeleteDownload(
+        downloadId,
+        podcastId,
+        'podcastEpisode',
+      ));
+
+      // Reload library to refresh offline tab
+      _loadLibraryData();
+
+      // Show success message
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              LocalizationService.getLocalizedText(
+                englishText: 'Podcast deleted successfully',
+                somaliText: 'Podcastka waa la tirtiray',
+              ),
+            ),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      print('❌ Error deleting offline podcast: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              LocalizationService.getLocalizedText(
+                englishText: 'Failed to delete podcast',
+                somaliText: 'Waxaa dhacay khalad marka la tirtirayay podcastka',
+              ),
+            ),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 

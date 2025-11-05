@@ -124,31 +124,43 @@ class PodcastCard extends StatelessWidget {
                     Positioned(
                       top: 8,
                       right: 8,
-                      child: Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          onTap: () => _toggleFavorite(context),
-                          borderRadius: BorderRadius.circular(20),
-                          child: Container(
-                            padding: EdgeInsets.all(6),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.95),
+                      child: BlocBuilder<LibraryBloc, LibraryState>(
+                        builder: (context, libraryState) {
+                          // Check current favorite status from LibraryBloc state
+                          bool currentIsFavorite = isFavorite;
+                          if (libraryState is LibraryLoaded) {
+                            currentIsFavorite = libraryState.favorites.any((fav) => 
+                              fav['item_type'] == 'podcast' && fav['item_id'] == podcast.id
+                            );
+                          }
+                          
+                          return Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              onTap: () => _toggleFavorite(context),
                               borderRadius: BorderRadius.circular(20),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.15),
-                                  blurRadius: 8,
-                                  offset: const Offset(0, 2),
+                              child: Container(
+                                padding: EdgeInsets.all(6),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.95),
+                                  borderRadius: BorderRadius.circular(20),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.15),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
                                 ),
-                              ],
+                                child: Icon(
+                                  currentIsFavorite ? Icons.favorite : Icons.favorite_border,
+                                  size: isSmallScreen ? 14 : (isTablet ? 18 : 16),
+                                  color: currentIsFavorite ? Colors.red : Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                                ),
+                              ),
                             ),
-                            child: Icon(
-                              isFavorite ? Icons.favorite : Icons.favorite_border,
-                              size: isSmallScreen ? 14 : (isTablet ? 18 : 16),
-                              color: isFavorite ? Colors.red : Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-                            ),
-                          ),
-                        ),
+                          );
+                        },
                       ),
                     ),
                 ],
@@ -210,47 +222,47 @@ class PodcastCard extends StatelessWidget {
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            // Episodes count
-                            Expanded(
-                              child: Container(
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: cardWidth * 0.018,
-                                  vertical: cardWidth * 0.01,
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        // Episodes count
+                        Expanded(
+                          child: Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: cardWidth * 0.018,
+                              vertical: cardWidth * 0.01,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(cardWidth * 0.06),
+                              border: Border.all(
+                                color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
+                                width: 1,
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.headphones,
+                                  size: isSmallScreen ? 10 : (isTablet ? 14 : 12),
+                                  color: Theme.of(context).colorScheme.primary,
                                 ),
-                                decoration: BoxDecoration(
-                                  color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(cardWidth * 0.06),
-                                  border: Border.all(
-                                    color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
-                                    width: 1,
-                                  ),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      Icons.headphones,
-                                      size: isSmallScreen ? 10 : (isTablet ? 14 : 12),
+                                SizedBox(width: cardWidth * 0.012),
+                                Flexible(
+                                  child: Text(
+                                    _formatEpisodeCount(podcast.totalEpisodes ?? 0),
+                                    style: TextStyle(
+                                      fontSize: isSmallScreen ? 9 : (isTablet ? 13 : 11),
+                                      fontWeight: FontWeight.w600,
                                       color: Theme.of(context).colorScheme.primary,
                                     ),
-                                    SizedBox(width: cardWidth * 0.012),
-                                    Flexible(
-                                      child: Text(
-                                        _formatEpisodeCount(podcast.totalEpisodes ?? 0),
-                                        style: TextStyle(
-                                          fontSize: isSmallScreen ? 9 : (isTablet ? 13 : 11),
-                                          fontWeight: FontWeight.w600,
-                                          color: Theme.of(context).colorScheme.primary,
-                                        ),
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                  ],
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
                                 ),
-                              ),
+                              ],
+                            ),
+                          ),
                             ),
                             
                             SizedBox(width: cardWidth * 0.012),
@@ -300,46 +312,46 @@ class PodcastCard extends StatelessWidget {
                           Padding(
                             padding: EdgeInsets.only(top: cardWidth * 0.012),
                             child: Row(
-                              children: [
-                                if (podcast.isFeatured)
-                                  Container(
+                            children: [
+                              if (podcast.isFeatured)
+                                Container(
                                     margin: EdgeInsets.only(right: cardWidth * 0.012),
-                                    padding: EdgeInsets.symmetric(
-                                      horizontal: cardWidth * 0.018,
-                                      vertical: cardWidth * 0.01,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: Colors.green,
-                                      borderRadius: BorderRadius.circular(cardWidth * 0.06),
-                                    ),
-                                    child: Text(
-                                      '★',
-                                      style: TextStyle(
-                                        fontSize: isSmallScreen ? 7 : (isTablet ? 10 : 8),
-                                        color: Colors.white,
-                                      ),
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: cardWidth * 0.018,
+                                    vertical: cardWidth * 0.01,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.green,
+                                    borderRadius: BorderRadius.circular(cardWidth * 0.06),
+                                  ),
+                                  child: Text(
+                                    '★',
+                                    style: TextStyle(
+                                      fontSize: isSmallScreen ? 7 : (isTablet ? 10 : 8),
+                                      color: Colors.white,
                                     ),
                                   ),
-                                if (podcast.isPremium)
-                                  Container(
-                                    padding: EdgeInsets.symmetric(
-                                      horizontal: cardWidth * 0.018,
-                                      vertical: cardWidth * 0.01,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: Colors.blue,
-                                      borderRadius: BorderRadius.circular(cardWidth * 0.06),
-                                    ),
-                                    child: Text(
-                                      'P',
-                                      style: TextStyle(
-                                        fontSize: isSmallScreen ? 7 : (isTablet ? 10 : 8),
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.bold,
-                                      ),
+                                ),
+                              if (podcast.isPremium)
+                                Container(
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: cardWidth * 0.018,
+                                    vertical: cardWidth * 0.01,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.blue,
+                                    borderRadius: BorderRadius.circular(cardWidth * 0.06),
+                                  ),
+                                  child: Text(
+                                    'P',
+                                    style: TextStyle(
+                                      fontSize: isSmallScreen ? 7 : (isTablet ? 10 : 8),
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
                                     ),
                                   ),
-                              ],
+                                ),
+                            ],
                             ),
                           ),
                       ],

@@ -20,7 +20,14 @@ class NetworkService {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
       },
+      // Optimize for handling many concurrent requests
+      maxRedirects: 5,
+      followRedirects: true,
+      validateStatus: (status) => status != null && status < 500,
     ));
+    
+    // Dio's default HTTP client adapter handles concurrent requests well
+    // on both web and native platforms, so we don't need custom configuration
 
     // Add interceptors
     _dio.interceptors.add(InterceptorsWrapper(
@@ -42,9 +49,10 @@ class NetworkService {
       onError: (error, handler) async {
         // Handle 401 (Unauthorized) - token expired or invalid
         if (error.response?.statusCode == 401) {
-          // Clear token and notify listeners
+          // Clear token
           await _secureStorage.delete(key: _tokenKey);
           clearAuthToken();
+          // Don't throw here - let the error propagate so the app can handle logout
         }
         handler.next(error);
       },
@@ -300,6 +308,11 @@ class NetworkService {
         // Friendlier message for rate limiting
         if (statusCode == 429) {
           message = 'Too many requests. Please try again later.';
+        }
+        // For 401 errors, clear token (already handled in interceptor, but ensure it's cleared here too)
+        if (statusCode == 401) {
+          _secureStorage.delete(key: _tokenKey);
+          clearAuthToken();
         }
         return DioException(
           requestOptions: error.requestOptions,

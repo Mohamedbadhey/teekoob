@@ -110,8 +110,14 @@ class _FloatingAudioPlayerState extends State<FloatingAudioPlayer>
         AppRouter.goToAudioPlayer(context, audioService.currentItem!.id);
       } else {
         // For podcasts, navigate to episode page
-        // We need to get the podcast ID from the episode
-        AppRouter.goToPodcastEpisode(context, '', audioService.currentItem!.id);
+        // Get the podcast ID from the service
+        final podcastId = audioService.currentPodcastId ?? '';
+        if (podcastId.isNotEmpty) {
+          AppRouter.goToPodcastEpisode(context, podcastId, audioService.currentItem!.id);
+        } else {
+          // Fallback: try to navigate to podcast detail if we can't find episode
+          print('⚠️ No podcast ID available, cannot navigate to episode');
+        }
       }
     }
   }
@@ -266,7 +272,7 @@ class _FloatingAudioPlayerState extends State<FloatingAudioPlayer>
               position: _slideAnimation,
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 300),
-                width: _isExpanded ? 320 : 280,
+                width: _getResponsiveWidth(),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     begin: Alignment.topLeft,
@@ -640,6 +646,29 @@ class _FloatingAudioPlayerState extends State<FloatingAudioPlayer>
         );
       },
     );
+  }
+
+  double _getResponsiveWidth() {
+    final screenWidth = MediaQuery.of(context).size.width;
+    if (_isExpanded) {
+      // Expanded width: responsive but with max limit
+      if (screenWidth < 360) {
+        return screenWidth - 32; // Full width minus padding on small phones
+      } else if (screenWidth < 600) {
+        return screenWidth * 0.85; // 85% on medium phones
+      } else {
+        return 400; // Fixed max width on tablets/desktop
+      }
+    } else {
+      // Collapsed width: responsive
+      if (screenWidth < 360) {
+        return screenWidth - 32; // Full width minus padding on small phones
+      } else if (screenWidth < 600) {
+        return screenWidth * 0.75; // 75% on medium phones
+      } else {
+        return 320; // Fixed width on tablets/desktop
+      }
+    }
   }
 
   Widget _buildControlButton({

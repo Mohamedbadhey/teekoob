@@ -45,7 +45,10 @@ class NavigationService {
   
   // Get tab index for a given route
   static int getTabForRoute(String route) {
-    switch (route) {
+    // Remove query parameters for matching
+    final routeWithoutQuery = route.split('?').first;
+    
+    switch (routeWithoutQuery) {
       case '/home':
       case '/home/':
         return 0;
@@ -56,7 +59,15 @@ class NavigationService {
       case '/home/settings':
         return 3;
       default:
-        return 0;
+        // For nested routes, check if they start with the tab routes
+        if (routeWithoutQuery.startsWith('/home/books')) {
+          return 1;
+        } else if (routeWithoutQuery.startsWith('/home/library')) {
+          return 2;
+        } else if (routeWithoutQuery.startsWith('/home/settings')) {
+          return 3;
+        }
+        return 0; // Default to Home
     }
   }
 }

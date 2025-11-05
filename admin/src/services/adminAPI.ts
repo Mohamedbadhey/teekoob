@@ -800,3 +800,24 @@ export const getBookCategories = async () => {
   const response = await api.get('/books/categories')
   return response.data.categories || []
 }
+
+// ===== MESSAGES/NOTIFICATIONS =====
+
+export const sendMessage = async (data: {
+  userIds: string[]
+  title: string
+  message: string
+  actionUrl?: string
+}) => {
+  const response = await api.post('/messages', data)
+  return response.data
+}
+
+export const sendBroadcastMessage = async (data: {
+  title: string
+  message: string
+  actionUrl?: string
+}) => {
+  const response = await api.post('/messages/broadcast', data)
+  return response.data
+}

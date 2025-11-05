@@ -32,6 +32,7 @@ class _AppScaffoldState extends State<AppScaffold> with WidgetsBindingObserver {
   bool _isOffline = false;
   final NetworkService _networkService = NetworkService();
   late StreamSubscription<ConnectivityResult> _connectivitySubscription;
+  StreamSubscription<GoRouterState>? _routeSubscription;
 
   final List<Widget> _pages = [
     const HomePage(),
@@ -49,6 +50,19 @@ class _AppScaffoldState extends State<AppScaffold> with WidgetsBindingObserver {
     _listenToConnectivity();
     _checkAuthToken();
     _setupAuthListener();
+    
+    // Initialize current index based on route
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        final location = GoRouterState.of(context).uri.path;
+        final index = NavigationService.getTabForRoute(location);
+        if (_currentIndex != index) {
+          setState(() {
+            _currentIndex = index;
+          });
+        }
+      }
+    });
   }
   
   void _checkAuthToken() async {
@@ -146,6 +160,7 @@ class _AppScaffoldState extends State<AppScaffold> with WidgetsBindingObserver {
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _connectivitySubscription.cancel();
+    _routeSubscription?.cancel();
     super.dispose();
   }
 
@@ -160,7 +175,12 @@ class _AppScaffoldState extends State<AppScaffold> with WidgetsBindingObserver {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _updateCurrentIndex();
+    // Update index based on current route
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _updateCurrentIndex();
+      }
+    });
   }
 
   void _updateCurrentIndex() {
@@ -228,6 +248,22 @@ class _AppScaffoldState extends State<AppScaffold> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
+    // Sync current index with route
+    final location = GoRouterState.of(context).uri.path;
+    final routeIndex = NavigationService.getTabForRoute(location);
+    
+    // Update index if different - use post frame callback to avoid setState during build
+    if (_currentIndex != routeIndex) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _currentIndex != routeIndex) {
+          setState(() {
+            _currentIndex = routeIndex;
+          });
+          print('🔄 AppScaffold: Updated index to $routeIndex for route: $location');
+        }
+      });
+    }
+    
     return BlocListener<AuthBloc, AuthState>(
       listener: (context, state) {
         // If user becomes unauthenticated, redirect to login
@@ -273,6 +309,11 @@ class _AppScaffoldState extends State<AppScaffold> with WidgetsBindingObserver {
           type: BottomNavigationBarType.fixed,
           currentIndex: _currentIndex,
           onTap: (index) async {
+            // Don't navigate if already on this tab
+            if (_currentIndex == index) {
+              return;
+            }
+            
             setState(() {
               _currentIndex = index;
             });
@@ -282,6 +323,7 @@ class _AppScaffoldState extends State<AppScaffold> with WidgetsBindingObserver {
             
             // Navigate to the correct route
             final route = NavigationService.getRouteForTab(index);
+            print('Navigating to route: $route for tab index: $index');
             context.go(route);
           },
           backgroundColor: Theme.of(context).colorScheme.surface,

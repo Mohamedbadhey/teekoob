@@ -13,6 +13,8 @@ import 'package:teekoob/features/library/bloc/library_bloc.dart';
 import 'package:teekoob/features/podcasts/bloc/podcasts_bloc.dart';
 import 'package:teekoob/features/podcasts/presentation/widgets/podcast_card.dart';
 import 'package:teekoob/core/models/podcast_model.dart';
+import 'package:teekoob/features/notifications/services/notifications_service.dart';
+import 'package:teekoob/core/config/app_router.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -25,6 +27,9 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin<
   // Initialization control
   bool _initialized = false;
   final List<Timer> _scheduledTimers = [];
+  final NotificationsService _notificationsService = NotificationsService();
+  int _unreadCount = 0;
+  Timer? _notificationTimer;
   List<Book> _featuredBooks = [];
   List<Book> _newReleases = [];
   List<Book> _recentBooks = [];
@@ -116,11 +121,11 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin<
   }
 
   void _loadAdditionalDataWithDelay() {
-    // Reduce initial load - only load essential sections
-    // Other sections will load as user scrolls (lazy loading)
+    // Load all sections faster for better user experience, especially on Android
+    // Reduce delays to load content more quickly
     
-    // Load new releases after a longer delay (only if user hasn't scrolled away)
-    _scheduledTimers.add(Timer(const Duration(seconds: 2), () {
+    // Load new releases quickly
+    _scheduledTimers.add(Timer(const Duration(milliseconds: 500), () {
       if (!mounted) return;
       if (!_isLoadingNewReleases && _newReleases.isEmpty) {
         setState(() => _isLoadingNewReleases = true);
@@ -128,8 +133,8 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin<
       }
     }));
     
-    // Load featured podcasts (important content)
-    _scheduledTimers.add(Timer(const Duration(seconds: 3), () {
+    // Load featured podcasts quickly
+    _scheduledTimers.add(Timer(const Duration(milliseconds: 800), () {
       if (!mounted) return;
       if (!_isLoadingFeaturedPodcasts && _featuredPodcasts.isEmpty) {
         setState(() => _isLoadingFeaturedPodcasts = true);
@@ -137,14 +142,14 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin<
       }
     }));
     
-    // Load remaining content with much longer delays or on scroll
-    // These will be lazy-loaded when sections come into view
+    // Load remaining content quickly
     _loadLazyContent();
   }
   
   void _loadLazyContent() {
-    // Load recent books - only after initial content is shown
-    _scheduledTimers.add(Timer(const Duration(seconds: 5), () {
+    // Load all sections quickly to ensure they all appear on Android
+    // Load recent books quickly
+    _scheduledTimers.add(Timer(const Duration(milliseconds: 1200), () {
       if (!mounted) return;
       if (!_isLoadingRecentBooks && _recentBooks.isEmpty) {
         setState(() => _isLoadingRecentBooks = true);
@@ -152,12 +157,29 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin<
       }
     }));
     
-    // Load free books
-    _scheduledTimers.add(Timer(const Duration(seconds: 7), () {
+    // Load free books quickly
+    _scheduledTimers.add(Timer(const Duration(milliseconds: 1500), () {
       if (!mounted) return;
       if (!_isLoadingFreeBooks && _freeBooks.isEmpty) {
         setState(() => _isLoadingFreeBooks = true);
         context.read<BooksBloc>().add(const LoadFreeBooks(limit: 6));
+      }
+    }));
+    
+    // Load podcast sections quickly
+    _scheduledTimers.add(Timer(const Duration(milliseconds: 1800), () {
+      if (!mounted) return;
+      if (!_isLoadingFreePodcasts && _freePodcasts.isEmpty) {
+        setState(() => _isLoadingFreePodcasts = true);
+        context.read<PodcastsBloc>().add(const LoadFreePodcasts(limit: 6));
+      }
+      if (!_isLoadingRecentPodcasts && _recentPodcasts.isEmpty) {
+        setState(() => _isLoadingRecentPodcasts = true);
+        context.read<PodcastsBloc>().add(const LoadRecentPodcasts(limit: 6));
+      }
+      if (!_isLoadingNewReleasePodcasts && _newReleasePodcasts.isEmpty) {
+        setState(() => _isLoadingNewReleasePodcasts = true);
+        context.read<PodcastsBloc>().add(const LoadNewReleasePodcasts(limit: 6));
       }
     }));
   }
@@ -241,10 +263,9 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin<
   }
 
   void _filterAllSectionsByCategories(List<String> categoryIds) {
-    // Filter featured books from original list - books that match ANY of the selected categories
-    final filteredFeatured = _originalFeaturedBooks.where((book) => 
-      book.categories != null && categoryIds.any((categoryId) => book.categories!.contains(categoryId))
-    ).toList();
+    // Featured books should NOT be filtered by categories - they should always show
+    // Only filter other sections
+    final filteredFeatured = List<Book>.from(_originalFeaturedBooks);
     
     // Filter new releases from original list
     final filteredNewReleases = _originalNewReleases.where((book) => 
@@ -262,13 +283,13 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin<
     ).toList();
     
     setState(() {
-      _featuredBooks = filteredFeatured;
+      _featuredBooks = filteredFeatured; // Always show featured books
       _newReleases = filteredNewReleases;
       _recentBooks = filteredRecent;
       _randomBooks = filteredRandom;
     });
     
-    print('🏠 HomePage: Filtered results - Featured: ${filteredFeatured.length}, New Releases: ${filteredNewReleases.length}, Recent: ${filteredRecent.length}, Random: ${filteredRandom.length}');
+    print('🏠 HomePage: Filtered results - Featured: ${filteredFeatured.length} (always shown), New Releases: ${filteredNewReleases.length}, Recent: ${filteredRecent.length}, Random: ${filteredRandom.length}');
   }
 
   // Cache library state to avoid rebuilding during layout
@@ -288,9 +309,42 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin<
           final libraryState = context.read<LibraryBloc>().state;
           _cachedLibraryState = libraryState;
           _loadEssentialData();
+          _loadUnreadCount();
+          _startNotificationPolling();
         }
       });
     }
+  }
+
+  @override
+  void dispose() {
+    _notificationTimer?.cancel();
+    for (var timer in _scheduledTimers) {
+      timer.cancel();
+    }
+    super.dispose();
+  }
+
+  void _loadUnreadCount() async {
+    try {
+      final count = await _notificationsService.getUnreadCount();
+      if (mounted) {
+        setState(() {
+          _unreadCount = count;
+        });
+      }
+    } catch (e) {
+      print('Error loading unread count: $e');
+    }
+  }
+
+  void _startNotificationPolling() {
+    // Poll every 30 seconds for new notifications
+    _notificationTimer = Timer.periodic(const Duration(seconds: 30), (timer) {
+      if (mounted) {
+        _loadUnreadCount();
+      }
+    });
   }
   
   @override
@@ -532,17 +586,52 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin<
             ),
           ),
           
-          // Notification bell
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surface,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Icon(
-              Icons.notifications_none,
-              size: 20,
-              color: Theme.of(context).colorScheme.onPrimary,
+          // Notification bell with badge
+          GestureDetector(
+            onTap: () {
+              context.push('/notifications');
+            },
+            child: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surface,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Icon(
+                    _unreadCount > 0 ? Icons.notifications : Icons.notifications_none,
+                    size: 20,
+                    color: Theme.of(context).colorScheme.onPrimary,
+                  ),
+                  if (_unreadCount > 0)
+                    Positioned(
+                      right: -2,
+                      top: -2,
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: const BoxDecoration(
+                          color: Colors.red,
+                          shape: BoxShape.circle,
+                        ),
+                        constraints: const BoxConstraints(
+                          minWidth: 16,
+                          minHeight: 16,
+                        ),
+                        child: Text(
+                          _unreadCount > 99 ? '99+' : _unreadCount.toString(),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
             ),
           ),
         ],
@@ -736,34 +825,44 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin<
               context.read<BooksBloc>().add(const LoadFeaturedBooks(limit: 6));
             }),
           ] else if (_featuredBooks.isNotEmpty) ...[
-            SizedBox(
-              width: double.infinity,
-              child: Builder(
-                builder: (context) {
-                  final book = _featuredBooks.first;
-                  bool isInLibrary = false;
-                  bool isFavorite = false;
-                  
-                  if (_cachedLibraryState is LibraryLoaded) {
-                    final libraryLoaded = _cachedLibraryState as LibraryLoaded;
-                    isInLibrary = libraryLoaded.library.any((item) => item['bookId'] == book.id);
-                    // Check favorites from favorites list
-                    isFavorite = libraryLoaded.favorites.any((fav) => 
-                      fav['item_type'] == 'book' && fav['item_id'] == book.id
-                    );
-                  }
-                  
-                  return BookCard(
-                    book: book,
-                    onTap: () => _navigateToBookDetail(book),
-                    showLibraryActions: true, // Enable favorite button
-                    isInLibrary: isInLibrary,
-                    isFavorite: isFavorite,
-                    userId: 'current_user', // TODO: Get from auth service
-                    enableAnimations: true,
-                  );
-                },
-              ),
+            // Make featured book responsive
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final screenWidth = constraints.maxWidth;
+                final maxCardWidth = screenWidth > 600 ? 400.0 : screenWidth - 40;
+                
+                return Center(
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(maxWidth: maxCardWidth),
+                    child: Builder(
+                      builder: (context) {
+                        final book = _featuredBooks.first;
+                        bool isInLibrary = false;
+                        bool isFavorite = false;
+                        
+                        if (_cachedLibraryState is LibraryLoaded) {
+                          final libraryLoaded = _cachedLibraryState as LibraryLoaded;
+                          isInLibrary = libraryLoaded.library.any((item) => item['bookId'] == book.id);
+                          // Check favorites from favorites list
+                          isFavorite = libraryLoaded.favorites.any((fav) => 
+                            fav['item_type'] == 'book' && fav['item_id'] == book.id
+                          );
+                        }
+                        
+                        return BookCard(
+                          book: book,
+                          onTap: () => _navigateToBookDetail(book),
+                          showLibraryActions: true, // Enable favorite button
+                          isInLibrary: isInLibrary,
+                          isFavorite: isFavorite,
+                          userId: 'current_user', // TODO: Get from auth service
+                          enableAnimations: true,
+                        );
+                      },
+                    ),
+                  ),
+                );
+              },
             ),
           ] else ...[
             _buildEmptyState(LocalizationService.getNoFeaturedBookAvailableText),
@@ -1096,9 +1195,12 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin<
             scrollDirection: Axis.horizontal,
             physics: const ClampingScrollPhysics(),
             itemCount: books.length,
+            shrinkWrap: false,
+            clipBehavior: Clip.none,
+            addAutomaticKeepAlives: false, // Disable to prevent layout issues
+            addRepaintBoundaries: true,
             itemBuilder: (context, index) {
               final book = books[index];
-              print('🎨 _buildBooksHorizontalScroll: Building item $index for book: ${book.title}');
               
               // Use cached library state to avoid rebuilds during layout
               bool isInLibrary = false;
@@ -1113,16 +1215,23 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin<
                 );
               }
               
-              return BookCard(
-                book: book,
-                onTap: () => _navigateToBookDetail(book),
-                showLibraryActions: true, // Enable favorite button
-                isInLibrary: isInLibrary,
-                isFavorite: isFavorite,
-                userId: 'current_user', // TODO: Get from auth service
-                width: _getResponsiveHorizontalCardWidth(), // Responsive width based on screen size
-                // No fixed height - uses responsive height from BookCard component
-                enableAnimations: !kIsWeb,
+              return SizedBox(
+                width: _getResponsiveHorizontalCardWidth(),
+                height: _getResponsiveHorizontalCardHeight(),
+                child: Padding(
+                  padding: EdgeInsets.only(right: index < books.length - 1 ? 16 : 20),
+                  child: BookCard(
+                    book: book,
+                    onTap: () => _navigateToBookDetail(book),
+                    showLibraryActions: true,
+                    isInLibrary: isInLibrary,
+                    isFavorite: isFavorite,
+                    userId: 'current_user',
+                    width: _getResponsiveHorizontalCardWidth(),
+                    height: _getResponsiveHorizontalCardHeight(),
+                    enableAnimations: !kIsWeb,
+                  ),
+                ),
               );
             },
           ),
@@ -1258,29 +1367,39 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin<
               context.read<PodcastsBloc>().add(const LoadFeaturedPodcasts(limit: 6));
             }),
           ] else if (_featuredPodcasts.isNotEmpty) ...[
-            SizedBox(
-              width: double.infinity,
-              child: Builder(
-                builder: (context) {
-                  bool isFavorite = false;
-                  if (_cachedLibraryState is LibraryLoaded) {
-                    final libraryLoaded = _cachedLibraryState as LibraryLoaded;
-                    isFavorite = libraryLoaded.favorites.any((fav) => 
-                      fav['item_type'] == 'podcast' && fav['item_id'] == _featuredPodcasts.first.id
-                    );
-                  }
-                  
-                  return PodcastCard(
-                    podcast: _featuredPodcasts.first,
-                    onTap: () => _navigateToPodcastDetail(_featuredPodcasts.first),
-                    showLibraryActions: true, // Enable favorite button
-                    isInLibrary: false,
-                    isFavorite: isFavorite,
-                    userId: 'current_user',
-                    enableAnimations: true,
-                  );
-                },
-              ),
+            // Make featured podcast responsive
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final screenWidth = constraints.maxWidth;
+                final maxCardWidth = screenWidth > 600 ? 400.0 : screenWidth - 40;
+                
+                return Center(
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(maxWidth: maxCardWidth),
+                    child: Builder(
+                      builder: (context) {
+                        bool isFavorite = false;
+                        if (_cachedLibraryState is LibraryLoaded) {
+                          final libraryLoaded = _cachedLibraryState as LibraryLoaded;
+                          isFavorite = libraryLoaded.favorites.any((fav) => 
+                            fav['item_type'] == 'podcast' && fav['item_id'] == _featuredPodcasts.first.id
+                          );
+                        }
+                        
+                        return PodcastCard(
+                          podcast: _featuredPodcasts.first,
+                          onTap: () => _navigateToPodcastDetail(_featuredPodcasts.first),
+                          showLibraryActions: true, // Enable favorite button
+                          isInLibrary: false,
+                          isFavorite: isFavorite,
+                          userId: 'current_user',
+                          enableAnimations: true,
+                        );
+                      },
+                    ),
+                  ),
+                );
+              },
             ),
           ] else ...[
             _buildEmptyPodcastState(LocalizationService.getNoFeaturedPodcastsAvailableText),
@@ -1451,29 +1570,41 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin<
             scrollDirection: Axis.horizontal,
             physics: const ClampingScrollPhysics(),
             itemCount: podcasts.length,
+            shrinkWrap: false,
+            clipBehavior: Clip.none,
+            addAutomaticKeepAlives: false, // Disable to prevent layout issues
+            addRepaintBoundaries: true,
             itemBuilder: (context, index) {
               final podcast = podcasts[index];
-              print('🎨 _buildPodcastsHorizontalScroll: Building item $index for podcast: ${podcast.title}');
               
               // Use cached library state to avoid rebuilds during layout
               bool isFavorite = false;
               if (_cachedLibraryState is LibraryLoaded) {
                 final libraryLoaded = _cachedLibraryState as LibraryLoaded;
+                
                 // Check favorites from favorites list
                 isFavorite = libraryLoaded.favorites.any((fav) => 
                   fav['item_type'] == 'podcast' && fav['item_id'] == podcast.id
                 );
               }
               
-              return PodcastCard(
-                podcast: podcast,
-                onTap: () => _navigateToPodcastDetail(podcast),
-                showLibraryActions: true, // Enable favorite button
-                isInLibrary: false,
-                isFavorite: isFavorite,
-                userId: 'current_user',
+              return SizedBox(
                 width: _getResponsiveHorizontalCardWidth(),
-                enableAnimations: !kIsWeb,
+                height: _getResponsiveHorizontalCardHeight(),
+                child: Padding(
+                  padding: EdgeInsets.only(right: index < podcasts.length - 1 ? 16 : 20),
+                  child: PodcastCard(
+                    podcast: podcast,
+                    onTap: () => _navigateToPodcastDetail(podcast),
+                    showLibraryActions: true,
+                    isInLibrary: false,
+                    isFavorite: isFavorite,
+                    userId: 'current_user',
+                    width: _getResponsiveHorizontalCardWidth(),
+                    height: _getResponsiveHorizontalCardHeight(),
+                    enableAnimations: !kIsWeb,
+                  ),
+                ),
               );
             },
           ),

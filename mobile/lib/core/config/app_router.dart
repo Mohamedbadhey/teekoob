@@ -18,6 +18,7 @@ import 'package:teekoob/features/books/presentation/pages/book_audio_player_page
 import 'package:teekoob/features/podcasts/presentation/pages/podcast_detail_page.dart';
 import 'package:teekoob/features/podcasts/presentation/pages/podcast_episode_page.dart';
 import 'package:teekoob/features/profile/presentation/pages/edit_profile_page.dart';
+import 'package:teekoob/features/notifications/presentation/pages/notifications_page.dart';
 import 'package:teekoob/features/auth/services/auth_service.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:teekoob/features/auth/bloc/auth_bloc.dart';
@@ -65,6 +66,13 @@ class AppRouter {
         path: '/edit-profile',
         name: 'editProfile',
         builder: (context, state) => const EditProfilePage(),
+      ),
+      
+      // Notifications Route (Protected)
+      GoRoute(
+        path: '/notifications',
+        name: 'notifications',
+        builder: (context, state) => const NotificationsPage(),
       ),
       
       // Main App Routes (Protected) - All handled by AppScaffold

@@ -62,6 +62,9 @@ try {
   const reviewRoutes = require('./routes/reviews');
   console.log('✅ Review routes loaded');
   
+  const messageRoutes = require('./routes/messages');
+  console.log('✅ Message routes loaded');
+  
   console.log('📦 Loading middleware...');
   const { errorHandler } = require('./middleware/errorHandler');
   console.log('✅ Error handler loaded');
@@ -376,6 +379,9 @@ try {
 
   app.use('/api/v1/notifications', authenticateToken, notificationRoutes);
   console.log('✅ Notification routes registered');
+  
+  app.use('/api/v1/messages', messageRoutes);
+  console.log('✅ Message routes registered');
   
   app.use('/api/v1/podcasts', podcastRoutes);
   console.log('✅ Podcast routes registered');

@@ -356,31 +356,43 @@ class _BookCardState extends State<BookCard> with TickerProviderStateMixin {
                   Positioned(
                     top: 8,
                     right: 8,
-                    child: Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        onTap: () => _toggleFavorite(context),
-                        borderRadius: BorderRadius.circular(20),
-                        child: Container(
-                          padding: EdgeInsets.all(6),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.95),
+                    child: BlocBuilder<LibraryBloc, LibraryState>(
+                      builder: (context, libraryState) {
+                        // Check current favorite status from LibraryBloc state
+                        bool currentIsFavorite = widget.isFavorite;
+                        if (libraryState is LibraryLoaded) {
+                          currentIsFavorite = libraryState.favorites.any((fav) => 
+                            fav['item_type'] == 'book' && fav['item_id'] == widget.book.id
+                          );
+                        }
+                        
+                        return Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: () => _toggleFavorite(context),
                             borderRadius: BorderRadius.circular(20),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.15),
-                                blurRadius: 8,
-                                offset: const Offset(0, 2),
+                            child: Container(
+                              padding: EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.95),
+                                borderRadius: BorderRadius.circular(20),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.15),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
                               ),
-                            ],
+                              child: Icon(
+                                currentIsFavorite ? Icons.favorite : Icons.favorite_border,
+                                size: _getResponsiveFontSize(cardWidth, 0.05),
+                                color: currentIsFavorite ? Colors.red : Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                              ),
+                            ),
                           ),
-                          child: Icon(
-                            widget.isFavorite ? Icons.favorite : Icons.favorite_border,
-                            size: _getResponsiveFontSize(cardWidth, 0.05),
-                            color: widget.isFavorite ? Colors.red : Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-                          ),
-                        ),
-                      ),
+                        );
+                      },
                     ),
                   ),
               ],
@@ -642,31 +654,43 @@ class _BookCardState extends State<BookCard> with TickerProviderStateMixin {
                   Positioned(
                     top: 4,
                     right: 4,
-                    child: Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        onTap: () => _toggleFavorite(context),
-                        borderRadius: BorderRadius.circular(12),
-                        child: Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.surface.withOpacity(0.9),
+                    child: BlocBuilder<LibraryBloc, LibraryState>(
+                      builder: (context, libraryState) {
+                        // Check current favorite status from LibraryBloc state
+                        bool currentIsFavorite = widget.isFavorite;
+                        if (libraryState is LibraryLoaded) {
+                          currentIsFavorite = libraryState.favorites.any((fav) => 
+                            fav['item_type'] == 'book' && fav['item_id'] == widget.book.id
+                          );
+                        }
+                        
+                        return Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: () => _toggleFavorite(context),
                             borderRadius: BorderRadius.circular(12),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.2),
-                                blurRadius: 3,
-                                offset: const Offset(0, 1),
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: BoxDecoration(
+                                color: Theme.of(context).colorScheme.surface.withOpacity(0.9),
+                                borderRadius: BorderRadius.circular(12),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.2),
+                                    blurRadius: 3,
+                                    offset: const Offset(0, 1),
+                                  ),
+                                ],
                               ),
-                            ],
+                              child: Icon(
+                                currentIsFavorite ? Icons.favorite : Icons.favorite_border,
+                                size: 14,
+                                color: currentIsFavorite ? Colors.red : Theme.of(context).colorScheme.onSurface,
+                              ),
+                            ),
                           ),
-                          child: Icon(
-                            widget.isFavorite ? Icons.favorite : Icons.favorite_border,
-                            size: 14,
-                            color: widget.isFavorite ? Colors.red : Theme.of(context).colorScheme.onSurface,
-                          ),
-                        ),
-                      ),
+                        );
+                      },
                     ),
                   ),
               ],

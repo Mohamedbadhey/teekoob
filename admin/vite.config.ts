@@ -12,13 +12,15 @@ export default defineConfig({
   },
   server: {
     port: 3001,
-    proxy: {
-      '/api': {
-        target: 'http://localhost:3000',
-        changeOrigin: true,
-        secure: false,
-      },
-    },
+    // Proxy disabled - admin connects directly to production API by default
+    // If you need to use local backend, uncomment the proxy below and set target to 'http://localhost:3000'
+    // proxy: {
+    //   '/api': {
+    //     target: 'http://localhost:3000',
+    //     changeOrigin: true,
+    //     secure: false,
+    //   },
+    // },
   },
   build: {
     outDir: 'dist',
