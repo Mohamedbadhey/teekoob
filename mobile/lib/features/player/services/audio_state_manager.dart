@@ -41,7 +41,6 @@ class AudioStateManager {
       }
       await _audioPlayerService.play();
     } catch (e) {
-      print('Error playing book: $e');
       rethrow;
     }
   }
@@ -58,7 +57,6 @@ class AudioStateManager {
         }
       }
     } catch (e) {
-      print('Error toggling play/pause: $e');
       rethrow;
     }
   }
@@ -67,7 +65,6 @@ class AudioStateManager {
     try {
       await _audioPlayerService.pause();
     } catch (e) {
-      print('Error pausing: $e');
       rethrow;
     }
   }
@@ -78,7 +75,6 @@ class AudioStateManager {
       _currentBook = null;
       _currentBookController.add(null);
     } catch (e) {
-      print('Error stopping: $e');
       rethrow;
     }
   }

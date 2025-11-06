@@ -98,7 +98,6 @@ class _PodcastEpisodePageState extends State<PodcastEpisodePage>
   }
 
   void _loadEpisodeData() {
-    print('🎧 PodcastEpisodePage: Loading episode data for podcast: ${widget.podcastId}, episode: ${widget.episodeId}');
     context.read<PodcastsBloc>().add(LoadPodcastEpisodeById(widget.podcastId, widget.episodeId));
     context.read<PodcastsBloc>().add(LoadPodcastById(widget.podcastId));
     context.read<PodcastsBloc>().add(LoadPodcastEpisodes(podcastId: widget.podcastId));
@@ -173,7 +172,6 @@ class _PodcastEpisodePageState extends State<PodcastEpisodePage>
   }
 
   void _skipPrevious() {
-    print('🎧 _skipPrevious: Using global audio service queue management');
     
     if (_audioService.hasPreviousEpisode) {
       _audioService.playPreviousEpisode();
@@ -185,7 +183,6 @@ class _PodcastEpisodePageState extends State<PodcastEpisodePage>
   }
 
   void _skipNext() {
-    print('🎧 _skipNext: Using global audio service queue management');
     
     if (_audioService.hasNextEpisode) {
       _audioService.playNextEpisode();
@@ -297,22 +294,18 @@ class _PodcastEpisodePageState extends State<PodcastEpisodePage>
   }
 
   void _handleBackNavigation() {
-    print('🎧 PodcastEpisodePage: Back button pressed');
     
     // Check if we can pop (there's something in the navigation stack)
     if (context.canPop()) {
-      print('🎧 PodcastEpisodePage: Can pop, navigating back');
       // Navigate back to previous page (podcast detail or episodes list)
       context.pop();
     } else {
       // Nothing to pop, navigate to podcast detail page or home
-      print('🎧 PodcastEpisodePage: Nothing to pop, navigating to podcast detail');
       try {
         // Try to navigate to podcast detail page first
         context.go('/podcast/${widget.podcastId}');
       } catch (e) {
         // If that fails, go to home
-        print('🎧 PodcastEpisodePage: Failed to navigate to podcast detail, going to home');
         context.go('/home');
       }
     }
@@ -362,9 +355,7 @@ class _PodcastEpisodePageState extends State<PodcastEpisodePage>
         backgroundColor: Theme.of(context).colorScheme.background,
         body: BlocListener<PodcastsBloc, PodcastsState>(
         listener: (context, state) {
-          print('🎧 PodcastEpisodePage: Received state: ${state.runtimeType}');
           if (state is PodcastEpisodeLoaded) {
-            print('🎧 PodcastEpisodePage: Episode loaded successfully: ${state.episode.title}');
             setState(() {
               _episode = state.episode;
               _isLoading = false;
@@ -372,29 +363,22 @@ class _PodcastEpisodePageState extends State<PodcastEpisodePage>
             _animationController.forward();
             _slideController.forward();
           } else if (state is PodcastLoaded) {
-            print('🎧 PodcastEpisodePage: Podcast loaded successfully: ${state.podcast.title}');
             setState(() {
               _podcast = state.podcast;
               _isLoadingPodcast = false;
             });
           } else if (state is PodcastEpisodesLoaded) {
-            print('🎧 PodcastEpisodePage: Episodes loaded successfully: ${state.episodes.length} episodes');
-            print('🎧 PodcastEpisodePage: Episode IDs: ${state.episodes.map((e) => e.id).toList()}');
-            print('🎧 PodcastEpisodePage: Episode titles: ${state.episodes.map((e) => e.title).toList()}');
-            print('🎧 PodcastEpisodePage: Episode numbers: ${state.episodes.map((e) => e.episodeNumber).toList()}');
             
             // Sort episodes by episode number in ascending order for proper navigation
             final sortedEpisodes = List<PodcastEpisode>.from(state.episodes)
               ..sort((a, b) => a.episodeNumber.compareTo(b.episodeNumber));
             
-            print('🎧 PodcastEpisodePage: Sorted episode numbers: ${sortedEpisodes.map((e) => e.episodeNumber).toList()}');
             
             setState(() {
               _episodes = sortedEpisodes;
               _isLoadingEpisodes = false;
             });
           } else if (state is PodcastsError) {
-            print('💥 PodcastEpisodePage: Error state received: ${state.message}');
             setState(() {
               _isLoading = false;
               _isLoadingPodcast = false;
@@ -407,7 +391,6 @@ class _PodcastEpisodePageState extends State<PodcastEpisodePage>
               ),
             );
           } else if (state is PodcastsLoading) {
-            print('🎧 PodcastEpisodePage: Loading state received');
           }
         },
         child: (_isLoading || _isLoadingPodcast || _isLoadingEpisodes) ? _buildLoadingState() : _buildEpisodeContent(),

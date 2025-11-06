@@ -24,7 +24,6 @@ class BooksService {
     String? sortOrder,
   }) async {
     try {
-      print('BooksService: Getting books with params: page=$page, limit=$limit, search=$search, genre=$genre, categories=$categories, language=$language, format=$format, year=$year, sortBy=$sortBy, sortOrder=$sortOrder');
       
       final queryParams = <String, dynamic>{
         'page': page,
@@ -40,16 +39,13 @@ class BooksService {
       if (sortBy != null && sortBy.isNotEmpty) queryParams['sortBy'] = sortBy;
       if (sortOrder != null && sortOrder.isNotEmpty) queryParams['sortOrder'] = sortOrder;
 
-      print('BooksService: Making request to /books with queryParams: $queryParams');
       final response = await _networkService.get('/books', queryParameters: queryParams);
-      print('BooksService: Response received - Status: ${response.statusCode}');
 
       if (response.statusCode == 200) {
         final booksData = response.data['books'] as List;
         final books = booksData.map((json) => Book.fromJson(json)).toList();
         
         // DO NOT cache books locally - always fetch fresh
-        print('🚫 BooksService: Not caching books - always fetch fresh');
         
         return {
           'books': books,
@@ -62,7 +58,6 @@ class BooksService {
         throw Exception('Failed to fetch books');
       }
     } catch (e) {
-      print('💥 BooksService: Error fetching books from API: $e');
       throw Exception('Failed to fetch books: $e');
     }
   }
@@ -70,13 +65,10 @@ class BooksService {
   // Get book by ID - ALWAYS fetch from API (no caching)
   Future<Book?> getBookById(String bookId, {bool forceRefresh = false}) async {
     try {
-      print('🔍 BooksService: Getting book by ID from API: $bookId');
-      print('🚫 BooksService: Caching disabled - always fetching fresh data');
       
       // Always fetch from API - no caching
       return await _fetchBookFromAPI(bookId);
     } catch (e) {
-      print('💥 BooksService: Error getting book by ID: $e');
       return null;
     }
   }
@@ -86,33 +78,23 @@ class BooksService {
     try {
       final response = await _networkService.get('/books/$bookId');
       
-      print('📡 BooksService: Server response status: ${response.statusCode}');
       
       if (response.statusCode == 200) {
         final bookData = response.data as Map<String, dynamic>;
-        print('📚 BooksService: API book data keys: ${bookData.keys.toList()}');
         final ebookContent = bookData['ebookContent']?.toString() ?? '';
-        print('📝 BooksService: API ebookContent length: ${ebookContent.length}');
         if (ebookContent.isNotEmpty) {
-          print('📝 BooksService: API ebookContent preview: ${ebookContent.substring(0, ebookContent.length > 100 ? 100 : ebookContent.length)}...');
         } else {
-          print('📝 BooksService: API ebookContent is empty');
         }
-        print('📅 BooksService: API book updated at: ${bookData['updatedAt']}');
         
         final book = Book.fromJson(bookData);
-        print('📖 BooksService: API book ebook content length: ${book.ebookContent?.length ?? 0}');
         
         // DO NOT save to local storage - always fetch fresh
-        print('🚫 BooksService: Not saving to cache - always fetch fresh');
         
         return book;
       } else {
-        print('❌ BooksService: Server returned status ${response.statusCode}');
         return null;
       }
     } catch (e) {
-      print('💥 BooksService: Error fetching book from API: $e');
       return null;
     }
   }
@@ -121,46 +103,35 @@ class BooksService {
   bool _shouldRefreshBook(Book book) {
     // Always refresh if ebook content is missing
     if (book.ebookContent == null || book.ebookContent!.isEmpty) {
-      print('🔄 BooksService: Book missing ebook content, needs refresh');
       return true;
     }
     
     // For now, only refresh if ebook content is missing
     // We can add time-based refresh later if needed
-    print('✅ BooksService: Book has ebook content, no refresh needed');
     return false;
   }
 
   // Clear cache for a specific book (useful when admin updates a book)
   Future<void> clearBookCache(String bookId) async {
     try {
-      print('🗑️ BooksService: Clearing cache for book: $bookId');
       // Note: No local storage - book not deleted locally
-      print('✅ BooksService: Cache cleared for book: $bookId');
     } catch (e) {
-      print('💥 BooksService: Error clearing cache for book $bookId: $e');
     }
   }
 
   // Clear all book cache
   Future<void> clearAllBookCache() async {
     try {
-      print('🗑️ BooksService: Clearing all book cache');
       // Note: No local storage - books not cleared locally
-      print('✅ BooksService: All book cache cleared');
     } catch (e) {
-      print('💥 BooksService: Error clearing all book cache: $e');
     }
   }
 
   // Initialize service - clear all cache on startup
   Future<void> initialize() async {
     try {
-      print('🚀 BooksService: Initializing - clearing all cache');
       await clearAllBookCache();
-      print('✅ BooksService: Initialization complete - cache cleared');
     } catch (e) {
-      print('💥 BooksService: Error during initialization: $e');
     }
   }
 
@@ -189,7 +160,6 @@ class BooksService {
         final books = booksData.map((json) => Book.fromJson(json)).toList();
         
         // DO NOT cache search results - always fetch fresh
-        print('🚫 searchBooks: Not caching books - always fetch fresh');
         
         return books;
       } else {
@@ -228,15 +198,12 @@ class BooksService {
         final books = booksData.map((json) => Book.fromJson(json)).toList();
         
         // DO NOT cache featured books - always fetch fresh
-        print('🚫 getFeaturedBooks: Not caching books - always fetch fresh');
         
         return books;
       } else {
-        print('❌ getFeaturedBooks: API returned status ${response.statusCode}');
         return [];
       }
     } catch (e) {
-      print('💥 getFeaturedBooks: Error occurred: $e');
       return [];
     }
   }
@@ -251,15 +218,12 @@ class BooksService {
         final books = booksData.map((json) => Book.fromJson(json)).toList();
         
         // DO NOT cache new releases - always fetch fresh
-        print('🚫 getNewReleases: Not caching books - always fetch fresh');
         
         return books;
       } else {
-        print('❌ getNewReleases: API returned status ${response.statusCode}');
         return [];
       }
     } catch (e) {
-      print('💥 getNewReleases: Error occurred: $e');
       return [];
     }
   }
@@ -267,36 +231,24 @@ class BooksService {
   // Get recent books (sorted by creation date)
   Future<List<Book>> getRecentBooks({int limit = 10}) async {
     try {
-      print('🔍 getRecentBooks: Fetching $limit recent books from API...');
       final response = await _networkService.get('/books/recent/list', queryParameters: {'limit': limit});
 
       if (response.statusCode == 200) {
-        print('✅ getRecentBooks: API response status: ${response.statusCode}');
-        print('📊 getRecentBooks: Response data keys: ${response.data.keys.toList()}');
         
         final booksData = response.data['recentBooks'] as List;
-        print('📚 getRecentBooks: Found ${booksData.length} books in response');
-        print('📖 getRecentBooks: Book titles: ${booksData.map((b) => b['title']).toList()}');
-        print('📅 getRecentBooks: Book dates: ${booksData.map((b) => b['createdAt']).toList()}');
         
         final books = booksData.map((json) {
-          print('🔧 getRecentBooks: Processing book: ${json['title']} (${json['createdAt']})');
           return Book.fromJson(json);
         }).toList();
         
-        print('✅ getRecentBooks: Successfully parsed ${books.length} books');
-        print('📚 getRecentBooks: Final book titles: ${books.map((b) => b.title).toList()}');
         
         // DO NOT cache recent books - always fetch fresh
-        print('🚫 getRecentBooks: Not caching books - always fetch fresh');
         
         return books;
       } else {
-        print('❌ getRecentBooks: API returned status ${response.statusCode}');
         return [];
       }
     } catch (e) {
-      print('💥 getRecentBooks: Error occurred: $e');
       return [];
     }
   }
@@ -304,35 +256,24 @@ class BooksService {
   // Get free books
   Future<List<Book>> getFreeBooks({int limit = 10}) async {
     try {
-      print('🔍 getFreeBooks: Fetching $limit free books from API...');
       final response = await _networkService.get('/books/free/list', queryParameters: {'limit': limit});
 
       if (response.statusCode == 200) {
-        print('✅ getFreeBooks: API response status: ${response.statusCode}');
-        print('📊 getFreeBooks: Response data keys: ${response.data.keys.toList()}');
         
         final booksData = response.data['freeBooks'] as List;
-        print('📚 getFreeBooks: Found ${booksData.length} books in response');
-        print('📖 getFreeBooks: Book titles: ${booksData.map((b) => b['title']).toList()}');
         
         final books = booksData.map((json) {
-          print('🔧 getFreeBooks: Processing book: ${json['title']}');
           return Book.fromJson(json);
         }).toList();
         
-        print('✅ getFreeBooks: Successfully parsed ${books.length} books');
-        print('📚 getFreeBooks: Final book titles: ${books.map((b) => b.title).toList()}');
         
         // DO NOT cache free books - always fetch fresh
-        print('🚫 getFreeBooks: Not caching books - always fetch fresh');
         
         return books;
       } else {
-        print('❌ getFreeBooks: API returned status ${response.statusCode}');
         return [];
       }
     } catch (e) {
-      print('💥 getFreeBooks: Error occurred: $e');
       return [];
     }
   }
@@ -340,38 +281,24 @@ class BooksService {
   // Get random books for recommendations
   Future<List<Book>> getRandomBooks({int limit = 10}) async {
     try {
-      print('🔍 getRandomBooks: Fetching $limit random books from API...');
       final response = await _networkService.get('/books/random/list', queryParameters: {'limit': limit});
 
       if (response.statusCode == 200) {
-        print('✅ getRandomBooks: API response status: ${response.statusCode}');
-        print('📊 getRandomBooks: Response data keys: ${response.data.keys.toList()}');
-        print('📊 getRandomBooks: Full response data: ${response.data}');
         
         final booksData = response.data['randomBooks'] as List;
-        print('📚 getRandomBooks: Found ${booksData.length} books in response');
-        print('📖 getRandomBooks: Book titles: ${booksData.map((b) => b['title']).toList()}');
-        print('🖼️ getRandomBooks: Book cover URLs: ${booksData.map((b) => b['coverImageUrl']).toList()}');
-        print('🔍 getRandomBooks: Full book data: ${booksData.map((b) => {'id': b['id'], 'title': b['title'], 'coverImageUrl': b['coverImageUrl']})}');
         
         final books = booksData.map((json) {
-          print('🔧 getRandomBooks: Processing book: ${json['title']}');
           return Book.fromJson(json);
         }).toList();
         
-        print('✅ getRandomBooks: Successfully parsed ${books.length} books');
-        print('📚 getRandomBooks: Final book titles: ${books.map((b) => b.title).toList()}');
         
         // DO NOT cache random books - always fetch fresh
-        print('🚫 getRandomBooks: Not caching books - always fetch fresh');
         
         return books;
       } else {
-        print('❌ getRandomBooks: API returned status ${response.statusCode}');
         return [];
       }
     } catch (e) {
-      print('💥 getRandomBooks: Error occurred: $e');
       return [];
     }
   }
@@ -386,7 +313,6 @@ class BooksService {
         final books = booksData.map((json) => Book.fromJson(json)).toList();
         
         // DO NOT cache popular books - always fetch fresh
-        print('🚫 getPopularBooks: Not caching books - always fetch fresh');
         
         return books;
       } else {
@@ -416,7 +342,6 @@ class BooksService {
         final books = booksData.map((json) => Book.fromJson(json)).toList();
         
         // DO NOT cache recommended books - always fetch fresh
-        print('🚫 getRecommendedBooks: Not caching books - always fetch fresh');
         
         return books;
       } else {
@@ -453,39 +378,30 @@ class BooksService {
   // Get books by language
   Future<List<Book>> filterBooksByLanguage(String language) async {
     try {
-      print('📚 BooksService: Filtering books by language: $language');
       final response = await _networkService.get('/books/language/$language');
-      print('📚 BooksService: Language filter response status: ${response.statusCode}');
       
       if (response.statusCode == 200) {
         final data = response.data as Map<String, dynamic>;
-        print('📚 BooksService: Language filter response data: $data');
         if (data['success'] == true) {
           final booksData = data['books'] as List;
           final books = booksData.map((json) => Book.fromJson(json)).toList();
-          print('📚 BooksService: Found ${books.length} books for language $language');
           
           // DO NOT cache filtered books - always fetch fresh
-          print('🚫 filterBooksByLanguage: Not caching books - always fetch fresh');
           
           return books;
         } else {
-          print('📚 BooksService: API returned success=false for language filtering');
           return [];
         }
       } else {
-        print('📚 BooksService: API returned error status ${response.statusCode} for language filtering');
         return [];
       }
     } catch (e) {
-      print('📚 BooksService: Error filtering by language: $e');
       // Fallback to local filtering if network fails
       // Note: No local storage - return empty list
     final allBooks = <Book>[];
       final filteredBooks = allBooks.where((book) => 
         book.language.toLowerCase() == language.toLowerCase()
       ).toList();
-      print('📚 BooksService: Fallback local filtering found ${filteredBooks.length} books');
       return filteredBooks;
     }
   }
@@ -502,7 +418,6 @@ class BooksService {
           final categories = categoriesData.map((json) => Category.fromJson(json)).toList();
           
           // DO NOT cache categories - always fetch fresh
-          print('🚫 getCategories: Not caching categories - always fetch fresh');
           
           return categories;
         } else {
@@ -521,28 +436,21 @@ class BooksService {
   // Get books by category
   Future<List<Book>> getBooksByCategory(String categoryId, {int limit = 20}) async {
     try {
-      print('🏷️ BooksService: Filtering books by category: $categoryId');
       final response = await _networkService.get('/categories/$categoryId/books', queryParameters: {'limit': limit});
-      print('🏷️ BooksService: Category filter response status: ${response.statusCode}');
       
       if (response.statusCode == 200) {
         final data = response.data as Map<String, dynamic>;
-        print('🏷️ BooksService: Category filter response data: $data');
         if (data['success'] == true) {
           final booksData = data['books'] as List;
           final books = booksData.map((json) => Book.fromJson(json)).toList();
-          print('🏷️ BooksService: Found ${books.length} books for category $categoryId');
           return books;
         } else {
-          print('🏷️ BooksService: API returned success=false for category filtering');
           return [];
         }
       } else {
-        print('🏷️ BooksService: API returned error status ${response.statusCode} for category filtering');
         return [];
       }
     } catch (e) {
-      print('🏷️ BooksService: Error filtering by category: $e');
       // Try to get from local storage if network fails
       // Note: No local storage - return empty list
       final localBooks = <Book>[];
@@ -550,7 +458,6 @@ class BooksService {
         book.categories != null && 
         book.categories!.contains(categoryId)
       ).take(limit).toList();
-      print('🏷️ BooksService: Fallback local filtering found ${filteredBooks.length} books');
       return filteredBooks;
     }
   }
@@ -590,7 +497,6 @@ class BooksService {
         final books = booksData.map((json) => Book.fromJson(json)).toList();
         
         // DO NOT cache related books - always fetch fresh
-        print('🚫 getRelatedBooks: Not caching books - always fetch fresh');
         
         return books;
       } else {

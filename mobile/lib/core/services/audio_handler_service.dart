@@ -85,7 +85,6 @@ class AudioHandlerService extends BaseAudioHandler with QueueHandler, SeekHandle
         this.mediaItem.add(mediaItem.copyWith(duration: duration));
       }
     } catch (e) {
-      print('Error loading audio: $e');
       rethrow;
     }
   }
@@ -173,17 +172,27 @@ class AudioHandlerService extends BaseAudioHandler with QueueHandler, SeekHandle
 }
 
 /// Initialize audio handler
+/// NOTE: This should NOT be called if GlobalAudioPlayerService is being used
+/// AudioService.init() can only be called ONCE per app lifecycle
 Future<AudioHandlerService> initAudioService() async {
-  return await AudioService.init(
-    builder: () => AudioHandlerService(),
-    config: const AudioServiceConfig(
-      androidNotificationChannelId: 'com.teekoob.app.audio',
-      androidNotificationChannelName: 'Teekoob Audio Player',
-      androidNotificationOngoing: false,
-      androidNotificationIcon: 'mipmap/ic_launcher',
-      androidShowNotificationBadge: true,
-      androidStopForegroundOnPause: true,
-      notificationColor: null,
-    ),
-  );
+  // Check if AudioService is already initialized
+  try {
+    // Try to initialize - if it fails with cache manager error, AudioService is already initialized
+    return await AudioService.init(
+      builder: () => AudioHandlerService(),
+      config: const AudioServiceConfig(
+        androidNotificationChannelId: 'com.teekoob.app.audio',
+        androidNotificationChannelName: 'Teekoob Audio Player',
+        androidNotificationOngoing: false,
+        androidNotificationIcon: 'mipmap/ic_launcher',
+        androidShowNotificationBadge: true,
+        androidStopForegroundOnPause: true,
+        notificationColor: null,
+      ),
+    );
+  } catch (e) {
+    // If AudioService is already initialized, we can't get a handler
+    // This is a fatal error - the old AudioPlayerService won't work
+    throw Exception('AudioService already initialized. Use GlobalAudioPlayerService instead. Error: $e');
+  }
 }

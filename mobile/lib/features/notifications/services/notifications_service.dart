@@ -54,7 +54,6 @@ class NotificationsService {
         return 0;
       }
     } catch (e) {
-      print('Error fetching unread count: $e');
       return 0;
     }
   }

@@ -194,7 +194,6 @@ class _BookAudioPlayerPageState extends State<BookAudioPlayerPage>
       }
     } else {
       // Nothing to pop, navigate to home page instead
-      print('🎧 BookAudioPlayerPage: Nothing to pop, navigating to home');
       context.go('/home');
     }
   }

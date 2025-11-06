@@ -6,9 +6,6 @@ import 'package:teekoob/firebase_options.dart';
 // Background message handler - must be top-level function
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  print('🔔 Background message received: ${message.messageId}');
-  print('🔔 Title: ${message.notification?.title}');
-  print('🔔 Body: ${message.notification?.body}');
 }
 
 void main() async {
@@ -35,7 +32,6 @@ void main() async {
   
   // Get FCM token
   String? token = await FirebaseMessaging.instance.getToken();
-  print('🔔 FCM Token: $token');
   
   runApp(MyApp());
 }
@@ -88,12 +84,10 @@ class _FCMTestPageState extends State<FCMTestPage> {
         _status = 'FCM initialized successfully!';
       });
       
-      print('🔔 FCM Token: $_token');
     } catch (e) {
       setState(() {
         _status = 'Error: $e';
       });
-      print('❌ FCM Error: $e');
     }
   }
 

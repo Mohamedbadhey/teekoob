@@ -513,11 +513,8 @@ class BooksBloc extends Bloc<BooksEvent, BooksState> {
     Emitter<BooksState> emit,
   ) async {
     try {
-      print('🎯 BooksBloc: _onLoadBooks called with event: $event');
-      print('🎯 BooksBloc: Emitting BooksLoading state');
       emit(const BooksLoading());
       
-      print('🎯 BooksBloc: Calling _booksService.getBooks...');
       final result = await _booksService.getBooks(
         page: event.page,
         limit: event.limit,
@@ -531,7 +528,6 @@ class BooksBloc extends Bloc<BooksEvent, BooksState> {
         sortOrder: event.sortOrder,
       );
       
-      print('🎯 BooksBloc: Received result from service: $result');
 
       final books = result['books'] as List<Book>;
       final total = result['total'] as int;
@@ -539,8 +535,6 @@ class BooksBloc extends Bloc<BooksEvent, BooksState> {
       final limit = result['limit'] as int;
       final totalPages = result['totalPages'] as int;
 
-      print('🎯 BooksBloc: Parsed data - books: ${books.length}, total: $total, page: $page');
-      print('🎯 BooksBloc: Emitting BooksLoaded state with ${books.length} books');
       
       emit(BooksLoaded(
         books: books,
@@ -551,10 +545,7 @@ class BooksBloc extends Bloc<BooksEvent, BooksState> {
         hasReachedMax: page >= totalPages,
       ));
       
-      print('🎯 BooksBloc: BooksLoaded state emitted successfully');
     } catch (e) {
-      print('❌ BooksBloc: Error loading books: $e');
-      print('❌ BooksBloc: Emitting BooksError state');
       emit(BooksError('Failed to load books: $e'));
     }
   }
@@ -613,17 +604,12 @@ class BooksBloc extends Bloc<BooksEvent, BooksState> {
     Emitter<BooksState> emit,
   ) async {
     try {
-      print('🎯 _onLoadRecentBooks: Starting to load ${event.limit} recent books...');
       emit(const BooksLoading());
       
       final books = await _booksService.getRecentBooks(limit: event.limit);
-      print('📚 _onLoadRecentBooks: Service returned ${books.length} books');
-      print('📖 _onLoadRecentBooks: Book titles: ${books.map((b) => b.title).toList()}');
 
       emit(RecentBooksLoaded(books: books, total: books.length));
-      print('✅ _onLoadRecentBooks: Emitted RecentBooksLoaded state with ${books.length} books');
     } catch (e) {
-      print('💥 _onLoadRecentBooks: Error occurred: $e');
       emit(BooksError('Failed to load recent books: $e'));
     }
   }
@@ -633,17 +619,12 @@ class BooksBloc extends Bloc<BooksEvent, BooksState> {
     Emitter<BooksState> emit,
   ) async {
     try {
-      print('🎯 _onLoadFreeBooks: Starting to load ${event.limit} free books...');
       emit(const BooksLoading());
       
       final books = await _booksService.getFreeBooks(limit: event.limit);
-      print('📚 _onLoadFreeBooks: Service returned ${books.length} books');
-      print('📖 _onLoadFreeBooks: Book titles: ${books.map((b) => b.title).toList()}');
 
       emit(FreeBooksLoaded(books: books, total: books.length));
-      print('✅ _onLoadFreeBooks: Emitted FreeBooksLoaded state with ${books.length} books');
     } catch (e) {
-      print('💥 _onLoadFreeBooks: Error occurred: $e');
       emit(BooksError('Failed to load free books: $e'));
     }
   }
@@ -653,17 +634,12 @@ class BooksBloc extends Bloc<BooksEvent, BooksState> {
     Emitter<BooksState> emit,
   ) async {
     try {
-      print('🎯 _onLoadRandomBooks: Starting to load ${event.limit} random books...');
       emit(const BooksLoading());
       
       final books = await _booksService.getRandomBooks(limit: event.limit);
-      print('📚 _onLoadRandomBooks: Service returned ${books.length} books');
-      print('📖 _onLoadRandomBooks: Book titles: ${books.map((b) => b.title).toList()}');
 
       emit(RandomBooksLoaded(books: books, total: books.length));
-      print('✅ _onLoadRandomBooks: Emitted RandomBooksLoaded state with ${books.length} books');
     } catch (e) {
-      print('💥 _onLoadRandomBooks: Error occurred: $e');
       emit(BooksError('Failed to load random books: $e'));
     }
   }
@@ -673,18 +649,12 @@ class BooksBloc extends Bloc<BooksEvent, BooksState> {
     Emitter<BooksState> emit,
   ) async {
     try {
-      print('🔍 BooksBloc: _onSearchBooks called with query: "${event.query}"');
-      print('🔍 BooksBloc: Emitting BooksLoading state for search');
       emit(const BooksLoading());
       
-      print('🔍 BooksBloc: Calling _booksService.searchBooks...');
       final books = await _booksService.searchBooks(event.query, limit: event.limit);
       
-      print('🔍 BooksBloc: Search completed, found ${books.length} books');
-      print('🔍 BooksBloc: Emitting SearchResultsLoaded state');
       emit(SearchResultsLoaded(books, event.query));
     } catch (e) {
-      print('❌ BooksBloc: Search error: $e');
       emit(BooksError('Failed to search books: $e'));
     }
   }

@@ -83,10 +83,6 @@ class Book {
 
   // Factory constructor from JSON
   factory Book.fromJson(Map<String, dynamic> json) {
-    print('🔧 Book.fromJson: Parsing book with ID: ${json['id']}');
-    print('🔧 Book.fromJson: Raw JSON data: $json');
-    print('🖼️ Book.fromJson: coverImageUrl from JSON: ${json['coverImageUrl']}');
-    print('🖼️ Book.fromJson: coverImageUrl type: ${json['coverImageUrl']?.runtimeType}');
     
     try {
       final book = Book(
@@ -163,11 +159,8 @@ class Book {
                 : DateTime.now()),
       );
       
-      print('✅ Book.fromJson: Successfully parsed book: ${book.title}');
       return book;
     } catch (e) {
-      print('💥 Book.fromJson: Error parsing book: $e');
-      print('💥 Book.fromJson: Problematic JSON: $json');
       rethrow;
     }
   }

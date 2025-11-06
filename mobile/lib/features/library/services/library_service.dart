@@ -34,10 +34,8 @@ class LibraryService {
       // Sync with server if online (optional for demo)
       try {
         await _networkService.post('/library/add', data: libraryItem);
-        print('📚 LibraryService: Book added to library synced with server');
       } catch (e) {
         // Continue offline if sync fails (this is expected for demo without auth)
-        print('📚 LibraryService: Library sync failed (expected for demo): $e');
       }
     } catch (e) {
       throw Exception('Failed to add book to library: $e');
@@ -54,7 +52,6 @@ class LibraryService {
         await _networkService.delete('/library/remove', data: {'userId': userId, 'bookId': bookId});
       } catch (e) {
         // Continue offline if sync fails
-        print('Library sync failed: $e');
       }
     } catch (e) {
       throw Exception('Failed to remove book from library: $e');
@@ -80,7 +77,6 @@ class LibraryService {
           });
         } catch (e) {
           // Continue offline if sync fails
-          print('Progress sync failed: $e');
         }
       }
     } catch (e) {
@@ -106,7 +102,6 @@ class LibraryService {
           });
         } catch (e) {
           // Continue offline if sync fails
-          print('Status sync failed: $e');
         }
       }
     } catch (e) {
@@ -117,7 +112,6 @@ class LibraryService {
   // Toggle favorite status
   Future<void> toggleFavorite(String userId, String bookId) async {
     try {
-      print('❤️ LibraryService: Toggling favorite for user: $userId, book: $bookId');
       
       // Note: No local storage - cannot get library item
       var item = null;
@@ -127,29 +121,24 @@ class LibraryService {
         final currentFavoriteStatus = item['isFavorite'] ?? false;
         final newFavoriteStatus = !currentFavoriteStatus;
         
-        print('❤️ LibraryService: Book already in library, toggling favorite status from $currentFavoriteStatus to $newFavoriteStatus');
         
         if (newFavoriteStatus) {
           // Adding to favorites - update the item
           item['isFavorite'] = true;
           // Note: No local storage - library item not saved locally
-          print('❤️ LibraryService: Book added to favorites');
         } else {
           // Removing from favorites - check if it's a favorite-only item
           if (item['status'] == 'favorite') {
             // This is a favorite-only item, remove it completely
             // Note: No local storage - library item not deleted locally
-            print('❤️ LibraryService: Favorite-only book removed from library');
           } else {
             // Book is in library for other reasons (reading, completed, etc.), just remove favorite status
             item['isFavorite'] = false;
             // Note: No local storage - library item not saved locally
-            print('❤️ LibraryService: Favorite status removed, book remains in library');
           }
         }
       } else {
         // Book is not in library, create new library item as favorite
-        print('❤️ LibraryService: Book not in library, creating new library item as favorite');
         
         item = {
           'userId': userId,
@@ -164,7 +153,6 @@ class LibraryService {
           'bookmarks': <Map<String, dynamic>>[],
         };
         // Note: No local storage - library item not saved locally
-        print('❤️ LibraryService: New library item created as favorite');
       }
 
       // Sync with server if online (optional for demo)
@@ -175,13 +163,10 @@ class LibraryService {
           'bookId': bookId,
           'isFavorite': isFavorite,
         });
-        print('❤️ LibraryService: Favorite status synced with server');
       } catch (e) {
         // Continue offline if sync fails (this is expected for demo without auth)
-        print('❤️ LibraryService: Favorite sync failed (expected for demo): $e');
       }
     } catch (e) {
-      print('❌ LibraryService: Error toggling favorite: $e');
       throw Exception('Failed to toggle favorite: $e');
     }
   }
@@ -222,7 +207,6 @@ class LibraryService {
           });
         } catch (e) {
           // Continue offline if sync fails
-          print('Bookmark sync failed: $e');
         }
       }
     } catch (e) {
@@ -244,7 +228,6 @@ class LibraryService {
           await _networkService.delete('/library/bookmarks/$bookmarkId');
         } catch (e) {
           // Continue offline if sync fails
-          print('Bookmark sync failed: $e');
         }
       }
     } catch (e) {
@@ -286,7 +269,6 @@ class LibraryService {
           });
         } catch (e) {
           // Continue offline if sync fails
-          print('Note sync failed: $e');
         }
       }
     } catch (e) {
@@ -332,7 +314,6 @@ class LibraryService {
           });
         } catch (e) {
           // Continue offline if sync fails
-          print('Highlight sync failed: $e');
         }
       }
     } catch (e) {
@@ -354,7 +335,6 @@ class LibraryService {
           await _networkService.delete('/library/highlights/$highlightId');
         } catch (e) {
           // Continue offline if sync fails
-          print('Highlight sync failed: $e');
         }
       }
     } catch (e) {
@@ -365,13 +345,10 @@ class LibraryService {
   // Get user's library
   List<Map<String, dynamic>> getUserLibrary(String userId) {
     try {
-      print('📚 LibraryService: Getting library for user: $userId');
       // Note: No local storage - return empty library
       final library = <Map<String, dynamic>>[];
-      print('📚 LibraryService: Retrieved ${library.length} library items');
       return library;
     } catch (e) {
-      print('❌ LibraryService: Error getting library: $e');
       return [];
     }
   }
@@ -381,10 +358,8 @@ class LibraryService {
     try {
       final response = await _networkService.put('/library/favorites/books/$bookId');
       final isFavorite = response.data['isFavorite'] as bool;
-      print('❤️ LibraryService: Book favorite toggled: $bookId, isFavorite: $isFavorite');
       return isFavorite;
     } catch (e) {
-      print('❌ LibraryService: Error toggling book favorite: $e');
       rethrow;
     }
   }
@@ -394,10 +369,8 @@ class LibraryService {
     try {
       final response = await _networkService.put('/library/favorites/podcasts/$podcastId');
       final isFavorite = response.data['isFavorite'] as bool;
-      print('❤️ LibraryService: Podcast favorite toggled: $podcastId, isFavorite: $isFavorite');
       return isFavorite;
     } catch (e) {
-      print('❌ LibraryService: Error toggling podcast favorite: $e');
       rethrow;
     }
   }
@@ -408,7 +381,6 @@ class LibraryService {
       final response = await _networkService.get('/library/favorites/book/$bookId');
       return response.data['isFavorite'] as bool? ?? false;
     } catch (e) {
-      print('❌ LibraryService: Error checking book favorite: $e');
       return false;
     }
   }
@@ -419,7 +391,6 @@ class LibraryService {
       final response = await _networkService.get('/library/favorites/podcast/$podcastId');
       return response.data['isFavorite'] as bool? ?? false;
     } catch (e) {
-      print('❌ LibraryService: Error checking podcast favorite: $e');
       return false;
     }
   }
@@ -432,10 +403,8 @@ class LibraryService {
       final favorites = (response.data['favorites'] as List?)
           ?.map((item) => item as Map<String, dynamic>)
           .toList() ?? [];
-      print('❤️ LibraryService: Retrieved ${favorites.length} favorites');
       return favorites;
     } catch (e) {
-      print('❌ LibraryService: Error getting favorites: $e');
       return [];
     }
   }
@@ -453,7 +422,6 @@ class LibraryService {
   // Get recently read books
   List<Map<String, dynamic>> getRecentlyReadBooks(String userId, {int limit = 10}) {
     try {
-      print('📖 LibraryService: Getting recently read books for user: $userId');
       // Note: No local storage - return empty library
       final library = <Map<String, dynamic>>[];
       library.sort((a, b) {
@@ -462,10 +430,8 @@ class LibraryService {
         return bDate.compareTo(aDate);
       });
       final recentlyRead = library.take(limit).toList();
-      print('📖 LibraryService: Retrieved ${recentlyRead.length} recently read books');
       return recentlyRead;
     } catch (e) {
-      print('❌ LibraryService: Error getting recently read books: $e');
       return [];
     }
   }
@@ -506,7 +472,6 @@ class LibraryService {
     try {
       // Skip the sync API call to avoid rate limiting
       // The LoadLibrary event already loads all necessary data including favorites
-      print('📚 LibraryService: Sync requested but skipped to avoid rate limiting');
       
       // Get local library (empty since we have no local storage)
       final localLibrary = <Map<String, dynamic>>[];
@@ -523,7 +488,6 @@ class LibraryService {
       // }
     } catch (e) {
       // Silently fail - don't throw to avoid breaking the UI
-      print('📚 LibraryService: Sync failed (expected): $e');
       // Don't throw - just return
     }
   }
@@ -531,7 +495,6 @@ class LibraryService {
   // Get reading statistics
   Map<String, dynamic> getReadingStats(String userId) {
     try {
-      print('📊 LibraryService: Getting reading stats for user: $userId');
       // Note: No local storage - return empty library
       final library = <Map<String, dynamic>>[];
       
@@ -554,10 +517,8 @@ class LibraryService {
         'totalProgress': totalProgress,
       };
       
-      print('📊 LibraryService: Reading stats calculated: $stats');
       return stats;
     } catch (e) {
-      print('❌ LibraryService: Error getting reading stats: $e');
       return {
         'totalBooks': 0,
         'completedBooks': 0,
@@ -572,18 +533,15 @@ class LibraryService {
   // Fetch book by ID from database
   Future<Book?> fetchBookById(String bookId) async {
     try {
-      print('📖 LibraryService: Fetching book by ID: $bookId');
       
       // Try to get from local storage first
       // Note: No local storage - cannot get book
       final localBook = null;
       if (localBook != null) {
-        print('📖 LibraryService: Book found in local storage');
         return localBook;
       }
       
       // If not in local storage, fetch from database
-      print('📖 LibraryService: Book not in local storage, fetching from database');
       final response = await _networkService.get('/books/$bookId');
       
       if (response.statusCode == 200 && response.data != null) {
@@ -592,15 +550,12 @@ class LibraryService {
         
         // Save to local storage for future use
         // Note: No local storage - book not saved locally
-        print('📖 LibraryService: Book fetched from database and saved locally');
         
         return book;
       } else {
-        print('📖 LibraryService: Book not found in database');
         return null;
       }
     } catch (e) {
-      print('❌ LibraryService: Error fetching book by ID: $e');
       return null;
     }
   }
@@ -608,7 +563,6 @@ class LibraryService {
   // Fetch multiple books by IDs from database
   Future<List<Book>> fetchBooksByIds(List<String> bookIds) async {
     try {
-      print('📚 LibraryService: Fetching ${bookIds.length} books by IDs');
       
       final List<Book> books = [];
       final List<String> missingIds = [];
@@ -624,15 +578,12 @@ class LibraryService {
             try {
               final book = Book.fromJson(metadata);
               books.add(book);
-              print('📚 LibraryService: Found book $bookId in local metadata');
               continue;
             } catch (e) {
-              print('❌ LibraryService: Error parsing local metadata for $bookId: $e');
               // Fall through to fetch from API
             }
           }
         } catch (e) {
-          print('❌ LibraryService: Error checking local metadata for $bookId: $e');
           // Fall through to fetch from API
         }
         
@@ -640,7 +591,6 @@ class LibraryService {
         missingIds.add(bookId);
       }
       
-      print('📚 LibraryService: Found ${books.length} books in local metadata, fetching ${missingIds.length} from API');
       
       // Fetch missing books from database
       if (missingIds.isNotEmpty) {
@@ -660,17 +610,13 @@ class LibraryService {
               // Note: No local storage - book not saved locally
             }
             
-            print('📚 LibraryService: Fetched ${booksData.length} books from database');
           }
         } catch (e) {
-          print('❌ LibraryService: Error fetching books from database: $e');
         }
       }
       
-      print('📚 LibraryService: Total books retrieved: ${books.length}');
       return books;
     } catch (e) {
-      print('❌ LibraryService: Error fetching books by IDs: $e');
       return [];
     }
   }

@@ -26,7 +26,6 @@ class SettingsService {
         });
       } catch (e) {
         // Continue offline if sync fails
-        print('Language sync failed: $e');
       }
     } catch (e) {
       throw Exception('Failed to update language: $e');
@@ -46,7 +45,6 @@ class SettingsService {
         });
       } catch (e) {
         // Continue offline if sync fails
-        print('Theme sync failed: $e');
       }
     } catch (e) {
       throw Exception('Failed to update theme: $e');
@@ -66,7 +64,6 @@ class SettingsService {
         });
       } catch (e) {
         // Continue offline if sync fails
-        print('Notification settings sync failed: $e');
       }
     } catch (e) {
       throw Exception('Failed to update notification settings: $e');
@@ -86,7 +83,6 @@ class SettingsService {
         });
       } catch (e) {
         // Continue offline if sync fails
-        print('Auto-download sync failed: $e');
       }
     } catch (e) {
       throw Exception('Failed to update auto-download setting: $e');
@@ -106,7 +102,6 @@ class SettingsService {
         });
       } catch (e) {
         // Continue offline if sync fails
-        print('Font size sync failed: $e');
       }
     } catch (e) {
       throw Exception('Failed to update font size: $e');
@@ -126,7 +121,6 @@ class SettingsService {
         });
       } catch (e) {
         // Continue offline if sync fails
-        print('Audio speed sync failed: $e');
       }
     } catch (e) {
       throw Exception('Failed to update audio speed: $e');
@@ -146,7 +140,6 @@ class SettingsService {
         });
       } catch (e) {
         // Continue offline if sync fails
-        print('Offline mode sync failed: $e');
       }
     } catch (e) {
       throw Exception('Failed to update offline mode: $e');
@@ -166,7 +159,6 @@ class SettingsService {
         });
       } catch (e) {
         // Continue offline if sync fails
-        print('Audio quality sync failed: $e');
       }
     } catch (e) {
       throw Exception('Failed to update audio quality: $e');
@@ -186,7 +178,6 @@ class SettingsService {
         });
       } catch (e) {
         // Continue offline if sync fails
-        print('Cache clear sync failed: $e');
       }
     } catch (e) {
       throw Exception('Failed to clear cache: $e');
@@ -228,7 +219,6 @@ class SettingsService {
           });
         } catch (e) {
           // Continue offline if sync fails
-          print('Settings import sync failed: $e');
         }
       }
     } catch (e) {
@@ -250,7 +240,6 @@ class SettingsService {
         });
       } catch (e) {
         // Continue offline if sync fails
-        print('Settings reset sync failed: $e');
       }
     } catch (e) {
       throw Exception('Failed to reset settings: $e');
@@ -351,7 +340,6 @@ class SettingsService {
         });
       } catch (e) {
         // Continue offline if sync fails
-        print('Setting sync failed: $e');
       }
     } catch (e) {
       throw Exception('Failed to set setting: $e');
@@ -384,7 +372,6 @@ class SettingsService {
         await _networkService.delete('/user/settings/$key');
       } catch (e) {
         // Continue offline if sync fails
-        print('Setting removal sync failed: $e');
       }
     } catch (e) {
       throw Exception('Failed to remove setting: $e');

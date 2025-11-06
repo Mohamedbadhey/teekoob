@@ -146,7 +146,6 @@ class _BookCardState extends State<BookCard> with TickerProviderStateMixin {
   }
 
   void _addToLibrary(BuildContext context) {
-    print('📚 BookCard: Adding book ${widget.book.id} to library');
     try {
       context.read<LibraryBloc>().add(AddBookToLibrary(
         widget.userId,
@@ -174,7 +173,6 @@ class _BookCardState extends State<BookCard> with TickerProviderStateMixin {
         ),
       );
     } catch (e) {
-      print('❌ BookCard: Error adding book to library: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Row(
@@ -196,7 +194,6 @@ class _BookCardState extends State<BookCard> with TickerProviderStateMixin {
   }
 
   void _toggleFavorite(BuildContext context) {
-    print('❤️ BookCard: Toggling favorite for book ${widget.book.id}');
     try {
       context.read<LibraryBloc>().add(ToggleFavorite(widget.userId, widget.book.id, itemType: 'book'));
       
@@ -222,7 +219,6 @@ class _BookCardState extends State<BookCard> with TickerProviderStateMixin {
         ),
       );
     } catch (e) {
-      print('❌ BookCard: Error toggling favorite: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Row(

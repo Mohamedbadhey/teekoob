@@ -124,7 +124,6 @@ class ThemeBloc extends Bloc<ThemeEvent, ThemeState> {
         themeMode: themeMode,
         themeString: event.theme,
       ));
-      print('🎨 ThemeBloc: Emitted ThemeLoaded with mode: $themeMode, string: ${event.theme}');
     } catch (e) {
       // If there's an error, keep the current state
       if (state is ThemeLoaded) {

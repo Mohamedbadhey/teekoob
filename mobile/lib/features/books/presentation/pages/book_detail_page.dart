@@ -56,7 +56,6 @@ class _BookDetailPageState extends State<BookDetailPage> {
         setState(() => _userId = user.id);
       }
     } catch (e) {
-      print('Error loading user ID: $e');
     }
   }
 
@@ -80,11 +79,9 @@ class _BookDetailPageState extends State<BookDetailPage> {
   
   Future<void> _handleDownload() async {
     if (book == null) {
-      print('❌ Cannot download: book is null');
       return;
     }
     
-    print('📥 Download button clicked for book: ${book!.id}');
     
     setState(() {
       _isDownloading = true;
@@ -93,7 +90,6 @@ class _BookDetailPageState extends State<BookDetailPage> {
     try {
       // Dispatch download event
       if (mounted) {
-        print('📤 Dispatching DownloadBook event...');
         context.read<LibraryBloc>().add(DownloadBook(book!));
       }
       
@@ -116,8 +112,6 @@ class _BookDetailPageState extends State<BookDetailPage> {
         _isDownloading = false;
       });
     } catch (e, stackTrace) {
-      print('❌ Download error: $e');
-      print('❌ Stack trace: $stackTrace');
       
       setState(() {
         _isDownloading = false;
@@ -142,12 +136,10 @@ class _BookDetailPageState extends State<BookDetailPage> {
         error = null;
       });
 
-      print('🔍 BookDetailPage: Loading book details for ID: ${widget.bookId}');
 
       // First, check if book is available offline
       final offlineMetadata = await _downloadService.getBookMetadata(widget.bookId);
       if (offlineMetadata != null) {
-        print('📦 BookDetailPage: Found offline metadata, using cached book');
         try {
           final cachedBook = Book.fromJson(offlineMetadata);
           if (mounted) {
@@ -170,11 +162,9 @@ class _BookDetailPageState extends State<BookDetailPage> {
             }
           } catch (e) {
             // Ignore network errors if we have offline data
-            print('⚠️ BookDetailPage: Could not refresh from network, using cached: $e');
           }
           return;
         } catch (e) {
-          print('❌ BookDetailPage: Error parsing cached book, fetching from network: $e');
         }
       }
 
@@ -183,15 +173,10 @@ class _BookDetailPageState extends State<BookDetailPage> {
       
       final fetchedBook = await booksService.getBookById(widget.bookId);
       
-      print('📚 BookDetailPage: Fetched book: ${fetchedBook != null}');
       if (fetchedBook != null) {
-        print('📖 BookDetailPage: Book title: ${fetchedBook.title}');
-        print('📝 BookDetailPage: Ebook content length: ${fetchedBook.ebookContent?.length ?? 0}');
         if (fetchedBook.ebookContent?.isNotEmpty == true) {
           final content = fetchedBook.ebookContent!;
-          print('📝 BookDetailPage: Ebook content preview: ${content.substring(0, content.length > 100 ? 100 : content.length)}...');
         } else {
-          print('📝 BookDetailPage: Ebook content is empty');
         }
         
         setState(() {
@@ -202,14 +187,12 @@ class _BookDetailPageState extends State<BookDetailPage> {
         // Check download status after loading book
         _checkDownloadStatus();
       } else {
-        print('❌ BookDetailPage: Book not found in API');
         setState(() {
           error = 'Book not found';
           isLoading = false;
         });
       }
     } catch (e) {
-      print('💥 BookDetailPage: Error loading book: $e');
       setState(() {
         error = 'Failed to load book: $e';
         isLoading = false;

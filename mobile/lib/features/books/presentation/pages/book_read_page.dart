@@ -35,33 +35,21 @@ class _BookReadPageState extends State<BookReadPage> {
   }
 
   void _loadEbookContent() {
-    print('🔍 BookReadPage: _loadEbookContent called');
-    print('📚 BookReadPage: _book is null: ${_book == null}');
     
     if (_book != null) {
-      print('🔍 BookReadPage: Loading ebook content...');
-      print('📚 BookReadPage: Book data: $_book');
       
       final ebookContent = _book!.ebookContent;
-      print('📖 BookReadPage: ebookContent type: ${ebookContent.runtimeType}');
-      print('📖 BookReadPage: ebookContent is null: ${ebookContent == null}');
-      print('📖 BookReadPage: ebookContent is empty: ${ebookContent?.isEmpty}');
       
       if (ebookContent != null && ebookContent.isNotEmpty) {
-        print('✅ BookReadPage: Ebook content found, loading...');
         setState(() {
           _showPdfContent = true;
-          print('🔄 BookReadPage: setState called - _showPdfContent set to true');
         });
       } else {
-        print('❌ BookReadPage: No ebook content found');
         setState(() {
           _showPdfContent = false;
-          print('🔄 BookReadPage: setState called - _showPdfContent set to false');
         });
       }
     } else {
-      print('❌ BookReadPage: No book data available');
     }
   }
 
@@ -283,9 +271,6 @@ Note: We attempted to extract text from the PDF but were unable to. We've provid
   }
 
   Widget _buildEbookContent(BuildContext context, Book book) {
-    print('📖 _buildEbookContent: Called');
-    print('📱 _buildEbookContent: kIsWeb: $kIsWeb');
-    print('📚 _buildEbookContent: book.title: ${book.title}');
     
     return Column(
       children: [
@@ -388,7 +373,6 @@ Note: We attempted to extract text from the PDF but were unable to. We've provid
   void _openPdfInNewTab() async {
     if (_pdfUrl != null) {
       // For mobile, open PDF in external app
-      print('Opening PDF directly: $_pdfUrl');
       try {
         final uri = Uri.parse(_pdfUrl!);
         if (await canLaunchUrl(uri)) {
@@ -412,17 +396,11 @@ Note: We attempted to extract text from the PDF but were unable to. We've provid
 
 
   Widget _buildPdfViewer(BuildContext context, Book book) {
-    print('🏗️ _buildPdfViewer: Called');
-    print('🔄 _buildPdfViewer: _showPdfContent: $_showPdfContent');
-    print('🔗 _buildPdfViewer: _pdfUrl: $_pdfUrl');
-    print('📱 _buildPdfViewer: kIsWeb: $kIsWeb');
     
     if (_showPdfContent) {
-      print('✅ _buildPdfViewer: Showing PDF content viewer');
       // Show the actual PDF content inside the app
       return _buildPdfContentViewer();
     } else {
-      print('📋 _buildPdfViewer: Showing PDF opener interface');
       // Show the PDF opener interface
       return Container(
         width: double.infinity,
@@ -614,16 +592,11 @@ Note: We attempted to extract text from the PDF but were unable to. We've provid
   }
 
   Widget _buildActualPdfContent() {
-    print('🔗 _buildActualPdfContent: Building actual PDF content');
-    print('🔗 _buildActualPdfContent: _pdfUrl: $_pdfUrl');
-    print('🔗 _buildActualPdfContent: kIsWeb: $kIsWeb');
     
     // Show the actual PDF content using an iframe
     if (kIsWeb && _pdfUrl != null) {
-      print('✅ _buildActualPdfContent: Creating web PDF viewer');
       return _buildWebPdfViewer();
     } else {
-      print('❌ _buildActualPdfContent: Not web or no PDF URL');
       return Container(
         color: Colors.grey[100],
         child: const Center(
@@ -751,8 +724,6 @@ Note: We attempted to extract text from the PDF but were unable to. We've provid
 
 
   Widget _buildPdfIframeContent() {
-    print('🔗 _buildPdfIframeContent: Creating PDF iframe content');
-    print('🔗 _buildPdfIframeContent: _pdfUrl: $_pdfUrl');
     
     if (kIsWeb && _pdfUrl != null) {
       // For web, create a direct HTML iframe that shows the PDF
@@ -822,8 +793,6 @@ Note: We attempted to extract text from the PDF but were unable to. We've provid
   }
 
   Widget _buildDirectHtmlIframe() {
-    print('🔗 _buildDirectHtmlIframe: Creating advanced PDF viewer');
-    print('🔗 _buildDirectHtmlIframe: _pdfUrl: $_pdfUrl');
     
     if (kIsWeb && _pdfUrl != null) {
       // For web, use WebView to display PDF
@@ -842,8 +811,6 @@ Note: We attempted to extract text from the PDF but were unable to. We've provid
   }
 
   Widget _buildWebPdfViewer() {
-    print('🔗 _buildWebPdfViewer: Creating web PDF viewer');
-    print('🔗 _buildWebPdfViewer: PDF URL: $_pdfUrl');
     
     if (kIsWeb && _pdfUrl != null) {
       // Create a container for the PDF viewer
@@ -912,8 +879,6 @@ Note: We attempted to extract text from the PDF but were unable to. We've provid
   }
 
   Widget _buildPdfFrame() {
-    print('🔗 _buildPdfFrame: Creating PDF frame for mobile');
-    print('🔗 _buildPdfFrame: PDF URL: $_pdfUrl');
     
     if (_pdfUrl != null) {
       return Container(
@@ -1081,7 +1046,6 @@ Note: We attempted to extract text from the PDF but were unable to. We've provid
   }
 
   Widget _buildMobilePdfViewer() {
-    print('🔗 _buildMobilePdfViewer: Creating mobile PDF viewer');
     
     // For mobile, we need to download the PDF first
     // For now, show a message and provide download option

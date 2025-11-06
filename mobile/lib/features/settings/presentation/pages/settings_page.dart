@@ -126,12 +126,6 @@ class _SettingsPageState extends State<SettingsPage> {
         final userEmail = authState.user.email;
         final avatarUrl = authState.user.profilePicture;
         
-        print('🔍 Profile Section Debug:');
-        print('   - User authenticated: true');
-        print('   - User name: $userName');
-        print('   - User email: $userEmail');
-        print('   - Avatar URL: $avatarUrl');
-        print('   - Profile picture field: ${authState.user.profilePicture}');
 
         return _buildSection(
           title: LocalizationService.getProfileText,
@@ -199,7 +193,6 @@ class _SettingsPageState extends State<SettingsPage> {
           builder: (context, settingsState) {
             return Consumer<ThemeService>(
               builder: (context, themeService, child) {
-                print('🎨 Settings: Consumer rebuild - current theme: ${themeService.currentTheme}');
             // Get current settings
             String currentLanguage = 'en';
             String currentTheme = 'system';
@@ -219,7 +212,6 @@ class _SettingsPageState extends State<SettingsPage> {
                     currentTheme = 'system';
                     break;
                 }
-                print('🎨 Settings: Converted theme to string: $currentTheme');
 
             if (authState is Authenticated) {
               currentLanguage = authState.user.preferredLanguage;
@@ -1154,7 +1146,6 @@ class _ThemeSelectionDialogState extends State<_ThemeSelectionDialog> {
     _themeService = widget.themeService;
     _themeService.addListener(_onThemeChanged);
     selectedTheme = _getCurrentThemeString(_themeService);
-    print('🎨 Theme Dialog: initState - selectedTheme: $selectedTheme, currentTheme: ${_themeService.currentTheme}');
   }
 
   @override
@@ -1185,9 +1176,6 @@ class _ThemeSelectionDialogState extends State<_ThemeSelectionDialog> {
 
   @override
   Widget build(BuildContext context) {
-    print('🎨 Theme Dialog: Building with _themeService.currentTheme: ${_themeService.currentTheme}');
-    print('🎨 Theme Dialog: Building with selectedTheme: $selectedTheme');
-    print('🎨 Theme Dialog: Building with _isApplying: $_isApplying');
     
     return AlertDialog(
           shape: RoundedRectangleBorder(
@@ -1266,7 +1254,6 @@ class _ThemeSelectionDialogState extends State<_ThemeSelectionDialog> {
                         ),
                         icon: Icons.settings_brightness_rounded,
                         onChanged: (value) {
-                          print('🎨 Theme Dialog: System theme selected: $value');
                           setState(() {
                             selectedTheme = value!;
                           });
@@ -1288,7 +1275,6 @@ class _ThemeSelectionDialogState extends State<_ThemeSelectionDialog> {
                         ),
                         icon: Icons.light_mode_rounded,
                         onChanged: (value) {
-                          print('🎨 Theme Dialog: Light theme selected: $value');
                           setState(() {
                             selectedTheme = value!;
                           });
@@ -1310,7 +1296,6 @@ class _ThemeSelectionDialogState extends State<_ThemeSelectionDialog> {
                         ),
                         icon: Icons.dark_mode_rounded,
                         onChanged: (value) {
-                          print('🎨 Theme Dialog: Dark theme selected: $value');
                           setState(() {
                             selectedTheme = value!;
                           });
@@ -1328,11 +1313,8 @@ class _ThemeSelectionDialogState extends State<_ThemeSelectionDialog> {
             ),
               ElevatedButton(
                 onPressed: _isApplying ? null : () {
-                  print('🎨 Theme Dialog: Apply button pressed with selectedTheme: $selectedTheme');
-                  print('🎨 Theme Dialog: _isApplying: $_isApplying');
                   
                   if (_isApplying) {
-                    print('🎨 Theme Dialog: Already applying, ignoring press');
                     return;
                   }
                   
@@ -1341,19 +1323,15 @@ class _ThemeSelectionDialogState extends State<_ThemeSelectionDialog> {
                       _isApplying = true;
                     });
                     
-                    print('🎨 Settings: _updateTheme called with: $selectedTheme');
-                    print('🎨 Settings: Current ThemeService theme before change: ${_themeService.currentTheme}');
                     
                     // Update theme using ThemeService
                     _themeService.setThemeFromString(selectedTheme);
-                    print('🎨 Settings: After setThemeFromString, ThemeService theme: ${_themeService.currentTheme}');
                     
                     // Close dialog first
                     Navigator.of(context).pop();
                     
                     // Wait a moment for the theme to propagate, then save settings
                     Future.delayed(const Duration(milliseconds: 200), () {
-                      print('🎨 Settings: ThemeService theme after delay: ${_themeService.currentTheme}');
                       
                       // Save to settings for persistence
                       context.read<SettingsBloc>().add(UpdateTheme((widget.authState as Authenticated).user.id, selectedTheme));
@@ -3502,9 +3480,6 @@ class _ThemeSelectionDialogState extends State<_ThemeSelectionDialog> {
   }
 
   Widget _buildProfileAvatar(String? avatarUrl) {
-    print('🖼️ _buildProfileAvatar called with URL: $avatarUrl');
-    print('🖼️ URL type: ${avatarUrl.runtimeType}');
-    print('🖼️ URL is null: ${avatarUrl == null}');
     return CircleAvatar(
       radius: 30,
       backgroundColor: const Color(0xFF0466c8),
@@ -3531,28 +3506,22 @@ class _ThemeSelectionDialogState extends State<_ThemeSelectionDialog> {
                   );
                 },
                 errorBuilder: (context, error, stackTrace) {
-                  print('🖼️ Profile avatar error: $error');
-                  print('🖼️ Avatar URL: $avatarUrl');
                   
                   // Check if it's a 429 (rate limit) error
                   if (error.toString().contains('429') || error.toString().contains('Too Many Requests')) {
-                    print('🖼️ Google CDN rate limit detected - showing fallback');
                   }
                   
                   // Check if it's a CORS/network error (statusCode: 0)
                   if (error.toString().contains('statusCode: 0')) {
-                    print('🖼️ CORS/Network error detected - trying alternative approach');
                     // Try to modify the URL to bypass some restrictions
                     if (avatarUrl != null && avatarUrl.contains('googleusercontent.com')) {
                       final modifiedUrl = avatarUrl.replaceAll('=s96-c', '=s200-c');
-                      print('🖼️ Trying modified URL: $modifiedUrl');
                       return Image.network(
                         modifiedUrl,
                         width: 60,
                         height: 60,
                         fit: BoxFit.cover,
                         errorBuilder: (context, error2, stackTrace2) {
-                          print('🖼️ Modified URL also failed: $error2');
                           return Icon(
                             Icons.person,
                             color: Theme.of(context).colorScheme.surface,

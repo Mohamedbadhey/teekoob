@@ -5,6 +5,7 @@ import 'package:audio_service/audio_service.dart';
 import 'package:teekoob/core/models/book_model.dart';
 import 'package:teekoob/core/config/app_config.dart';
 import 'package:teekoob/core/services/audio_handler_service.dart';
+import 'package:teekoob/core/services/global_audio_player_service.dart';
 
 class AudioPlayerService {
   AudioHandlerService? _audioHandler;
@@ -60,11 +61,36 @@ class AudioPlayerService {
   AudioPlayerService() {
     _initializeAudioSession();
     _setupStreams();
-    _initAudioService();
+    // CRITICAL: DO NOT initialize AudioService here anymore
+    // GlobalAudioPlayerService handles all AudioService initialization
+    // This prevents the "already initialized" error
+    print('[AUDIO DEBUG] Old AudioPlayerService: Skipping AudioService initialization - GlobalAudioPlayerService handles it');
+    // Don't call _initAudioService() at all - it will conflict with GlobalAudioPlayerService
   }
 
   Future<void> _initAudioService() async {
+    // Skip initialization if GlobalAudioPlayerService is handling AudioService
+    // This prevents the "already initialized" error
+    // GlobalAudioPlayerService should handle all audio playback
+    if (GlobalAudioPlayerService.isInitializingAudioService) {
+      print('[AUDIO DEBUG] Old AudioPlayerService: GlobalAudioPlayerService is handling AudioService, skipping init');
+      _audioHandler = null;
+      return;
+    }
+    
     try {
+      // Check if AudioService might already be initialized by checking if we can get a handler
+      // If GlobalAudioPlayerService initialized it, we should skip
+      final globalService = GlobalAudioPlayerService();
+      if (globalService.audioHandler != null) {
+        print('[AUDIO DEBUG] Old AudioPlayerService: AudioService already initialized by GlobalAudioPlayerService, skipping init');
+        _audioHandler = null;
+        return;
+      }
+      
+      // WARNING: This will fail if GlobalAudioPlayerService has already initialized AudioService
+      // AudioService.init() can only be called ONCE per app lifecycle
+      // Consider using GlobalAudioPlayerService instead
       _audioHandler = await initAudioService();
       
       // Listen to audio handler playback state
@@ -78,7 +104,11 @@ class AudioPlayerService {
         }
       });
     } catch (e) {
-      print('Failed to initialize audio service: $e');
+      // AudioService already initialized - this service won't work
+      // Should use GlobalAudioPlayerService instead
+      print('[AUDIO DEBUG] Old AudioPlayerService failed to initialize: $e');
+      print('[AUDIO DEBUG] This is expected if GlobalAudioPlayerService is being used');
+      _audioHandler = null; // Mark as null so we know it's not available
     }
   }
 
@@ -100,7 +130,6 @@ class AudioPlayerService {
         androidWillPauseWhenDucked: true,
       ));
     } catch (e) {
-      print('Failed to configure audio session: $e');
     }
   }
 
@@ -152,7 +181,6 @@ class AudioPlayerService {
 
       // Build full audio URL
       final fullAudioUrl = _buildFullAudioUrl(url);
-      print('🎵 AudioPlayerService: Loading audio from: $fullAudioUrl');
 
       // Load audio through audio handler for background playback
       if (_audioHandler != null) {

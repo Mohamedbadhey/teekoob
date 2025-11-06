@@ -39,7 +39,6 @@ class NetworkService {
             options.headers['Authorization'] = 'Bearer $token';
           }
         } catch (e) {
-          print('⚠️ NetworkService: Could not load auth token: $e');
         }
         handler.next(options);
       },
@@ -62,7 +61,7 @@ class NetworkService {
     _dio.interceptors.add(LogInterceptor(
       requestBody: true,
       responseBody: true,
-      logPrint: (obj) => print(obj),
+      logPrint: (obj) {}, // Disabled logging for production
     ));
   }
 

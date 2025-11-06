@@ -40,7 +40,6 @@ class ReviewsService {
         throw Exception('Failed to fetch reviews');
       }
     } catch (e) {
-      print('Error fetching reviews: $e');
       throw Exception('Failed to fetch reviews: $e');
     }
   }
@@ -63,7 +62,6 @@ class ReviewsService {
         throw Exception('Failed to fetch user review');
       }
     } catch (e) {
-      print('Error fetching user review: $e');
       return null;
     }
   }
@@ -92,7 +90,6 @@ class ReviewsService {
         throw Exception('Failed to create/update review');
       }
     } catch (e) {
-      print('Error creating/updating review: $e');
       throw Exception('Failed to create/update review: $e');
     }
   }
@@ -106,7 +103,6 @@ class ReviewsService {
         throw Exception('Failed to delete review');
       }
     } catch (e) {
-      print('Error deleting review: $e');
       throw Exception('Failed to delete review: $e');
     }
   }

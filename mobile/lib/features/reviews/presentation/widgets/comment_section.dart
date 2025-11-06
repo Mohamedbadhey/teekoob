@@ -76,7 +76,6 @@ class _CommentSectionState extends State<CommentSection> {
         _isLoading = false;
       });
     } catch (e) {
-      print('Error loading reviews: $e');
       setState(() => _isLoading = false);
     }
   }
@@ -94,7 +93,6 @@ class _CommentSectionState extends State<CommentSection> {
         // Form stays empty for new reviews
       });
     } catch (e) {
-      print('Error loading user review: $e');
     }
   }
 

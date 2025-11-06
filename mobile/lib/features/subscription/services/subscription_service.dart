@@ -23,7 +23,6 @@ class SubscriptionService {
           return plans;
         }
       } catch (e) {
-        print('Failed to fetch subscription plans from server: $e');
       }
 
       // Return default plans if all else fails
@@ -55,7 +54,6 @@ class SubscriptionService {
           return subscription;
         }
       } catch (e) {
-        print('Failed to fetch user subscription from server: $e');
       }
 
       return null;
@@ -190,7 +188,6 @@ class SubscriptionService {
           return paymentMethods;
         }
       } catch (e) {
-        print('Failed to fetch payment methods from server: $e');
       }
 
       return [];
@@ -263,7 +260,6 @@ class SubscriptionService {
           return billingHistory;
         }
       } catch (e) {
-        print('Failed to fetch billing history from server: $e');
       }
 
       return [];
@@ -312,7 +308,6 @@ class SubscriptionService {
           return features;
         }
       } catch (e) {
-        print('Failed to fetch subscription features from server: $e');
       }
 
       // Return default features if all else fails

@@ -105,14 +105,12 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
           authBloc.add(const CheckAuthStatus());
         }),
         Future.delayed(const Duration(seconds: 20), () {
-          print('⏰ Splash screen timeout - forcing navigation to login');
           if (mounted) {
             context.go('/login');
           }
         }),
       ]);
     } catch (e) {
-      print('❌ Splash screen error: $e');
       if (mounted) {
         context.go('/login');
       }
@@ -138,7 +136,6 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
           } else if (state is Unauthenticated || state is AuthInitial) {
             context.go('/login');
           } else if (state is AuthError) {
-            print('❌ Auth error in splash: ${state.message}');
             // On auth error, proceed to login screen
             context.go('/login');
           }

@@ -54,16 +54,13 @@ class MobileNotificationService implements NotificationServiceInterface {
       await _requestPermissions();
 
       _isInitialized = true;
-      print('🔔 Mobile Notification Service initialized successfully');
     } catch (e) {
-      print('❌ Error initializing Mobile Notification Service: $e');
     }
   }
 
   Future<void> _requestPermissions() async {
     try {
       if (kIsWeb) {
-        print('🔔 Web platform - skipping notification permissions');
         return;
       }
 
@@ -80,23 +77,18 @@ class MobileNotificationService implements NotificationServiceInterface {
             sound: true,
           );
       
-      print('🔔 Notification permissions requested');
     } catch (e) {
-      print('❌ Error requesting notification permissions: $e');
     }
   }
 
   void _onNotificationTapped(NotificationResponse response) {
-    print('🔔 Notification tapped with payload: ${response.payload}');
     if (response.payload != null) {
       try {
         final bookId = response.payload!;
         if (bookId.isNotEmpty) {
-          print('Navigating to book detail for ID: $bookId');
           // TODO: Implement navigation to book detail page using GoRouter
         }
       } catch (e) {
-        print('❌ Error parsing notification payload: $e');
       }
     }
   }
@@ -108,7 +100,6 @@ class MobileNotificationService implements NotificationServiceInterface {
       final pendingNotifications = await _notifications.pendingNotificationRequests();
       return true; // Assume enabled if we can get pending notifications
     } catch (e) {
-      print('❌ Error checking notification status: $e');
       return false;
     }
   }
@@ -118,7 +109,6 @@ class MobileNotificationService implements NotificationServiceInterface {
       if (kIsWeb) return [];
       return await _notifications.pendingNotificationRequests();
     } catch (e) {
-      print('❌ Error getting pending notifications: $e');
       return [];
     }
   }
@@ -130,29 +120,24 @@ class MobileNotificationService implements NotificationServiceInterface {
       await _requestPermissions();
       return true;
     } catch (e) {
-      print('❌ Error requesting permissions: $e');
       return false;
     }
   }
 
   // Firebase Cloud Messaging methods (not supported - use local notifications)
   String? getFCMToken() {
-    print('🔔 FCM not supported - using local notifications instead');
     return null;
   }
 
   Future<void> enableRandomBookNotifications() async {
-    print('🔔 Random book notifications enabled via local notifications');
     _startRandomBookNotifications();
   }
 
   Future<void> disableRandomBookNotifications() async {
-    print('🔔 Random book notifications disabled');
     _stopRandomBookNotifications();
   }
 
   Future<void> sendTestNotification() async {
-    print('🔔 Sending test notification via local notifications');
     await _sendRandomBookNotification();
   }
 
@@ -164,13 +149,11 @@ class MobileNotificationService implements NotificationServiceInterface {
       _sendRandomBookNotification();
     });
     
-    print('🔔 Random book notifications started (every 10 minutes)');
   }
 
   void _stopRandomBookNotifications() {
     _notificationTimer?.cancel();
     _notificationTimer = null;
-    print('🔔 Random book notifications stopped');
   }
 
   Future<void> _sendRandomBookNotification() async {
@@ -205,9 +188,7 @@ class MobileNotificationService implements NotificationServiceInterface {
         payload: randomBook.id.toString(),
       );
       
-      print('🔔 Random book notification sent: ${randomBook.title}');
     } catch (e) {
-      print('❌ Error sending random book notification: $e');
     }
   }
 
@@ -241,9 +222,7 @@ class MobileNotificationService implements NotificationServiceInterface {
         payload: book.id.toString(),
       );
       
-      print('🔔 Book reminder scheduled for ${book.title} at $scheduledTime');
     } catch (e) {
-      print('❌ Error scheduling book reminder: $e');
     }
   }
 
@@ -264,9 +243,7 @@ class MobileNotificationService implements NotificationServiceInterface {
         customMessage: 'Time for your daily reading! 📚',
       );
       
-      print('🔔 Daily reading reminder scheduled for ${book.title} at ${time.hour}:${time.minute.toString().padLeft(2, '0')}');
     } catch (e) {
-      print('❌ Error scheduling daily reading reminder: $e');
     }
   }
 
@@ -280,9 +257,7 @@ class MobileNotificationService implements NotificationServiceInterface {
         customMessage: 'New book released! 🎉',
       );
       
-      print('🔔 New book notification scheduled for ${book.title} at $releaseTime');
     } catch (e) {
-      print('❌ Error scheduling new book notification: $e');
     }
   }
 
@@ -314,9 +289,7 @@ class MobileNotificationService implements NotificationServiceInterface {
         payload: book.id.toString(),
       );
       
-      print('🔔 Instant book reminder sent: ${book.title}');
     } catch (e) {
-      print('❌ Error sending instant book reminder: $e');
     }
   }
 
@@ -332,9 +305,7 @@ class MobileNotificationService implements NotificationServiceInterface {
         customMessage: 'Continue reading ${book.title}! 📖',
       );
       
-      print('🔔 Reading progress reminder scheduled for ${book.title} in ${interval.inHours} hours');
     } catch (e) {
-      print('❌ Error scheduling reading progress reminder: $e');
     }
   }
 
@@ -342,9 +313,7 @@ class MobileNotificationService implements NotificationServiceInterface {
     try {
       if (kIsWeb) return;
       await _notifications.cancel(id);
-      print('🔔 Notification cancelled: $id');
     } catch (e) {
-      print('❌ Error cancelling notification: $e');
     }
   }
 
@@ -352,9 +321,7 @@ class MobileNotificationService implements NotificationServiceInterface {
     try {
       if (kIsWeb) return;
       await _notifications.cancelAll();
-      print('🔔 All notifications cancelled');
     } catch (e) {
-      print('❌ Error cancelling all notifications: $e');
     }
   }
 

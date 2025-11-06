@@ -42,10 +42,8 @@ class _BooksPageState extends State<BooksPage> {
   @override
   void initState() {
     super.initState();
-    print('🏗️ BooksPage: initState called');
     // Load books immediately when page is initialized
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      print('🏗️ BooksPage: PostFrameCallback called');
       if (!_hasLoadedInitialData) {
     _loadInitialData();
       }
@@ -55,7 +53,6 @@ class _BooksPageState extends State<BooksPage> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    print('🔄 BooksPage: didChangeDependencies called');
     // Only load if we haven't loaded initial data yet
     if (!_hasLoadedInitialData) {
     _loadInitialData();
@@ -70,37 +67,28 @@ class _BooksPageState extends State<BooksPage> {
 
   void _loadInitialData() {
     if (_hasLoadedInitialData) {
-      print('🚫 BooksPage: Skipping initial data load - already loaded');
       return; // Prevent duplicate loading
     }
     
-    print('🚀 BooksPage: Loading initial data - dispatching events');
     _hasLoadedInitialData = true;
     
     // Load metadata (genres, languages) and library
-    print('🏷️ BooksPage: Dispatching LoadGenres event');
     context.read<BooksBloc>().add(const LoadGenres());
-    print('🌍 BooksPage: Dispatching LoadLanguages event');
     context.read<BooksBloc>().add(const LoadLanguages());
-    print('📖 BooksPage: Dispatching LoadLibrary event');
     context.read<LibraryBloc>().add(const LoadLibrary('current_user'));
     
     // Load initial books and podcasts on page load
-    print('📚 BooksPage: Loading initial books and podcasts');
     _loadCombinedContent();
   }
 
   void _searchBooks(String query) {
-    print('🔍 BooksPage: Search called with query: "$query"');
     if (query.trim().isNotEmpty) {
       final q = query.trim();
-      print('🔍 BooksPage: Dispatching LoadBooks with search and filters for: "$q"');
       setState(() {
         _currentSearchQuery = q;
       });
       _loadCombinedContent();
     } else {
-      print('🔍 BooksPage: Empty query, loading books with filters');
       setState(() {
         _currentSearchQuery = '';
       });
@@ -110,14 +98,10 @@ class _BooksPageState extends State<BooksPage> {
 
   void _loadBooksWithFilters() {
     if (_isInitialBuild) {
-      print('🚫 BooksPage: Skipping filter load - initial build');
       _isInitialBuild = false;
       return; // Don't load on initial build
     }
     
-    print('🔧 BooksPage: Loading books with filters');
-    print('🔧 BooksPage: Filters - categories: $_selectedCategories, year: $_selectedYear');
-    print('🔧 BooksPage: Filters - sortBy: $_sortBy, sortOrder: $_sortOrder');
     
     _loadCombinedContent();
   }
@@ -139,10 +123,8 @@ class _BooksPageState extends State<BooksPage> {
   }
 
  Future<void> _loadCombinedContent() async {
-  print('📚 BooksPage: _loadCombinedContent called');
   setState(() { _isLoadingContent = true; _contentError = null; });
   try {
-    print('📚 BooksPage: Fetching books...');
     final booksFut = _booksService.getBooks(
       search: _currentSearchQuery,
       categories: _selectedCategories,
@@ -150,34 +132,27 @@ class _BooksPageState extends State<BooksPage> {
       sortBy: _sortBy,
       sortOrder: _sortOrder,
     ).then((res) {
-      print('📚 BooksPage: Books response received: ${res['books']?.length ?? 0} books');
       return res['books'] as List;
     });
     
-    print('📚 BooksPage: Fetching podcasts...');
     final podcastsFut = _podcastsService.getPodcasts(
       search: _currentSearchQuery,
       categories: _selectedCategories,
       sortBy: _sortBy,
       sortOrder: _sortOrder,
     ).then((res) {
-      print('📚 BooksPage: Podcasts response received: ${res['podcasts']?.length ?? 0} podcasts');
       return res['podcasts'] as List;
     });
     
     final books = await booksFut;
     final podcasts = await podcastsFut;
     
-    print('📚 BooksPage: Combining content - ${books.length} books, ${podcasts.length} podcasts');
     final allContent = [...books, ...podcasts];
     
     setState(() {
       _allContent = allContent;
-      print('📚 BooksPage: State updated with ${_allContent.length} total items');
     });
   } catch (e, stackTrace) {
-    print('❌ BooksPage: Error loading combined content: $e');
-    print('❌ BooksPage: Stack trace: $stackTrace');
     setState(() => _contentError = e.toString());
   } finally {
     setState(() => _isLoadingContent = false);

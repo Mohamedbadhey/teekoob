@@ -42,42 +42,31 @@ class _ReaderPageState extends State<ReaderPage> {
     try {
       // Note: No local storage - cannot get book from storage
       final book = null;
-      print('🔍 ReaderPage: Loading book with ID: ${widget.bookId}');
-      print('📖 ReaderPage: Book found in storage: ${book != null}');
       if (book != null) {
-        print('📚 ReaderPage: Book title: ${book.title}');
         setState(() {
           _book = book;
           _bookContent = book.ebookContent;
         });
       } else {
-        print('❌ ReaderPage: Book not found in local storage');
         // Try to get all books to see what's available
         // Note: No local storage - cannot get books from storage
         final allBooks = <Book>[];
-        print('📚 ReaderPage: Total books in storage: ${allBooks.length}');
-        print('📖 ReaderPage: Available book IDs: ${allBooks.map((b) => b.id).toList()}');
         
         // Try to fetch the book from API as fallback
-        print('🔄 ReaderPage: Attempting to fetch book from API...');
         try {
           final booksService = BooksService();
           final fetchedBook = await booksService.getBookById(widget.bookId);
           if (fetchedBook != null) {
-            print('✅ ReaderPage: Successfully fetched book from API');
             setState(() {
               _book = fetchedBook;
               _bookContent = fetchedBook.ebookContent;
             });
           } else {
-            print('❌ ReaderPage: Book not found in API either');
           }
         } catch (e) {
-          print('💥 ReaderPage: Error fetching book from API: $e');
         }
       }
     } catch (e) {
-      print('💥 ReaderPage: Error loading book: $e');
     }
   }
 

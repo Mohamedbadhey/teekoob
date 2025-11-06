@@ -61,8 +61,6 @@ class Podcast {
 
   // Factory constructor from JSON
   factory Podcast.fromJson(Map<String, dynamic> json) {
-    print('🔧 Podcast.fromJson: Parsing podcast with ID: ${json['id']}');
-    print('🔧 Podcast.fromJson: Raw JSON data: $json');
     
     try {
       final podcast = Podcast(
@@ -129,11 +127,8 @@ class Podcast {
                 : DateTime.now()),
       );
       
-      print('✅ Podcast.fromJson: Successfully parsed podcast: ${podcast.title}');
       return podcast;
     } catch (e) {
-      print('💥 Podcast.fromJson: Error parsing podcast: $e');
-      print('💥 Podcast.fromJson: Problematic JSON: $json');
       rethrow;
     }
   }
@@ -346,7 +341,6 @@ class PodcastEpisode {
         updatedAt: _parseDateTime(json['updated_at'] ?? json['updatedAt']),
       );
     } catch (e) {
-      print('💥 PodcastEpisode.fromJson: Error parsing episode: $e');
       rethrow;
     }
   }

@@ -25,11 +25,8 @@ class AuthService {
   /// Register user for notifications after successful login
   Future<void> _registerUserForNotifications() async {
     try {
-      print('🔔 Registering user for notifications after login...');
       await _notificationServiceInstance.enableRandomBookNotifications();
-      print('🔔 ✅ User registered for notifications successfully');
     } catch (e) {
-      print('🔔 ❌ Failed to register user for notifications: $e');
       // Don't throw error - login should succeed even if notifications fail
     }
   }
@@ -84,104 +81,67 @@ class AuthService {
   // Login with Google
   Future<User> loginWithGoogle() async {
     try {
-      print('🚀 ===== GOOGLE SIGN-IN STARTED =====');
       
       // Debug information
       if (kIsWeb) {
-        print('🌐 Web platform detected');
-        print('🔑 Using client ID: ${AppConfig.googleWebClientId}');
-        print('🌍 Current origin: ${Uri.base.origin}');
-        print('🔧 Google Sign-In configured scopes: email, profile');
       }
       
       GoogleSignInAccount? googleUser;
       
       if (kIsWeb) {
         // For web, ensure fresh authentication by signing out first
-        print('🔄 Signing out any existing session to ensure fresh authentication...');
         await _googleSignIn.signOut();
         
         // For web, skip silent sign-in and go directly to interactive
-        print('🔄 Attempting interactive sign-in (web)...');
-        print('⏰ Starting Google Sign-In process...');
         
         try {
           googleUser = await _googleSignIn.signIn().timeout(
             const Duration(seconds: 60),
             onTimeout: () {
-              print('⏰ Google sign-in timed out after 60 seconds');
-              print('⏰ This might be due to popup communication issues');
               throw Exception('Google sign-in timed out. Please check if popup is blocked or try again.');
             },
           );
           
-          print('✅ Interactive sign-in completed');
-          print('👤 Google user account: ${googleUser?.email ?? 'null'}');
-          print('🆔 Google user ID: ${googleUser?.id ?? 'null'}');
-          print('📝 Google user display name: ${googleUser?.displayName ?? 'null'}');
           
         } catch (e) {
-          print('❌ Interactive sign-in failed');
-          print('❌ Error type: ${e.runtimeType}');
-          print('❌ Error details: ${e.toString()}');
           if (e is Exception) {
-            print('❌ Exception message: ${e.toString()}');
           }
           
           // Always rethrow errors to ensure user confirmation is required
-          print('🔄 Interactive sign-in failed - user must confirm manually');
           rethrow;
         }
       } else {
         // For mobile platforms (Android/iOS)
-        print('📱 Mobile platform detected');
-        print('🔄 Signing out any existing session...');
         await _googleSignIn.signOut();
         
-        print('🔄 Attempting mobile Google Sign-In...');
         try {
           googleUser = await _googleSignIn.signIn().timeout(
             const Duration(seconds: 60),
             onTimeout: () {
-              print('⏰ Mobile Google sign-in timed out');
               throw Exception('Google sign-in timed out. Please try again.');
             },
           );
           
-          print('✅ Mobile sign-in completed');
-          print('👤 Google user account: ${googleUser?.email ?? 'null'}');
-          print('🆔 Google user ID: ${googleUser?.id ?? 'null'}');
-          print('📝 Google user display name: ${googleUser?.displayName ?? 'null'}');
           
         } catch (e) {
-          print('❌ Mobile Google sign-in failed');
-          print('❌ Error type: ${e.runtimeType}');
-          print('❌ Error details: ${e.toString()}');
           rethrow;
         }
       }
       
       if (googleUser == null) {
-        print('❌ Google user is null - sign-in was cancelled');
         throw Exception('Google sign-in was cancelled by user');
       }
 
-      print('🔐 Getting Google authentication tokens...');
       final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
       final String? idToken = googleAuth.idToken;
       final String? accessToken = googleAuth.accessToken;
 
-      print('🔑 ID Token: ${idToken != null ? "Present (${idToken.length} chars)" : "Missing"}');
-      print('🔑 Access Token: ${accessToken != null ? "Present (${accessToken.length} chars)" : "Missing"}');
       
       if (accessToken != null) {
-        print('🔑 Access Token (first 20 chars): ${accessToken.substring(0, 20)}...');
       }
 
       // For web, if ID token is missing, use access token to get user info
       if (idToken == null && accessToken != null && kIsWeb) {
-        print('🔄 ID token missing, using access token to get user info...');
-        print('🌐 Fetching user info from Google OAuth2 API...');
         
         // Get user info using access token
         final userInfoResponse = await _networkService.get(
@@ -191,37 +151,22 @@ class AuthService {
           ),
         );
         
-        print('📡 Google OAuth2 API response status: ${userInfoResponse.statusCode}');
         
         if (userInfoResponse.statusCode == 200) {
           final userInfo = userInfoResponse.data;
-          print('✅ User info obtained successfully');
-          print('📧 Email: ${userInfo['email']}');
-          print('👤 Name: ${userInfo['name']}');
-          print('🆔 Google ID: ${userInfo['id']}');
-          print('🖼️ Picture: ${userInfo['picture']}');
           
-          print('🚀 Sending data to backend /auth/google-web...');
           // Send user info to backend for authentication
           final response = await _networkService.post('/auth/google-web', data: {
             'accessToken': accessToken,
             'userInfo': userInfo,
           });
           
-          print('📡 Backend response status: ${response.statusCode}');
           
           if (response.statusCode == 200) {
-            print('✅ Backend authentication successful!');
             final userData = response.data['user'] as Map<String, dynamic>;
             final token = response.data['token'] as String;
             
-            print('👤 User data received:');
-            print('   - ID: ${userData['id']}');
-            print('   - Email: ${userData['email']}');
-            print('   - Name: ${userData['firstName']} ${userData['lastName']}');
-            print('   - Admin: ${userData['isAdmin']}');
             
-            print('🔐 Setting authentication token...');
             _networkService.setAuthToken(token);
             await _secureStorage.write(key: _tokenKey, value: token);
             await _secureStorage.write(key: _userEmailKey, value: userData['email'] as String?);
@@ -229,50 +174,31 @@ class AuthService {
             // Register user for notifications
             await _registerUserForNotifications();
             
-            print('🎉 Google Sign-In completed successfully!');
             return User.fromJson(userData);
           } else {
-            print('❌ Backend authentication failed');
-            print('❌ Status: ${response.statusCode}');
-            print('❌ Message: ${response.statusMessage}');
-            print('❌ Response data: ${response.data}');
             throw Exception('Google login failed: ${response.statusMessage}');
           }
         } else {
-          print('❌ Failed to get user info from Google');
-          print('❌ Status: ${userInfoResponse.statusCode}');
-          print('❌ Response: ${userInfoResponse.data}');
           throw Exception('Failed to get user info from Google');
         }
       }
 
       if (idToken == null) {
-        print('❌ No ID token available - this should not happen with People API enabled');
         throw Exception('Failed to obtain Google ID token. This may be due to origin configuration issues.');
       }
 
-      print('🔑 Using ID token for authentication...');
-      print('🚀 Sending ID token to backend /auth/google...');
       
       // Send the ID token to backend to verify and exchange for app JWT
       final response = await _networkService.post('/auth/google', data: {
         'idToken': idToken,
       });
       
-      print('📡 Backend response status: ${response.statusCode}');
 
       if (response.statusCode == 200) {
-        print('✅ Backend authentication successful!');
         final userData = response.data['user'] as Map<String, dynamic>;
         final token = response.data['token'] as String;
         
-        print('👤 User data received:');
-        print('   - ID: ${userData['id']}');
-        print('   - Email: ${userData['email']}');
-        print('   - Name: ${userData['firstName']} ${userData['lastName']}');
-        print('   - Admin: ${userData['isAdmin']}');
         
-        print('🔐 Setting authentication token...');
         _networkService.setAuthToken(token);
         await _secureStorage.write(key: _tokenKey, value: token);
         await _secureStorage.write(key: _userEmailKey, value: userData['email'] as String?);
@@ -280,49 +206,29 @@ class AuthService {
         // Register user for notifications
         await _registerUserForNotifications();
         
-        print('🎉 Google Sign-In completed successfully!');
         return User.fromJson(userData);
       } else {
-        print('❌ Backend authentication failed');
-        print('❌ Status: ${response.statusCode}');
-        print('❌ Message: ${response.statusMessage}');
-        print('❌ Response data: ${response.data}');
         throw Exception('Google login failed: ${response.statusMessage}');
       }
     } catch (e) {
-      print('🚨 ===== GOOGLE SIGN-IN ERROR =====');
-      print('🚨 Error caught: $e');
-      print('🚨 Error type: ${e.runtimeType}');
-      print('🚨 Full error details: ${e.toString()}');
-      print('🚨 Stack trace: ${StackTrace.current}');
       
       if (e.toString().contains('unregistered_origin') ||
           e.toString().contains('origin is not allowed')) {
-        print('🚨 Origin configuration error detected');
-        print('🚨 Solution: Add your domain to Google Cloud Console authorized origins');
         throw Exception('Google OAuth configuration error: Please add your domain to Google Cloud Console authorized origins');
       }
       
       if (e.toString().contains('popup') || e.toString().contains('blocked')) {
-        print('🚨 Popup blocking error detected');
-        print('🚨 Solution: Allow popups for localhost:3000 in your browser');
         throw Exception('Popup blocked: Please allow popups for localhost:3000 in your browser');
       }
       
       if (e.toString().contains('timeout')) {
-        print('🚨 Timeout error detected');
-        print('🚨 Solution: Check internet connection and try again');
         throw Exception('Google sign-in timed out: Please check your internet connection and try again');
       }
       
       if (e.toString().contains('PERMISSION_DENIED')) {
-        print('🚨 Permission denied error detected');
-        print('🚨 Solution: Ensure People API is enabled in Google Cloud Console');
         throw Exception('Google API permission error: Please ensure People API is enabled in Google Cloud Console');
       }
       
-      print('🚨 Unknown error, rethrowing...');
-      print('🚨 ===== END ERROR =====');
       throw Exception('Google login failed: $e');
     }
   }
@@ -394,7 +300,6 @@ class AuthService {
       // await _networkService.post('/auth/logout');
     } catch (e) {
       // Continue with local logout even if server call fails
-      print('Server logout failed: $e');
     } finally {
       await _secureStorage.delete(key: _tokenKey);
       await _secureStorage.delete(key: _userEmailKey);
@@ -410,7 +315,6 @@ class AuthService {
       _networkService.setAuthToken(token);
       return true;
     } catch (e) {
-      print('❌ Error checking authentication: $e');
       return false;
     }
   }
@@ -423,7 +327,6 @@ class AuthService {
       
       // Check connectivity first
       if (!await _networkService.isConnected()) {
-        print('📡 No internet connection - skipping user fetch');
         return null;
       }
       
@@ -434,7 +337,6 @@ class AuthService {
       final response = await _networkService.get('/auth/me').timeout(
         const Duration(seconds: 10),
         onTimeout: () {
-          print('⏰ getCurrentUser: API call timed out after 10 seconds');
           throw Exception('Request timed out');
         },
       );
@@ -447,7 +349,6 @@ class AuthService {
     } on DioException catch (e) {
       // Handle 401 - token expired or invalid
       if (e.response?.statusCode == 401) {
-        print('🔒 Token expired or invalid - logging out');
         // Clear token and logout
         await _secureStorage.delete(key: _tokenKey);
         await _secureStorage.delete(key: _userEmailKey);
@@ -455,10 +356,8 @@ class AuthService {
         // Return null to indicate user needs to login
         return null;
       }
-      print('❌ Error getting current user: $e');
       return null;
     } catch (e) {
-      print('❌ Error getting current user: $e');
       // Return null instead of throwing to allow app to continue
       return null;
     }

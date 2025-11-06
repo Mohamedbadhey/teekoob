@@ -108,9 +108,7 @@ class EnhancedAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandl
         this.mediaItem.add(mediaItem.copyWith(duration: duration));
       }
       
-      print('🎵 Audio loaded successfully: ${book.title}');
     } catch (e) {
-      print('❌ Error loading audio: $e');
       rethrow;
     }
   }
@@ -119,9 +117,7 @@ class EnhancedAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandl
   Future<void> play() async {
     try {
       await _audioPlayer.play();
-      print('▶️ Playback started');
     } catch (e) {
-      print('❌ Error starting playback: $e');
     }
   }
 
@@ -129,9 +125,7 @@ class EnhancedAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandl
   Future<void> pause() async {
     try {
       await _audioPlayer.pause();
-      print('⏸️ Playback paused');
     } catch (e) {
-      print('❌ Error pausing playback: $e');
     }
   }
 
@@ -140,9 +134,7 @@ class EnhancedAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandl
     try {
       await _audioPlayer.stop();
       await super.stop();
-      print('⏹️ Playback stopped');
     } catch (e) {
-      print('❌ Error stopping playback: $e');
     }
   }
 
@@ -150,9 +142,7 @@ class EnhancedAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandl
   Future<void> seek(Duration position) async {
     try {
       await _audioPlayer.seek(position);
-      print('⏩ Seeked to: ${position.inSeconds}s');
     } catch (e) {
-      print('❌ Error seeking: $e');
     }
   }
 
@@ -166,13 +156,10 @@ class EnhancedAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandl
       
       if (newPosition < duration) {
         await _audioPlayer.seek(newPosition);
-        print('⏭️ Skipped forward 30s');
       } else {
         await _audioPlayer.seek(duration);
-        print('⏭️ Reached end of track');
       }
     } catch (e) {
-      print('❌ Error skipping forward: $e');
     }
   }
 
@@ -185,13 +172,10 @@ class EnhancedAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandl
       
       if (newPosition > Duration.zero) {
         await _audioPlayer.seek(newPosition);
-        print('⏮️ Skipped backward 10s');
       } else {
         await _audioPlayer.seek(Duration.zero);
-        print('⏮️ Reached start of track');
       }
     } catch (e) {
-      print('❌ Error skipping backward: $e');
     }
   }
 
@@ -199,9 +183,7 @@ class EnhancedAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandl
   Future<void> setSpeed(double speed) async {
     try {
       await _audioPlayer.setSpeed(speed);
-      print('⚡ Speed set to: ${speed}x');
     } catch (e) {
-      print('❌ Error setting speed: $e');
     }
   }
   
@@ -263,23 +245,18 @@ class EnhancedAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandl
     switch (state) {
       case AppLifecycleState.paused:
         // App is in background - audio continues playing
-        print('🎵 App paused - audio continues in background');
         break;
       case AppLifecycleState.resumed:
         // App is back in foreground
-        print('🎵 App resumed');
         break;
       case AppLifecycleState.inactive:
         // App is inactive (e.g., phone call)
-        print('🎵 App inactive');
         break;
       case AppLifecycleState.detached:
         // App is detached
-        print('🎵 App detached');
         break;
       case AppLifecycleState.hidden:
         // App is hidden
-        print('🎵 App hidden');
         break;
     }
   }
@@ -291,7 +268,6 @@ class EnhancedAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandl
     await _durationSubscription?.cancel();
     await _playbackStateController.close();
     await _audioPlayer.dispose();
-    print('🎵 Audio handler disposed');
   }
 }
 

@@ -99,7 +99,6 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin<
   }
 
   void _loadEssentialData() {
-    print('🏠 HomePage: Loading essential data first...');
     
     // Load only the most important data first
     if (!_isLoadingFeatured && _featuredBooks.isEmpty) {
@@ -232,7 +231,6 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin<
 
 
   void _filterBooksByCategory(String? categoryId) {
-    print('🏠 HomePage: Filtering by category: $categoryId');
     
     setState(() {
       if (categoryId == null) {
@@ -250,7 +248,6 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin<
     
     if (_selectedCategoryIds.isEmpty) {
       // Show all books - restore original lists
-      print('🏠 HomePage: No categories selected - restoring original lists');
       setState(() {
         _featuredBooks = List.from(_originalFeaturedBooks);
         _newReleases = List.from(_originalNewReleases);
@@ -259,7 +256,6 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin<
       });
     } else {
       // Filter all book sections by selected categories
-      print('🏠 HomePage: Filtering all sections by categories: $_selectedCategoryIds');
       _filterAllSectionsByCategories(_selectedCategoryIds);
     }
   }
@@ -291,7 +287,6 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin<
       _randomBooks = filteredRandom;
     });
     
-    print('🏠 HomePage: Filtered results - Featured: ${filteredFeatured.length} (always shown), New Releases: ${filteredNewReleases.length}, Recent: ${filteredRecent.length}, Random: ${filteredRandom.length}');
   }
 
   // Cache library state to avoid rebuilding during layout
@@ -327,7 +322,7 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin<
         });
       }
     } catch (e) {
-      print('Error loading unread count: $e');
+      // Silently handle notification count error
     }
   }
 
@@ -364,43 +359,36 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin<
                 _originalFeaturedBooks = List.from(state.books);
                 _isLoadingFeatured = false;
               });
-              print('🏠 Featured books loaded: ${state.books.length}');
             } else if (state is NewReleasesLoaded) {
               setState(() {
                 _newReleases = state.books;
                 _originalNewReleases = List.from(state.books);
                 _isLoadingNewReleases = false;
               });
-              print('🏠 New releases loaded: ${state.books.length}');
             } else if (state is RecentBooksLoaded) {
               setState(() {
                 _recentBooks = state.books;
                 _originalRecentBooks = List.from(state.books);
                 _isLoadingRecentBooks = false;
               });
-              print('🏠 Recent books loaded: ${state.books.length}');
             } else if (state is FreeBooksLoaded) {
               setState(() {
                 _freeBooks = state.books;
                 _originalFreeBooks = List.from(state.books);
                 _isLoadingFreeBooks = false;
               });
-              print('🏠 Free books loaded: ${state.books.length}');
             } else if (state is RandomBooksLoaded) {
               setState(() {
                 _randomBooks = state.books;
                 _originalRandomBooks = List.from(state.books);
                 _isLoadingRandomBooks = false;
               });
-              print('🏠 Random books loaded: ${state.books.length}');
             } else if (state is CategoriesLoaded) {
               setState(() {
                 _categories = state.categories;
                 _isLoadingCategories = false;
               });
-              print('🏠 Categories loaded: ${state.categories.length}');
             } else if (state is BooksError) {
-              print('❌ Books error: ${state.message}');
               // Handle error gracefully - check if it's rate limiting
               final isRateLimit = state.message.contains('429') || 
                                   state.message.contains('Too many requests') ||
@@ -450,37 +438,31 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin<
                 _originalFeaturedPodcasts = List.from(state.podcasts);
                 _isLoadingFeaturedPodcasts = false;
               });
-              print('🏠 Featured podcasts loaded: ${state.podcasts.length}');
             } else if (state is NewReleasePodcastsLoaded) {
               setState(() {
                 _newReleasePodcasts = state.podcasts;
                 _originalNewReleasePodcasts = List.from(state.podcasts);
                 _isLoadingNewReleasePodcasts = false;
               });
-              print('🏠 New release podcasts loaded: ${state.podcasts.length}');
             } else if (state is RecentPodcastsLoaded) {
               setState(() {
                 _recentPodcasts = state.podcasts;
                 _originalRecentPodcasts = List.from(state.podcasts);
                 _isLoadingRecentPodcasts = false;
               });
-              print('🏠 Recent podcasts loaded: ${state.podcasts.length}');
             } else if (state is FreePodcastsLoaded) {
               setState(() {
                 _freePodcasts = state.podcasts;
                 _originalFreePodcasts = List.from(state.podcasts);
                 _isLoadingFreePodcasts = false;
               });
-              print('🏠 Free podcasts loaded: ${state.podcasts.length}');
             } else if (state is RandomPodcastsLoaded) {
               setState(() {
                 _randomPodcasts = state.podcasts;
                 _originalRandomPodcasts = List.from(state.podcasts);
                 _isLoadingRandomPodcasts = false;
               });
-              print('🏠 Random podcasts loaded: ${state.podcasts.length}');
             } else if (state is PodcastsError) {
-              print('❌ Podcasts error: ${state.message}');
               // Handle error gracefully - check if it's rate limiting
               final isRateLimit = state.message.contains('429') || 
                                   state.message.contains('Too many requests') ||
@@ -790,15 +772,18 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin<
   }
 
   Widget _buildCategoriesLoading() {
-    return Row(
-      children: List.generate(4, (index) => 
-        Container(
-          margin: EdgeInsets.only(right: index < 3 ? 12 : 0),
-          height: 40,
-          width: 100,
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surface,
-            borderRadius: BorderRadius.circular(12),
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: List.generate(4, (index) => 
+          Container(
+            margin: EdgeInsets.only(right: index < 3 ? 12 : 0),
+            height: 40,
+            width: 100,
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surface,
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
         ),
       ),
@@ -899,7 +884,6 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin<
   }
 
   Widget _buildFreeBooksSection() {
-    print('Building Free Books Section - _freeBooks: ${_freeBooks.length}, _isLoadingFreeBooks: $_isLoadingFreeBooks');
     
     if (_isLoadingFreeBooks)
       return _buildLoadingHorizontalScroll();
@@ -918,7 +902,6 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin<
   }
 
   Widget _buildRecentBooksSection() {
-    print('Building Recent Books Section - _recentBooks: ${_recentBooks.length}, _isLoadingRecentBooks: $_isLoadingRecentBooks');
     
     if (_isLoadingRecentBooks)
       return _buildLoadingHorizontalScroll();
@@ -937,7 +920,6 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin<
   }
 
   Widget _buildNewReleasesSection() {
-    print('Building New Releases Section - _newReleases: ${_newReleases.length}, _isLoadingNewReleases: $_isLoadingNewReleases');
     
     if (_isLoadingNewReleases)
       return _buildLoadingHorizontalScroll();
@@ -1167,8 +1149,6 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin<
   }
 
   Widget _buildBooksHorizontalScroll(List<Book> books, String sectionTitle) {
-    print('🔄 _buildBooksHorizontalScroll: Building horizontal scroll with ${books.length} books');
-    print('📖 _buildBooksHorizontalScroll: Book titles: ${books.map((b) => b.title).toList()}');
     
     if (books.isEmpty) {
       return const SizedBox.shrink();
@@ -1540,8 +1520,6 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin<
   }
 
   Widget _buildPodcastsHorizontalScroll(List<Podcast> podcasts, String sectionTitle) {
-    print('🔄 _buildPodcastsHorizontalScroll: Building horizontal scroll with ${podcasts.length} podcasts');
-    print('📖 _buildPodcastsHorizontalScroll: Podcast titles: ${podcasts.map((p) => p.title).toList()}');
     
     if (podcasts.isEmpty) {
       return const SizedBox.shrink();

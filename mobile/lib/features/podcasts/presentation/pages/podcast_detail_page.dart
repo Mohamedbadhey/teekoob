@@ -67,7 +67,6 @@ class _PodcastDetailPageState extends State<PodcastDetailPage>
         setState(() => _userId = user.id);
       }
     } catch (e) {
-      print('Error loading user ID: $e');
     }
   }
 
@@ -198,17 +197,13 @@ class _PodcastDetailPageState extends State<PodcastDetailPage>
   }
 
   void _loadPodcastData() {
-    print('🎧 PodcastDetailPage: Loading podcast data for ID: ${widget.podcastId}');
     
     // Load podcast details
-    print('🎧 PodcastDetailPage: Dispatching LoadPodcastById event');
     context.read<PodcastsBloc>().add(LoadPodcastById(widget.podcastId));
     
     // Load podcast episodes
-    print('🎧 PodcastDetailPage: Dispatching LoadPodcastEpisodes event');
     context.read<PodcastsBloc>().add(LoadPodcastEpisodes(podcastId: widget.podcastId));
     
-    print('✅ PodcastDetailPage: Both events dispatched successfully');
   }
 
   void _navigateToEpisode(PodcastEpisode episode) {
@@ -244,11 +239,8 @@ class _PodcastDetailPageState extends State<PodcastDetailPage>
           ),
           BlocListener<PodcastsBloc, PodcastsState>(
             listener: (context, state) {
-              print('🎧 PodcastDetailPage: Received state: ${state.runtimeType}');
               
               if (state is PodcastEpisodesLoaded) {
-                print('🎧 PodcastDetailPage: Episodes loaded - count: ${state.episodes.length}');
-                print('🎧 PodcastDetailPage: Episodes data: ${state.episodes.map((e) => '${e.id}: ${e.title}').toList()}');
                 
                 setState(() {
                   _episodes = state.episodes;
@@ -258,9 +250,7 @@ class _PodcastDetailPageState extends State<PodcastDetailPage>
                 // Check download status for all episodes
                 _checkDownloadStatus();
                 
-                print('✅ PodcastDetailPage: Episodes state updated successfully');
               } else if (state is PodcastsError) {
-                print('💥 PodcastDetailPage: Error state received: ${state.message}');
                 
                 setState(() {
                   _isLoadingEpisodes = false;
@@ -272,7 +262,6 @@ class _PodcastDetailPageState extends State<PodcastDetailPage>
                   ),
                 );
               } else if (state is PodcastsLoading) {
-                print('🎧 PodcastDetailPage: Loading state received');
               }
             },
           ),

@@ -105,7 +105,6 @@ class _AppScaffoldState extends State<AppScaffold> with WidgetsBindingObserver {
       setState(() {
         _isOffline = true;
       });
-      print('📴 AppScaffold: Offline detected - redirecting to offline tab');
       
       // Navigate to library page (index 2) with offline tab
       if (_currentIndex != 2) {
@@ -139,7 +138,6 @@ class _AppScaffoldState extends State<AppScaffold> with WidgetsBindingObserver {
       setState(() {
         _isOffline = false;
       });
-      print('📶 AppScaffold: Online detected');
       
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -185,13 +183,10 @@ class _AppScaffoldState extends State<AppScaffold> with WidgetsBindingObserver {
 
   void _updateCurrentIndex() {
     final location = GoRouterState.of(context).uri.path;
-    print('Current location: $location'); // Debug log
     
     // Always default to Home (index 0) for hot refresh
     // This ensures that hot refresh always shows Home tab selected
     _currentIndex = NavigationService.getTabForRoute(location);
-    
-    print('Updated current index to: $_currentIndex'); // Debug log
   }
 
   Future<void> _showExitConfirmationDialog(BuildContext context) async {
@@ -259,7 +254,6 @@ class _AppScaffoldState extends State<AppScaffold> with WidgetsBindingObserver {
           setState(() {
             _currentIndex = routeIndex;
           });
-          print('🔄 AppScaffold: Updated index to $routeIndex for route: $location');
         }
       });
     }
@@ -323,7 +317,6 @@ class _AppScaffoldState extends State<AppScaffold> with WidgetsBindingObserver {
             
             // Navigate to the correct route
             final route = NavigationService.getRouteForTab(index);
-            print('Navigating to route: $route for tab index: $index');
             context.go(route);
           },
           backgroundColor: Theme.of(context).colorScheme.surface,

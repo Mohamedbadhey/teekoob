@@ -207,7 +207,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       ]);
       
       if (result == 'timeout') {
-        print('⏰ Auth check timed out after 15 seconds - proceeding to login');
         emit(const Unauthenticated());
         return;
       }
@@ -225,7 +224,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         }
       }
     } catch (e) {
-      print('❌ Auth check error: $e');
       // On error, proceed to login screen instead of staying stuck
       emit(const Unauthenticated());
     }
@@ -236,7 +234,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       final isAuthenticated = await _authService.isAuthenticated();
       return isAuthenticated;
     } catch (e) {
-      print('❌ Error in _checkAuthStatusInternal: $e');
       return false;
     }
   }

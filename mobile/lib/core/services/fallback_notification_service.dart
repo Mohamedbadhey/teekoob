@@ -7,7 +7,6 @@ import 'package:teekoob/core/models/book_model.dart';
 class FallbackNotificationService implements NotificationServiceInterface {
   @override
   Future<void> initialize() async {
-    print('🔔 Fallback notification service initialized (no Firebase)');
   }
 
   @override
@@ -17,7 +16,6 @@ class FallbackNotificationService implements NotificationServiceInterface {
 
   @override
   Future<bool> requestPermissions() async {
-    print('🔔 Fallback: Cannot request permissions without Firebase');
     return false;
   }
 
@@ -33,17 +31,14 @@ class FallbackNotificationService implements NotificationServiceInterface {
 
   @override
   Future<void> enableRandomBookNotifications() async {
-    print('🔔 Fallback: Random book notifications not available without Firebase');
   }
 
   @override
   Future<void> disableRandomBookNotifications() async {
-    print('🔔 Fallback: Random book notifications not available without Firebase');
   }
 
   @override
   Future<void> sendTestNotification() async {
-    print('🔔 Fallback: Test notifications not available without Firebase');
   }
 
   // Local notification methods (disabled)
@@ -53,7 +48,6 @@ class FallbackNotificationService implements NotificationServiceInterface {
     required DateTime scheduledTime,
     String? customMessage,
   }) async {
-    print('🔔 Fallback: Local notifications disabled');
   }
 
   @override
@@ -61,7 +55,6 @@ class FallbackNotificationService implements NotificationServiceInterface {
     required Book book,
     required TimeOfDay time,
   }) async {
-    print('🔔 Fallback: Local notifications disabled');
   }
 
   @override
@@ -69,7 +62,6 @@ class FallbackNotificationService implements NotificationServiceInterface {
     required Book book,
     required DateTime releaseTime,
   }) async {
-    print('🔔 Fallback: Local notifications disabled');
   }
 
   @override
@@ -77,7 +69,6 @@ class FallbackNotificationService implements NotificationServiceInterface {
     required Book book,
     String? customMessage,
   }) async {
-    print('🔔 Fallback: Local notifications disabled');
   }
 
   @override
@@ -85,16 +76,13 @@ class FallbackNotificationService implements NotificationServiceInterface {
     required Book book,
     required Duration interval,
   }) async {
-    print('🔔 Fallback: Local notifications disabled');
   }
 
   @override
   Future<void> cancelNotification(int notificationId) async {
-    print('🔔 Fallback: Local notifications disabled');
   }
 
   @override
   Future<void> cancelAllNotifications() async {
-    print('🔔 Fallback: Local notifications disabled');
   }
 }

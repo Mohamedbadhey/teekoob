@@ -116,7 +116,6 @@ class _FloatingAudioPlayerState extends State<FloatingAudioPlayer>
           AppRouter.goToPodcastEpisode(context, podcastId, audioService.currentItem!.id);
         } else {
           // Fallback: try to navigate to podcast detail if we can't find episode
-          print('⚠️ No podcast ID available, cannot navigate to episode');
         }
       }
     }

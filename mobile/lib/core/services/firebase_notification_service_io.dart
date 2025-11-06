@@ -10,7 +10,6 @@ import 'package:teekoob/core/models/book_model.dart';
 class FirebaseNotificationService implements NotificationServiceInterface {
   @override
   Future<void> initialize() async {
-    print('🔔 Firebase messaging disabled for Android builds');
   }
 
   @override

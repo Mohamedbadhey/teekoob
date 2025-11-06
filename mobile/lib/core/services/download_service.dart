@@ -141,18 +141,15 @@ class DownloadService {
         // Initialize FFI for web using sqflite_common_ffi_web
         databaseFactory = databaseFactoryFfiWeb;
         _databaseFactoryInitialized = true;
-        print('🔧 DownloadService: Initialized databaseFactoryFfiWeb for web platform');
       } else if (!kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS) && !_databaseFactoryInitialized) {
         // Initialize FFI for desktop platforms (Linux, Windows, macOS)
         // Note: sqfliteFfiInit() may not be needed in newer versions, but try it
         try {
           sqfliteFfiInit();
         } catch (e) {
-          print('⚠️ DownloadService: sqfliteFfiInit() failed (might not be needed): $e');
         }
         databaseFactory = databaseFactoryFfi;
         _databaseFactoryInitialized = true;
-        print('🔧 DownloadService: Initialized databaseFactoryFfi for desktop platform');
       }
       // Note: For Android/iOS, use the default databaseFactory (no initialization needed)
       
@@ -161,11 +158,9 @@ class DownloadService {
       if (kIsWeb) {
         // Web uses a simple string for the database name
         dbPath = 'downloads.db';
-        print('🔧 DownloadService: Using web database path: $dbPath');
       } else {
         // Mobile and desktop use full path
         dbPath = path.join(await getDatabasesPath(), 'downloads.db');
-        print('🔧 DownloadService: Using platform database path: $dbPath');
       }
       
       _database = await openDatabase(
@@ -247,13 +242,10 @@ class DownloadService {
             // Column might already exist
           }
         } catch (e) {
-          print('⚠️ Error upgrading database: $e');
         }
       },
       );
-      print('✅ DownloadService: Database initialized successfully');
     } catch (e) {
-      print('❌ DownloadService: Error initializing database: $e');
       rethrow;
     } finally {
       // Clear the future once initialization is complete
@@ -264,12 +256,10 @@ class DownloadService {
   Future<bool> _requestStoragePermission() async {
     // On web, storage permissions work differently - we can proceed
     if (kIsWeb) {
-      print('🔐 Web platform: Storage permissions not required');
       return true;
     }
     
     if (Platform.isAndroid) {
-      print('🔐 Requesting storage permissions...');
       
       // For app-specific directories, we usually don't need permissions
       // But let's try to get permissions for better compatibility
@@ -281,36 +271,29 @@ class DownloadService {
           if (!await testDir.exists()) {
             await testDir.create(recursive: true);
           }
-          print('✅ App-specific storage accessible');
           return true;
         }
       } catch (e) {
-        print('⚠️ App-specific storage test failed: $e');
       }
       
       // Try storage permission for older Android
       try {
         final storageStatus = await Permission.storage.request();
         if (storageStatus.isGranted) {
-          print('✅ Storage permission granted');
           return true;
         }
       } catch (e) {
-        print('⚠️ Storage permission request failed: $e');
       }
       
       // Try audio permission for Android 13+
       try {
         final audioStatus = await Permission.audio.request();
         if (audioStatus.isGranted) {
-          print('✅ Audio permission granted');
           return true;
         }
       } catch (e) {
-        print('⚠️ Audio permission request failed: $e');
       }
       
-      print('⚠️ No explicit permissions granted, but continuing with app-specific directory');
       return true; // Return true anyway - app-specific dir usually works
     }
     return true; // iOS doesn't need explicit permission for app directory
@@ -367,30 +350,21 @@ class DownloadService {
       throw Exception('Storage permission denied');
     }
 
-    print('📥 DownloadService: Starting complete download for book: ${book.id}');
     
     try {
       // Download book metadata (store as JSON)
-      print('📥 DownloadService: Saving book metadata...');
       await _saveBookMetadata(book);
-      print('✅ DownloadService: Book metadata saved');
       
       // Download ebook content if available
       if (book.ebookContent != null && book.ebookContent!.isNotEmpty) {
-        print('📥 DownloadService: Downloading ebook content...');
         await downloadBookEbook(book.id, book.ebookContent!);
-        print('✅ DownloadService: Ebook content downloaded');
       } else if (book.ebookUrl != null && book.ebookUrl!.isNotEmpty) {
-        print('📥 DownloadService: Downloading ebook from URL...');
         await downloadBookEbook(book.id, book.ebookUrl!);
-        print('✅ DownloadService: Ebook downloaded from URL');
       }
       
       // Download audio if available
       if (book.audioUrl != null && book.audioUrl!.isNotEmpty) {
-        print('📥 DownloadService: Downloading audio...');
         await downloadBookAudio(book.id, book.audioUrl!);
-        print('✅ DownloadService: Audio downloaded');
       }
       
       // Verify all downloads are completed
@@ -400,13 +374,9 @@ class DownloadService {
         (d.type == DownloadType.bookAudio || d.type == DownloadType.bookEbook)
       ).toList();
       
-      print('✅ DownloadService: Complete book download finished: ${book.id}');
-      print('✅ DownloadService: Verified ${bookDownloads.length} downloads for book ${book.id}:');
       for (final d in bookDownloads) {
-        print('   - ${d.type}: ${d.status} (${d.localPath ?? 'no path'})');
       }
     } catch (e) {
-      print('❌ Error downloading complete book: $e');
       rethrow;
     }
   }
@@ -425,7 +395,6 @@ class DownloadService {
         )
       ''');
     } catch (e) {
-      print('⚠️ Error creating book_metadata table (may already exist): $e');
     }
     
     // Save book as JSON
@@ -441,9 +410,7 @@ class DownloadService {
         },
         conflictAlgorithm: ConflictAlgorithm.replace,
       );
-      print('✅ Book metadata saved: ${book.id}');
     } catch (e) {
-      print('❌ Error saving book metadata: $e');
       rethrow;
     }
   }
@@ -477,7 +444,6 @@ class DownloadService {
       final metadataStr = maps.first['metadata'] as String;
       return jsonDecode(metadataStr) as Map<String, dynamic>;
     } catch (e) {
-      print('❌ Error getting book metadata: $e');
       return null;
     }
   }
@@ -499,13 +465,11 @@ class DownloadService {
           try {
             await downloadPodcastEpisode(episode.id, episode.audioUrl!, podcastId: podcast.id);
           } catch (e) {
-            print('⚠️ Error downloading episode ${episode.id}: $e');
             // Continue with other episodes
           }
         }
       }
     } catch (e) {
-      print('❌ Error downloading complete podcast: $e');
       rethrow;
     }
   }
@@ -524,7 +488,6 @@ class DownloadService {
         )
       ''');
     } catch (e) {
-      print('⚠️ Error creating podcast_metadata table (may already exist): $e');
     }
     
     // Save podcast as JSON
@@ -540,9 +503,7 @@ class DownloadService {
         },
         conflictAlgorithm: ConflictAlgorithm.replace,
       );
-      print('✅ Podcast metadata saved: ${podcast.id}');
     } catch (e) {
-      print('❌ Error saving podcast metadata: $e');
       rethrow;
     }
   }
@@ -576,7 +537,6 @@ class DownloadService {
       final metadataStr = maps.first['metadata'] as String;
       return jsonDecode(metadataStr) as Map<String, dynamic>;
     } catch (e) {
-      print('❌ Error getting podcast metadata: $e');
       return null;
     }
   }
@@ -621,7 +581,6 @@ class DownloadService {
     _activeDownloads[downloadId] = downloadItem;
 
     try {
-      print('⬇️ Starting audio file download...');
       
       if (!kIsWeb) {
         // On mobile/desktop, ensure parent directory exists
@@ -688,16 +647,11 @@ class DownloadService {
       await _saveDownload(completedItem);
       _activeDownloads.remove(downloadId);
 
-      print('✅ Audio download completed: $filePath');
-      print('✅ File size: $fileSize bytes');
-      print('✅ DownloadItem saved with ID: $downloadId, status: ${completedItem.status}, itemId: ${completedItem.itemId}');
       
       // Verify the download was saved
       final saved = await getDownload(downloadId);
       if (saved != null) {
-        print('✅ Verified download saved: ${saved.status} for ${saved.itemId}');
       } else {
-        print('❌ WARNING: Download not found after save!');
       }
       
       return filePath;
@@ -771,7 +725,6 @@ class DownloadService {
     try {
       if (ebookUrlOrContent.startsWith('http') || ebookUrlOrContent.startsWith('/')) {
         // Download from URL
-        print('⬇️ Downloading ebook from URL...');
         
         if (!kIsWeb) {
           // On mobile/desktop, ensure parent directory exists
@@ -810,7 +763,6 @@ class DownloadService {
       );
       } else {
         // Save direct content
-        print('📝 Saving ebook content...');
         
         if (kIsWeb) {
           // On web, store content in database instead of file system
@@ -836,7 +788,6 @@ class DownloadService {
           
           // Use a virtual path for web
           filePath = '/downloads/$bookId.txt';
-          print('✅ Ebook content saved to database (${ebookUrlOrContent.length} characters)');
         } else {
           // On mobile/desktop, save to file system
           final file = File(filePath);
@@ -848,7 +799,6 @@ class DownloadService {
           }
           
           await file.writeAsString(ebookUrlOrContent);
-          print('✅ Ebook content saved: $filePath (${ebookUrlOrContent.length} characters)');
         }
         final contentLength = ebookUrlOrContent.length;
         final updatedItem = DownloadItem(
@@ -887,15 +837,11 @@ class DownloadService {
       await _saveDownload(completedItem);
       _activeDownloads.remove(downloadId);
 
-      print('✅ Ebook download completed: $filePath');
-      print('✅ DownloadItem saved with ID: $downloadId, status: ${completedItem.status}, itemId: ${completedItem.itemId}');
       
       // Verify the download was saved
       final saved = await getDownload(downloadId);
       if (saved != null) {
-        print('✅ Verified ebook download saved: ${saved.status} for ${saved.itemId}');
       } else {
-        print('❌ WARNING: Ebook download not found after save!');
       }
       
       return filePath;
@@ -1044,13 +990,11 @@ class DownloadService {
         try {
           await _initDatabase().timeout(const Duration(seconds: 5));
         } catch (e) {
-          print('❌ DownloadService: Failed to initialize database in getAllDownloads: $e');
           return [];
         }
       }
       
       if (_database == null) {
-        print('⚠️ DownloadService: Database is null after initialization attempt');
         return [];
       }
       
@@ -1072,7 +1016,6 @@ class DownloadService {
 
       return maps.map((map) => DownloadItem.fromJson(map)).toList();
     } catch (e) {
-      print('❌ DownloadService: Error in getAllDownloads: $e');
       return [];
     }
   }
@@ -1083,20 +1026,17 @@ class DownloadService {
         try {
           await _initDatabase().timeout(const Duration(seconds: 5));
         } catch (e) {
-          print('❌ DownloadService: Failed to initialize database in getCompletedDownloads: $e');
           return [];
         }
       }
       
       if (_database == null) {
-        print('⚠️ DownloadService: Database is null after initialization attempt');
         return [];
       }
       
       List<Map<String, dynamic>> maps;
       
       final statusString = DownloadStatus.completed.toString().split('.').last;
-      print('🔍 DownloadService: Getting completed downloads with status: $statusString');
       
       if (type != null) {
         final typeString = type.toString().split('.').last;
@@ -1106,7 +1046,6 @@ class DownloadService {
           whereArgs: [statusString, typeString],
           orderBy: 'completed_at DESC',
         );
-        print('🔍 DownloadService: Found ${maps.length} completed downloads of type $typeString');
       } else {
         maps = await _database!.query(
           'downloads',
@@ -1114,27 +1053,21 @@ class DownloadService {
           whereArgs: [statusString],
           orderBy: 'completed_at DESC',
         );
-        print('🔍 DownloadService: Found ${maps.length} total completed downloads');
       }
 
       final items = maps.map((map) {
         try {
           return DownloadItem.fromJson(map);
         } catch (e) {
-          print('❌ DownloadService: Error parsing download item: $e');
-          print('❌ DownloadService: Map data: $map');
           return null;
         }
       }).whereType<DownloadItem>().toList();
       
-      print('🔍 DownloadService: Parsed ${items.length} download items');
       for (final item in items) {
-        print('  - ${item.type} for ${item.itemId}: ${item.status}');
       }
       
       return items;
     } catch (e) {
-      print('❌ DownloadService: Error in getCompletedDownloads: $e');
       return [];
     }
   }
@@ -1219,7 +1152,6 @@ class DownloadService {
           await file.delete();
         }
       } catch (e) {
-        print('Error deleting file: $e');
       }
     }
     
@@ -1244,7 +1176,6 @@ class DownloadService {
             await file.delete();
           }
         } catch (e) {
-          print('Error deleting file: $e');
         }
       }
     }
@@ -1298,7 +1229,6 @@ class DownloadService {
       
       return podcastIds.toList();
     } catch (e) {
-      print('❌ Error getting podcasts with downloaded episodes: $e');
       return [];
     }
   }

@@ -38,71 +38,72 @@ import 'package:just_audio/just_audio.dart';
 import 'package:teekoob/core/services/teekoob_audio_handler.dart';
 
 void main() async {
-  print('🚀 ===== APP STARTUP =====');
   
   try {
     WidgetsFlutterBinding.ensureInitialized();
-    print('🚀 WidgetsFlutterBinding initialized');
     
     // Initialize Localization
-    print('🚀 Initializing Localization...');
     await LocalizationService.initialize();
-    print('🚀 ✅ Localization initialized');
     
-    print('🚀 Starting TeekoobApp...');
+    // CRITICAL: Initialize AudioService BEFORE runApp() to prevent old AudioPlayerService
+    // from initializing it first. The old service is created when RepositoryProviders
+    // are built, which happens synchronously during runApp().
+    print('[AUDIO DEBUG] ========== STARTING EARLY AUDIO INITIALIZATION ==========');
+    final audioHandlerCompleter = Completer<AudioHandler>();
+    final globalService = GlobalAudioPlayerService();
+    globalService.setAudioHandlerCompleter(audioHandlerCompleter);
+    
+    // Mark that we're initializing IMMEDIATELY (before any delay)
+    // This prevents the old AudioPlayerService from trying to initialize
+    print('[AUDIO DEBUG] Step 1: Marking as initializing...');
+    GlobalAudioPlayerService.markInitializing();
+    print('[AUDIO DEBUG] Step 2: Flag set, checking: ${GlobalAudioPlayerService.isInitializingAudioService}');
+    
+    // Initialize AudioService synchronously before runApp()
+    // We need FlutterEngine to be ready, so we wait a bit after ensureInitialized
+    try {
+      print('[AUDIO DEBUG] Step 3: Waiting for FlutterEngine...');
+      // Small delay to ensure FlutterEngine is ready
+      await Future.delayed(const Duration(milliseconds: 100));
+      
+      print('[AUDIO DEBUG] 🚀 Step 4: Initializing AudioService BEFORE runApp() to prevent conflicts...');
+      await globalService.initializeAudioHandler();
+      
+      // Check both instance and static handler
+      final audioHandler = globalService.audioHandler ?? GlobalAudioPlayerService.getGlobalHandler();
+      print('[AUDIO DEBUG] Step 5: Initialization complete, handler: ${audioHandler != null}');
+      print('[AUDIO DEBUG] Instance handler: ${globalService.audioHandler != null}');
+      print('[AUDIO DEBUG] Static handler: ${GlobalAudioPlayerService.getGlobalHandler() != null}');
+      if (audioHandler != null && !audioHandlerCompleter.isCompleted) {
+        audioHandlerCompleter.complete(audioHandler);
+        print('[AUDIO DEBUG] ✅ AudioService initialized successfully BEFORE runApp()!');
+        print('[AUDIO DEBUG] ✅ Handler stored globally: ${GlobalAudioPlayerService.getGlobalHandler() != null}');
+        print('[AUDIO DEBUG] ========== EARLY AUDIO INITIALIZATION SUCCESS ==========');
+      } else {
+        print('[AUDIO DEBUG] ⚠️ AudioService initialization - handler is null');
+        print('[AUDIO DEBUG] ⚠️ Will retry after runApp() when FlutterEngine is ready');
+        print('[AUDIO DEBUG] ========== EARLY AUDIO INITIALIZATION DEFERRED ==========');
+      }
+    } catch (e, stackTrace) {
+      print('[AUDIO DEBUG] ❌ AudioService initialization failed: $e');
+      print('[AUDIO DEBUG] Stack trace: $stackTrace');
+      print('[AUDIO DEBUG] ========== EARLY AUDIO INITIALIZATION ERROR ==========');
+      if (!audioHandlerCompleter.isCompleted) {
+        audioHandlerCompleter.completeError(e);
+      }
+    }
+    
+    // Now run the app - AudioService is already initialized
+    print('[AUDIO DEBUG] Step 6: Calling runApp()...');
     runApp(TeekoobApp());
     
-    // Initialize audio_service AFTER runApp() so FlutterEngine exists
-    // Use addPostFrameCallback to ensure the engine is fully ready
-    final audioHandlerCompleter = Completer<AudioHandler>();
-    
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      try {
-        // Additional delay to ensure FlutterEngine is completely ready
-        await Future.delayed(const Duration(milliseconds: 800));
-        
-        print('🚀 Initializing AudioService...');
-        // Initialize AudioService - the GlobalAudioPlayerService will create its own handler
-        final globalService = GlobalAudioPlayerService();
-        // Trigger initialization in the service
-        await globalService.initializeAudioHandler();
-        final audioHandler = globalService.audioHandler;
-        
-        if (audioHandler != null) {
-          print('🚀 ✅ AudioService initialized successfully');
-          if (!audioHandlerCompleter.isCompleted) {
-            audioHandlerCompleter.complete(audioHandler);
-          }
-        } else {
-          print('🚀 ⚠️ AudioHandler is null, but this may be OK - will retry on first playback');
-          // Don't complete with error - allow lazy initialization on first playback
-          if (!audioHandlerCompleter.isCompleted) {
-            // Complete with a placeholder - GlobalAudioPlayerService will handle retry
-            audioHandlerCompleter.completeError(Exception('AudioHandler not ready yet'));
-          }
-        }
-      } catch (e) {
-        print('🚀 ❌ Failed to initialize AudioService: $e');
-        print('🚀 ⚠️ This is often a timing issue and may not affect playback');
-        print('🚀 ⚠️ Audio playback will still work, but background controls may be limited');
-        // Complete with error so audio operations know to wait/retry
-        if (!audioHandlerCompleter.isCompleted) {
-          audioHandlerCompleter.completeError(e);
-        }
-      }
-    });
-    
-    // Store the completer in GlobalAudioPlayerService so it can wait for init
-    GlobalAudioPlayerService().setAudioHandlerCompleter(audioHandlerCompleter);
-    
     // Initialize Firebase notification service in background (non-blocking)
-    print('🚀 Initializing Firebase Notification Service in background...');
     _initializeFirebaseInBackground();
     
-    print('🚀 ===== APP STARTUP COMPLETE =====');
-  } catch (e) {
-    print('🚀 ❌ Critical startup error: $e');
-    print('🚀 Starting app anyway...');
+  } catch (e, stackTrace) {
+    print('[AUDIO DEBUG] ❌ CRITICAL ERROR in main(): $e');
+    print('[AUDIO DEBUG] Stack trace: $stackTrace');
+    // Still run the app even if initialization fails
     runApp(TeekoobApp());
   }
 }
@@ -112,14 +113,11 @@ void _initializeFirebaseInBackground() async {
   try {
     // Skip Firebase initialization on web platform
     if (kIsWeb) {
-      print('🚀 ⚠️ Skipping Firebase initialization on web platform');
       return;
     }
     
     await FirebaseNotificationService().initialize();
-    print('🚀 ✅ Firebase Notification Service initialized successfully');
   } catch (e) {
-    print('🚀 ❌ Firebase initialization failed, app will continue without notifications: $e');
   }
 }
 
@@ -128,13 +126,11 @@ NotificationServiceInterface _createNotificationService() {
   try {
     // Use stub implementation on web platform
     if (kIsWeb) {
-      print('🚀 Using stub notification service for web platform');
       return FirebaseNotificationService(); // This will use the stub implementation
     }
     
     return FirebaseNotificationService();
   } catch (e) {
-    print('🚀 ⚠️ Using fallback notification service due to Firebase error: $e');
     return FallbackNotificationService();
   }
 }
@@ -173,15 +169,51 @@ class _TeekoobAppState extends State<TeekoobApp> with WidgetsBindingObserver {
 
   Future<void> _initializeGlobalAudioService() async {
     try {
-      // Wait a bit longer to ensure JustAudioBackground is fully ready
-      // even if init() had an error, it might still work
+      // This is called AFTER runApp(), so FlutterEngine is definitely ready
+      // If early initialization failed, retry here
+      print('[AUDIO DEBUG] _initializeGlobalAudioService() called - FlutterEngine is ready');
+      
+      // Check if AudioService was already initialized
+      final existingHandler = GlobalAudioPlayerService.getGlobalHandler();
+      if (GlobalAudioPlayerService.isAudioServiceInitialized && existingHandler != null) {
+        print('[AUDIO DEBUG] ✅ AudioService already initialized, handler exists');
+        print('[AUDIO DEBUG] ✅ Handler type: ${existingHandler.runtimeType}');
+        print('[AUDIO DEBUG] ✅ Using existing handler for background controls');
+        // Make sure the instance also has the handler
+        final service = GlobalAudioPlayerService();
+        if (service.audioHandler == null) {
+          print('[AUDIO DEBUG] Setting instance handler from global handler');
+          // Directly set the handler - don't call initializeAudioHandler() as it will fail
+          service.setAudioHandler(existingHandler);
+          print('[AUDIO DEBUG] ✅ Instance handler set from global handler');
+        } else {
+          print('[AUDIO DEBUG] Instance handler already exists');
+        }
+        // Also call initialize() to set up audio player
+        await GlobalAudioPlayerService().initialize();
+        return;
+      }
+      
+      // Wait a bit to ensure everything is ready
       await Future.delayed(const Duration(milliseconds: 300));
       
+      print('[AUDIO DEBUG] Retrying AudioService initialization after runApp()...');
+      await GlobalAudioPlayerService().initializeAudioHandler();
+      
+      final handler = GlobalAudioPlayerService.getGlobalHandler();
+      if (handler != null) {
+        print('[AUDIO DEBUG] ✅ AudioService initialized successfully after runApp()!');
+        print('[AUDIO DEBUG] ✅ Handler stored: ${handler != null}');
+      } else {
+        print('[AUDIO DEBUG] ⚠️ AudioService initialization still failed after runApp()');
+        print('[AUDIO DEBUG] ⚠️ Background controls will not be available');
+      }
+      
+      // Also call initialize() to set up audio player
       await GlobalAudioPlayerService().initialize();
-      print('🎵 ✅ Global Audio Service initialized for background playback');
-    } catch (e) {
-      print('🎵 ❌ Failed to initialize Global Audio Service: $e');
-      print('🎵 ⚠️ Audio playback may still work, but with limited background support');
+    } catch (e, stackTrace) {
+      print('[AUDIO DEBUG] ⚠️ _initializeGlobalAudioService() error: $e');
+      print('[AUDIO DEBUG] Stack trace: $stackTrace');
     }
   }
 
@@ -265,28 +297,27 @@ class _TeekoobAppState extends State<TeekoobApp> with WidgetsBindingObserver {
                 ),
               ),
             ],
-        child: BlocListener<AuthBloc, AuthState>(
-          listener: (context, authState) {
-            if (authState is Authenticated) {
-              // Apply theme change after current frame to avoid setState during build
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                final userTheme = authState.user.preferences['theme'] ?? 'system';
-                final themeService = context.read<ThemeService>();
-                themeService.setThemeFromString(userTheme);
-              });
-            }
-          },
-          child: MultiProvider(
-            providers: [
+        child: MultiProvider(
+          providers: [
             ChangeNotifierProvider(create: (context) => ThemeService()),
             ChangeNotifierProvider(create: (context) => LanguageService()),
             ChangeNotifierProvider(create: (context) => GlobalAudioPlayerService()),
-            ],
+          ],
+          child: BlocListener<AuthBloc, AuthState>(
+            listener: (context, authState) {
+              if (authState is Authenticated) {
+                // Apply theme change after current frame to avoid setState during build
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  final userTheme = authState.user.preferences['theme'] ?? 'system';
+                  final themeService = context.read<ThemeService>();
+                  themeService.setThemeFromString(userTheme);
+                });
+              }
+            },
             child: Consumer<LanguageService>(
               builder: (context, languageService, child) {
                 return Consumer<ThemeService>(
                   builder: (context, themeService, child) {
-                    print('🎨 Main: Consumer rebuild - current theme: ${themeService.currentTheme}, language: ${languageService.currentLanguageCode}');
                     return MaterialApp.router(
                       title: 'Teekoob',
                       theme: AppTheme.lightTheme,

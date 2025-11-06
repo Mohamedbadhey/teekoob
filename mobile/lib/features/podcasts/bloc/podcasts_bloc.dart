@@ -406,12 +406,9 @@ class PodcastsBloc extends Bloc<PodcastsEvent, PodcastsState> {
     Emitter<PodcastsState> emit,
   ) async {
     try {
-      print('🎧 PodcastsBloc: Loading episodes for podcast: ${event.podcastId}');
-      print('🎧 PodcastsBloc: Event params - page: ${event.page}, limit: ${event.limit}, search: ${event.search}, season: ${event.season}');
       
       emit(PodcastsLoading());
       
-      print('🎧 PodcastsBloc: Calling getPodcastEpisodes service method');
       final episodes = await _podcastsService.getPodcastEpisodes(
         event.podcastId,
         page: event.page,
@@ -420,17 +417,13 @@ class PodcastsBloc extends Bloc<PodcastsEvent, PodcastsState> {
         season: event.season,
       );
       
-      print('🎧 PodcastsBloc: Received ${episodes.length} episodes from service');
       
       emit(PodcastEpisodesLoaded(
         episodes: episodes,
         podcastId: event.podcastId,
       ));
       
-      print('✅ PodcastsBloc: Successfully emitted PodcastEpisodesLoaded state');
     } catch (e) {
-      print('💥 PodcastsBloc: Error loading episodes: $e');
-      print('💥 PodcastsBloc: Error type: ${e.runtimeType}');
       emit(PodcastsError('Failed to load podcast episodes: $e'));
     }
   }

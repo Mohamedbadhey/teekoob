@@ -58,13 +58,11 @@ class _LibraryPageState extends State<LibraryPage> with SingleTickerProviderStat
   }
 
   void _loadLibraryData() {
-    print('🎯 LibraryPage: Loading library data for user: $_userId');
     try {
       // LoadLibrary already loads favorites, so we don't need a separate LoadFavorites call
       context.read<LibraryBloc>().add(LoadLibrary(_userId));
-      print('✅ LibraryPage: LoadLibrary event dispatched successfully');
     } catch (e) {
-      print('❌ LibraryPage: Error dispatching LoadLibrary event: $e');
+      // Silently handle error - library loading will retry on next navigation
     }
   }
 
@@ -216,7 +214,6 @@ class _LibraryPageState extends State<LibraryPage> with SingleTickerProviderStat
                       },
                     );
                   } catch (e) {
-                    print('❌ Error parsing book: $e');
                     return const SizedBox.shrink();
                   }
                 },
@@ -279,7 +276,6 @@ class _LibraryPageState extends State<LibraryPage> with SingleTickerProviderStat
                       },
                     );
                   } catch (e) {
-                    print('❌ Error parsing podcast: $e');
                     return const SizedBox.shrink();
                   }
                 },
@@ -295,9 +291,7 @@ class _LibraryPageState extends State<LibraryPage> with SingleTickerProviderStat
     final downloadedBooks = state.downloadedBooks;
     final downloadedPodcasts = state.downloadedPodcasts;
     
-    print('📥 LibraryPage: Building offline tab - Books: ${downloadedBooks.length}, Podcasts: ${downloadedPodcasts.length}');
     if (downloadedBooks.isNotEmpty) {
-      print('📥 LibraryPage: Downloaded book IDs: ${downloadedBooks.map((d) => d['item_id']).toList()}');
     }
     
     if (downloadedBooks.isEmpty && downloadedPodcasts.isEmpty) {
@@ -553,7 +547,6 @@ class _LibraryPageState extends State<LibraryPage> with SingleTickerProviderStat
       final libraryBloc = context.read<LibraryBloc>();
       return await libraryBloc.fetchBooksByIds(bookIds);
     } catch (e) {
-      print('❌ Error fetching books: $e');
       return [];
     }
   }
@@ -590,13 +583,12 @@ class _LibraryPageState extends State<LibraryPage> with SingleTickerProviderStat
             result.add(podcastMap);
           }
         } catch (e) {
-          print('❌ Error fetching podcast $podcastId: $e');
+          // Skip podcast if fetch fails
         }
       }
       
       return result;
     } catch (e) {
-      print('❌ Error fetching downloaded podcasts: $e');
       return [];
     }
   }
@@ -615,7 +607,8 @@ class _LibraryPageState extends State<LibraryPage> with SingleTickerProviderStat
             podcasts.add(Podcast.fromJson(metadata));
             continue;
           } catch (e) {
-            print('❌ Error parsing cached podcast metadata: $e');
+            // Skip podcast if metadata parsing fails
+            continue;
           }
         }
         
@@ -627,13 +620,12 @@ class _LibraryPageState extends State<LibraryPage> with SingleTickerProviderStat
             podcasts.add(podcast);
           }
         } catch (e) {
-          print('❌ Error fetching podcast $podcastId from API: $e');
+          // Skip podcast if API fetch fails
         }
       }
       
       return podcasts;
     } catch (e) {
-      print('❌ Error fetching podcasts: $e');
       return [];
     }
   }
@@ -709,7 +701,6 @@ class _LibraryPageState extends State<LibraryPage> with SingleTickerProviderStat
         );
       }
     } catch (e) {
-      print('❌ Error deleting offline book: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -797,7 +788,6 @@ class _LibraryPageState extends State<LibraryPage> with SingleTickerProviderStat
         );
       }
     } catch (e) {
-      print('❌ Error deleting offline podcast: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -826,24 +816,12 @@ class _LibraryPageState extends State<LibraryPage> with SingleTickerProviderStat
             Expanded(
               child: BlocListener<LibraryBloc, LibraryState>(
                 listener: (context, state) {
-                  print('🎧 LibraryPage BlocListener: State changed to ${state.runtimeType}');
-                  
-                  if (state is LibraryLoading) {
-                    print('⏳ LibraryPage Listener: Library is loading...');
-                  } else if (state is LibraryLoaded) {
-                    print('✅ LibraryPage Listener: Library loaded successfully - ${state.library.length} books');
-                  } else if (state is LibraryError) {
-                    print('❌ LibraryPage Listener: Library error - ${state.message}');
-                  } else if (state is LibrarySearchResults) {
-                    print('🔍 LibraryPage Listener: Search results loaded - ${state.results.length} results');
-                  }
+                  // State changes handled by BlocBuilder below
                 },
                 child: BlocBuilder<LibraryBloc, LibraryState>(
                   builder: (context, state) {
-                    print('🔍 LibraryPage BlocBuilder: Current state = ${state.runtimeType}');
                     
                     if (state is LibrarySearchResults) {
-                      print('🔍 LibraryPage: Showing search results - ${state.results.length} results');
                       return _buildSearchResults(state);
                     } else if (state is LibraryLoaded) {
                       return _buildLibraryContent(state);

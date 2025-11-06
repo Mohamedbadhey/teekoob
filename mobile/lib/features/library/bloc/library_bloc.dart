@@ -382,25 +382,15 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
     Emitter<LibraryState> emit,
   ) async {
     try {
-      print('🎯 LibraryBloc: _onLoadLibrary called with userId: ${event.userId}');
-      print('🎯 LibraryBloc: Emitting LibraryLoading state');
       emit(const LibraryLoading());
 
-      print('🎯 LibraryBloc: Calling _libraryService.getUserLibrary...');
       final library = _libraryService.getUserLibrary(event.userId);
-      print('🎯 LibraryBloc: Library items retrieved: ${library.length}');
 
-      print('🎯 LibraryBloc: Loading favorites...');
       final favorites = await _libraryService.getFavorites();
-      print('🎯 LibraryBloc: Favorites retrieved: ${favorites.length}');
 
-      print('🎯 LibraryBloc: Calling _libraryService.getRecentlyReadBooks...');
       final recentlyRead = _libraryService.getRecentlyReadBooks(event.userId);
-      print('🎯 LibraryBloc: Recently read books retrieved: ${recentlyRead.length}');
 
-      print('🎯 LibraryBloc: Calling _libraryService.getReadingStats...');
       final stats = _libraryService.getReadingStats(event.userId);
-      print('🎯 LibraryBloc: Reading stats retrieved: $stats');
 
       // Load downloads with error handling
       List<DownloadItem> allDownloads = [];
@@ -410,12 +400,10 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
         allDownloads = await _downloadService.getAllDownloads().timeout(
           const Duration(seconds: 10),
           onTimeout: () {
-            print('⚠️ LibraryBloc: Timeout loading all downloads');
             return <DownloadItem>[];
           },
         );
       } catch (e) {
-        print('❌ LibraryBloc: Error loading all downloads: $e');
         allDownloads = [];
       }
       
@@ -423,12 +411,10 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
         completedDownloads = await _downloadService.getCompletedDownloads().timeout(
           const Duration(seconds: 10),
           onTimeout: () {
-            print('⚠️ LibraryBloc: Timeout loading completed downloads');
             return <DownloadItem>[];
           },
         );
       } catch (e) {
-        print('❌ LibraryBloc: Error loading completed downloads: $e');
         completedDownloads = [];
       }
       
@@ -460,7 +446,6 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
 
       final downloads = allDownloads.map((d) => d.toJson()).toList();
 
-      print('🎯 LibraryBloc: Emitting LibraryLoaded state');
       emit(LibraryLoaded(
         library: library,
         favorites: favorites,
@@ -471,10 +456,7 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
         downloadedPodcasts: downloadedPodcasts,
       ));
 
-      print('🎯 LibraryBloc: LibraryLoaded state emitted successfully');
     } catch (e) {
-      print('❌ LibraryBloc: Error loading library: $e');
-      print('❌ LibraryBloc: Emitting LibraryError state');
       emit(LibraryError('Failed to load library: $e'));
     }
   }
@@ -832,7 +814,6 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
       
       // Skip the sync API call as it causes rate limiting
       // Instead, just reload the library data
-      print('🔄 LibraryBloc: Sync requested, reloading library data instead of calling sync endpoint');
       
       // Reload library data directly (this includes favorites)
       add(LoadLibrary(event.userId));
@@ -842,7 +823,6 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
         operation: 'sync',
       ));
     } catch (e) {
-      print('❌ LibraryBloc: Error syncing library: $e');
       // Don't emit error state - just silently fail since we're reloading anyway
       emit(const LibraryOperationSuccess(
         message: 'Library refreshed',
@@ -888,12 +868,10 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
     Emitter<LibraryState> emit,
   ) async {
     try {
-      print('📥 LibraryBloc: Starting download for book: ${event.book.id}');
       
       // Download complete book (metadata, ebook content, and audio)
       await _downloadService.downloadCompleteBook(event.book);
       
-      print('✅ LibraryBloc: Book download completed');
 
       // Reload library state with updated downloads
       final currentState = state;
@@ -930,8 +908,6 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
 
         final downloads = allDownloads.map((d) => d.toJson()).toList();
 
-        print('📥 LibraryBloc: Updated downloads - Books: ${downloadedBooks.length}, Podcasts: ${downloadedPodcasts.length}');
-        print('📥 LibraryBloc: Downloaded book IDs: ${downloadedBooks.map((d) => d['item_id']).toList()}');
         
         // Update the state with new downloads - this will trigger UI refresh
         emit(currentState.copyWith(
@@ -952,8 +928,6 @@ class LibraryBloc extends Bloc<LibraryEvent, LibraryState> {
         add(LoadLibrary('current_user'));
       }
     } catch (e, stackTrace) {
-      print('❌ LibraryBloc: Download failed: $e');
-      print('❌ Stack trace: $stackTrace');
       emit(LibraryError('Failed to download book: ${e.toString()}'));
     }
   }
