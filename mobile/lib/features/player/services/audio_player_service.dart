@@ -9,7 +9,15 @@ import 'package:teekoob/core/services/global_audio_player_service.dart';
 
 class AudioPlayerService {
   AudioHandlerService? _audioHandler;
-  final AudioPlayer _audioPlayer = AudioPlayer();
+  // This service is deprecated - use GlobalAudioPlayerService instead
+  // AudioPlayer can be created directly (no just_audio_background needed)
+  AudioPlayer? _audioPlayerInstance;
+  AudioPlayer get _audioPlayer {
+    if (_audioPlayerInstance == null) {
+      _audioPlayerInstance = AudioPlayer();
+    }
+    return _audioPlayerInstance!;
+  }
   StreamSubscription<PlayerState>? _playerStateSubscription;
   StreamSubscription<Duration?>? _positionSubscription;
   StreamSubscription<Duration?>? _durationSubscription;
@@ -69,6 +77,16 @@ class AudioPlayerService {
   }
 
   Future<void> _initAudioService() async {
+    // CRITICAL: This method should NEVER be called
+    // GlobalAudioPlayerService handles all AudioService initialization
+    // Calling this will cause "already initialized" errors
+    print('[AUDIO DEBUG] ❌ ERROR: _initAudioService() should never be called!');
+    print('[AUDIO DEBUG] ❌ GlobalAudioPlayerService handles all AudioService initialization');
+    print('[AUDIO DEBUG] ❌ This method is disabled to prevent conflicts');
+    throw Exception('AudioService initialization is handled by GlobalAudioPlayerService. Do not call _initAudioService().');
+    
+    // OLD CODE BELOW - DISABLED TO PREVENT CONFLICTS
+    /*
     // Skip initialization if GlobalAudioPlayerService is handling AudioService
     // This prevents the "already initialized" error
     // GlobalAudioPlayerService should handle all audio playback
@@ -110,6 +128,7 @@ class AudioPlayerService {
       print('[AUDIO DEBUG] This is expected if GlobalAudioPlayerService is being used');
       _audioHandler = null; // Mark as null so we know it's not available
     }
+    */
   }
 
   Future<void> _initializeAudioSession() async {

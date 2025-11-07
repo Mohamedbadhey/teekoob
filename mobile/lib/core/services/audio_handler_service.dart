@@ -2,10 +2,23 @@ import 'dart:async';
 import 'package:audio_service/audio_service.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:teekoob/core/models/book_model.dart';
+import 'package:teekoob/core/services/global_audio_player_service.dart';
 
-/// Audio handler for background playback with media controls
+/// DEPRECATED: Audio handler for background playback with media controls
+/// This service is deprecated - use GlobalAudioPlayerService instead
+/// Kept for backward compatibility only
+@Deprecated('Use GlobalAudioPlayerService instead')
 class AudioHandlerService extends BaseAudioHandler with QueueHandler, SeekHandler {
-  final AudioPlayer _audioPlayer = AudioPlayer();
+  // This service is deprecated - use GlobalAudioPlayerService instead
+  // AudioPlayer can be created directly (no just_audio_background needed)
+  AudioPlayer? _audioPlayerInstance;
+  AudioPlayer get _audioPlayer {
+    if (_audioPlayerInstance == null) {
+      // AudioPlayer can be created directly (no just_audio_background needed)
+      _audioPlayerInstance = AudioPlayer();
+    }
+    return _audioPlayerInstance!;
+  }
   
   // Current book/podcast being played
   Book? _currentBook;
@@ -167,14 +180,25 @@ class AudioHandlerService extends BaseAudioHandler with QueueHandler, SeekHandle
   void dispose() {
     _playbackEventSubscription?.cancel();
     _playerStateSubscription?.cancel();
-    _audioPlayer.dispose();
+    _audioPlayerInstance?.dispose();
   }
 }
 
-/// Initialize audio handler
-/// NOTE: This should NOT be called if GlobalAudioPlayerService is being used
+/// DEPRECATED: This function should NOT be called
 /// AudioService.init() can only be called ONCE per app lifecycle
+/// Use GlobalAudioPlayerService instead
+/// 
+/// This function is kept for backward compatibility but will throw an error
+/// if GlobalAudioPlayerService is already handling AudioService
+@Deprecated('Use GlobalAudioPlayerService instead')
 Future<AudioHandlerService> initAudioService() async {
+  // CRITICAL: Check if GlobalAudioPlayerService is already handling AudioService
+  // If so, throw an error to prevent multiple initialization
+  if (GlobalAudioPlayerService.isInitializingAudioService || 
+      GlobalAudioPlayerService().isAudioServiceInitialized) {
+    throw Exception('AudioService is already initialized by GlobalAudioPlayerService. Use GlobalAudioPlayerService instead.');
+  }
+  
   // Check if AudioService is already initialized
   try {
     // Try to initialize - if it fails with cache manager error, AudioService is already initialized

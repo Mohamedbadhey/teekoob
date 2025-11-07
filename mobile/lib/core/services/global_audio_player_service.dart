@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:just_audio/just_audio.dart';
+// Removed just_audio_background - using audio_service directly with just_audio
 import 'package:audio_service/audio_service.dart';
 import 'package:audio_session/audio_session.dart';
 import 'package:teekoob/core/models/book_model.dart';
@@ -93,6 +94,16 @@ class AudioItem {
   }
 }
 
+/// Global audio player service for managing audio playback across the app.
+/// 
+/// CRITICAL REQUIREMENTS:
+/// 1. Only ONE AudioService.init() call exists - this is the ONLY place that calls it
+/// 2. Only ONE global AudioPlayer() instance is created and reused (lazy-initialized)
+/// 
+/// This service ensures:
+/// - Single AudioService instance (prevents "already initialized" errors)
+/// - Single AudioPlayer instance (prevents "single player instance" errors)
+/// - AudioPlayer can be created directly without just_audio_background
 class GlobalAudioPlayerService extends ChangeNotifier {
   static final GlobalAudioPlayerService _instance = GlobalAudioPlayerService._internal();
   factory GlobalAudioPlayerService() {
@@ -105,7 +116,16 @@ class GlobalAudioPlayerService extends ChangeNotifier {
   }
   GlobalAudioPlayerService._internal();
 
-  final AudioPlayer _audioPlayer = AudioPlayer();
+  // Lazy initialization - AudioPlayer can be created directly (no just_audio_background needed)
+  AudioPlayer? _audioPlayerInstance;
+  
+  AudioPlayer get _audioPlayer {
+    if (_audioPlayerInstance == null) {
+      print('[AUDIO DEBUG] Creating AudioPlayer instance (lazy initialization)');
+      _audioPlayerInstance = AudioPlayer();
+    }
+    return _audioPlayerInstance!;
+  }
   final DownloadService _downloadService = DownloadService();
   
   AudioItem? _currentItem;
@@ -168,8 +188,8 @@ class GlobalAudioPlayerService extends ChangeNotifier {
   // Get the global AudioHandler (for checking initialization status)
   static AudioHandler? getGlobalHandler() => _globalAudioHandler;
   
-  // Check if AudioService is initialized
-  static bool get isAudioServiceInitialized => _audioServiceInitialized;
+  // Check if AudioService is initialized (instance getter)
+  bool get isAudioServiceInitialized => _audioServiceInitialized;
 
   // Mark that we're initializing AudioService (call this before initializeAudioHandler)
   static void markInitializing() {
@@ -266,9 +286,24 @@ class GlobalAudioPlayerService extends ChangeNotifier {
       // Wait a bit longer to ensure FlutterEngine is fully initialized
       // The error "wrong Activity or FlutterEngine" suggests we're calling too early
       await Future.delayed(const Duration(milliseconds: 200));
+      
       try {
+        // Initialize AudioService - AudioPlayer will be created in the builder
+        print('[AUDIO DEBUG] Initializing AudioService (AudioPlayer will be created in builder)...');
+        
         _audioHandler = await AudioService.init(
-          builder: () => TeekoobAudioHandler(_audioPlayer),
+          builder: () {
+            // Create AudioPlayer instance if it doesn't exist
+            // No need for just_audio_background - AudioPlayer can be created directly
+            if (_audioPlayerInstance == null) {
+              print('[AUDIO DEBUG] Creating AudioPlayer instance in AudioService builder...');
+              _audioPlayerInstance = AudioPlayer();
+              print('[AUDIO DEBUG] ✅ AudioPlayer instance created in builder');
+            }
+            
+            print('[AUDIO DEBUG] Creating TeekoobAudioHandler with AudioPlayer');
+            return TeekoobAudioHandler(_audioPlayerInstance!);
+          },
           config: const AudioServiceConfig(
             androidNotificationChannelId: 'com.teekoob.app.audio',
             androidNotificationChannelName: 'Teekoob Audio Player',
@@ -296,6 +331,10 @@ class GlobalAudioPlayerService extends ChangeNotifier {
           print('[AUDIO DEBUG] ✅ Global handler verified: ${_globalAudioHandler != null}');
           print('[AUDIO DEBUG] ✅ Handler type: ${_audioHandler.runtimeType}');
           
+          // Now set up AudioPlayer listeners since AudioService is ready
+          // AudioPlayer was created in the builder, so we can now set up listeners
+          _setupAudioPlayerListeners();
+          
           // Complete the completer if it exists
           if (_audioHandlerCompleter != null && !_audioHandlerCompleter!.isCompleted) {
             _audioHandlerCompleter!.complete(_audioHandler!);
@@ -321,28 +360,41 @@ class GlobalAudioPlayerService extends ChangeNotifier {
             print('[AUDIO DEBUG] ✅ Found existing global handler! Using it...');
             _audioHandler = _globalAudioHandler;
             _audioServiceInitialized = true;
+            _isInitializing = false;
             print('[AUDIO DEBUG] ✅ Recovered handler from global storage');
             return; // Don't mark as error - we have a handler!
           }
           
           print('[AUDIO DEBUG] ❌ Cannot recover handler - background controls will NOT work');
           print('[AUDIO DEBUG] ❌ This means AudioService.init() was called multiple times');
+          print('[AUDIO DEBUG] ⚠️ Audio will still work but without background controls');
+          // Mark as initialized to prevent retries
           _audioServiceInitialized = true;
           _audioHandler = null;
+          _isInitializing = false;
           
           // Complete completer with error
           if (_audioHandlerCompleter != null && !_audioHandlerCompleter!.isCompleted) {
             _audioHandlerCompleter!.completeError(e);
           }
+          return; // Exit early - don't try to initialize again
         } else {
+          // For other errors (like FlutterEngine not ready), don't mark as initialized
+          // This allows retry on next play attempt
+          print('[AUDIO DEBUG] ⚠️ AudioService initialization failed (will retry on next play): $e');
           _audioHandler = null;
+          _isInitializing = false;
+          // DON'T set _audioServiceInitialized = true - allow retry
           
           // Complete completer with error
           if (_audioHandlerCompleter != null && !_audioHandlerCompleter!.isCompleted) {
             _audioHandlerCompleter!.completeError(e);
           }
+          return; // Exit early - will retry on next play
         }
       }
+      
+      _isInitializing = false;
     } else if (_audioServiceInitialized && _audioHandler == null) {
         print('[AUDIO DEBUG] ⚠️ AudioService was initialized but handler is null');
         print('[AUDIO DEBUG] ⚠️ This means AudioService.init() was called multiple times');
@@ -390,6 +442,112 @@ class GlobalAudioPlayerService extends ChangeNotifier {
   }
 
   // Initialize the audio player
+  /// Set up AudioPlayer listeners after AudioService is initialized
+  /// This must be called AFTER AudioService.init() completes successfully
+  void _setupAudioPlayerListeners() {
+    if (_audioPlayerInstance == null) {
+      print('[AUDIO DEBUG] ⚠️ AudioPlayer not created yet, cannot set up listeners');
+      return;
+    }
+    
+    print('[AUDIO DEBUG] Setting up AudioPlayer listeners...');
+    
+    // Listen to position changes
+    _positionSubscription?.cancel();
+    _positionSubscription = _audioPlayer.positionStream.listen((position) {
+      _position = position;
+      notifyListeners();
+    });
+    
+    // Listen to duration changes and update MediaItem
+    _durationSubscription?.cancel();
+    _durationSubscription = _audioPlayer.durationStream.listen((duration) async {
+      if (duration != null && duration != Duration.zero) {
+        print('[AUDIO DEBUG] Duration updated: ${duration.inSeconds}s');
+        _duration = duration;
+        notifyListeners();
+        
+        // Update MediaItem with duration once it's available
+        if (_audioHandler != null && 
+            _audioHandler is TeekoobAudioHandler && 
+            _currentItem != null) {
+          print('[AUDIO DEBUG] Updating MediaItem with duration...');
+          try {
+            // Build cover image URL for MediaItem
+            String? coverImageUrl;
+            if (_currentItem!.coverImageUrl != null && _currentItem!.coverImageUrl!.isNotEmpty) {
+              if (_currentItem!.coverImageUrl!.startsWith('http')) {
+                coverImageUrl = _currentItem!.coverImageUrl;
+              } else {
+                coverImageUrl = '${AppConfig.mediaBaseUrl}${_currentItem!.coverImageUrl}';
+              }
+            }
+            
+            final updatedMediaItem = MediaItem(
+              id: _currentItem!.id,
+              title: _currentItem!.title,
+              artist: _currentItem!.type == AudioType.book 
+                  ? (_currentItem!.author ?? 'Unknown Author') 
+                  : (_currentItem!.host ?? 'Podcast'),
+              album: _currentItem!.type == AudioType.book ? 'Audiobook' : 'Podcast',
+              artUri: coverImageUrl != null ? Uri.parse(coverImageUrl) : null,
+              duration: duration,
+              extras: {
+                'type': _currentItem!.type == AudioType.book ? 'book' : 'podcast',
+                'id': _currentItem!.id,
+              },
+            );
+            
+            await (_audioHandler as TeekoobAudioHandler).updateMediaItem(updatedMediaItem);
+            print('[AUDIO DEBUG] MediaItem updated with duration successfully');
+          } catch (e) {
+            print('[AUDIO DEBUG] Error updating MediaItem with duration: $e');
+          }
+        }
+      }
+    });
+    
+    // Listen to player state changes
+    _playerStateSubscription?.cancel();
+    _playerStateSubscription = _audioPlayer.playerStateStream.listen((playerState) {
+      print('[AUDIO DEBUG] Player state changed: ${playerState.processingState}, playing: ${playerState.playing}');
+      switch (playerState.processingState) {
+        case ProcessingState.idle:
+          if (!playerState.playing) {
+            _state = AudioPlayerState.stopped;
+            print('[AUDIO DEBUG] State: STOPPED');
+          }
+          break;
+        case ProcessingState.loading:
+          _state = AudioPlayerState.loading;
+          print('[AUDIO DEBUG] State: LOADING');
+          break;
+        case ProcessingState.buffering:
+          _state = AudioPlayerState.loading;
+          print('[AUDIO DEBUG] State: BUFFERING');
+          break;
+        case ProcessingState.ready:
+          if (playerState.playing) {
+            _state = AudioPlayerState.playing;
+            print('[AUDIO DEBUG] State: PLAYING');
+          } else {
+            _state = AudioPlayerState.paused;
+            print('[AUDIO DEBUG] State: PAUSED');
+          }
+          break;
+        case ProcessingState.completed:
+          _state = AudioPlayerState.stopped;
+          _position = Duration.zero;
+          print('[AUDIO DEBUG] State: COMPLETED');
+          _handleEpisodeCompletion();
+          break;
+      }
+      notifyListeners();
+    });
+    
+    print('[AUDIO DEBUG] ✅ AudioPlayer listeners set up successfully');
+  }
+
   Future<void> initialize() async {
     print('[AUDIO DEBUG] initialize() called, _isInitialized: $_isInitialized');
     if (_isInitialized) {
@@ -400,9 +558,8 @@ class GlobalAudioPlayerService extends ChangeNotifier {
     try {
       print('[AUDIO DEBUG] Starting audio player initialization...');
       
-      // Give JustAudioBackground a moment to fully initialize if needed
-      // This is a workaround for the late initialization error
-      await Future.delayed(const Duration(milliseconds: 200));
+      // AudioPlayer can be created directly (no just_audio_background needed)
+      print('[AUDIO DEBUG] Proceeding with AudioPlayer setup...');
       
       // Configure audio session for background playback
       print('[AUDIO DEBUG] Configuring AudioSession...');
@@ -423,102 +580,10 @@ class GlobalAudioPlayerService extends ChangeNotifier {
       ));
       print('[AUDIO DEBUG] AudioSession configured successfully');
 
-      // Listen to position changes and update AudioHandler
-      print('[AUDIO DEBUG] Setting up position stream listener...');
-      _positionSubscription = _audioPlayer.positionStream.listen((position) {
-        _position = position;
-        notifyListeners();
-        // Update AudioHandler playback state with position (for notification updates)
-        if (_audioHandler != null && _audioHandler is TeekoobAudioHandler) {
-          // Position updates are handled automatically by the handler's stream listeners
-        }
-      });
-
-      // Listen to duration changes and update MediaItem
-      print('[AUDIO DEBUG] Setting up duration stream listener...');
-      _durationSubscription = _audioPlayer.durationStream.listen((duration) async {
-        if (duration != null && duration != Duration.zero) {
-          print('[AUDIO DEBUG] Duration updated: ${duration.inSeconds}s');
-          _duration = duration;
-          notifyListeners();
-          
-          // Update MediaItem with duration once it's available
-          if (_audioHandler != null && 
-              _audioHandler is TeekoobAudioHandler && 
-              _currentItem != null) {
-            print('[AUDIO DEBUG] Updating MediaItem with duration...');
-            try {
-              // Build cover image URL for MediaItem
-              String? coverImageUrl;
-              if (_currentItem!.coverImageUrl != null && _currentItem!.coverImageUrl!.isNotEmpty) {
-                if (_currentItem!.coverImageUrl!.startsWith('http')) {
-                  coverImageUrl = _currentItem!.coverImageUrl;
-                } else {
-                  coverImageUrl = '${AppConfig.mediaBaseUrl}${_currentItem!.coverImageUrl}';
-                }
-              }
-              
-              final updatedMediaItem = MediaItem(
-                id: _currentItem!.id,
-                title: _currentItem!.title,
-                artist: _currentItem!.type == AudioType.book 
-                    ? (_currentItem!.author ?? 'Unknown Author') 
-                    : (_currentItem!.host ?? 'Podcast'),
-                album: _currentItem!.type == AudioType.book ? 'Audiobook' : 'Podcast',
-                artUri: coverImageUrl != null ? Uri.parse(coverImageUrl) : null,
-                duration: duration,
-                extras: {
-                  'type': _currentItem!.type == AudioType.book ? 'book' : 'podcast',
-                  'id': _currentItem!.id,
-                },
-              );
-              
-              await (_audioHandler as TeekoobAudioHandler).updateMediaItem(updatedMediaItem);
-              print('[AUDIO DEBUG] MediaItem updated with duration successfully');
-            } catch (e) {
-              print('[AUDIO DEBUG] Error updating MediaItem with duration: $e');
-            }
-          }
-        }
-      });
-
-      // Listen to player state changes
-      print('[AUDIO DEBUG] Setting up player state stream listener...');
-      _playerStateSubscription = _audioPlayer.playerStateStream.listen((playerState) {
-        print('[AUDIO DEBUG] Player state changed: ${playerState.processingState}, playing: ${playerState.playing}');
-        switch (playerState.processingState) {
-          case ProcessingState.idle:
-            if (!playerState.playing) {
-              _state = AudioPlayerState.stopped;
-              print('[AUDIO DEBUG] State: STOPPED');
-            }
-            break;
-          case ProcessingState.loading:
-            _state = AudioPlayerState.loading;
-            print('[AUDIO DEBUG] State: LOADING');
-            break;
-          case ProcessingState.buffering:
-            _state = AudioPlayerState.loading;
-            print('[AUDIO DEBUG] State: BUFFERING');
-            break;
-          case ProcessingState.ready:
-            if (playerState.playing) {
-              _state = AudioPlayerState.playing;
-              print('[AUDIO DEBUG] State: PLAYING');
-            } else {
-              _state = AudioPlayerState.paused;
-              print('[AUDIO DEBUG] State: PAUSED');
-            }
-            break;
-          case ProcessingState.completed:
-            _state = AudioPlayerState.stopped;
-            _position = Duration.zero;
-            print('[AUDIO DEBUG] State: COMPLETED');
-            _handleEpisodeCompletion();
-            break;
-        }
-        notifyListeners();
-      });
+      // CRITICAL: Don't access _audioPlayer here - it will be created when AudioService.init() is called
+      // AudioPlayer is created lazily in the builder when AudioService.init() is called
+      // Listeners will be set up AFTER AudioService is initialized
+      print('[AUDIO DEBUG] AudioPlayer listeners will be set up after AudioService is initialized');
 
       _isInitialized = true;
       print('[AUDIO DEBUG] Audio player initialized successfully');
@@ -543,16 +608,24 @@ class GlobalAudioPlayerService extends ChangeNotifier {
     print('[AUDIO DEBUG] AudioHandler exists: ${_audioHandler != null}');
     
     try {
-      // Ensure service is initialized before playing
-      if (!_isInitialized) {
-        print('[AUDIO DEBUG] Not initialized, calling initialize()...');
-        await initialize();
+      // CRITICAL: Initialize AudioService FIRST before creating AudioPlayer
+      // AudioPlayer can be created directly without just_audio_background
+      if (!_audioServiceInitialized || _audioHandler == null) {
+        print('[AUDIO DEBUG] AudioService not initialized yet, initializing AudioService first...');
+        
+        await initializeAudioHandler();
+        await Future.delayed(const Duration(milliseconds: 200));
+        
+        // Verify handler was created
+        if (_audioHandler == null && _globalAudioHandler != null) {
+          _audioHandler = _globalAudioHandler;
+          print('[AUDIO DEBUG] ✅ Using global handler after initialization');
+        }
       }
       
-      // Double-check initialization after delay (in case JustAudioBackground wasn't ready)
+      // Now initialize audio player AFTER AudioService is ready
       if (!_isInitialized) {
-        print('[AUDIO DEBUG] Still not initialized after first attempt, retrying...');
-        await Future.delayed(const Duration(milliseconds: 300));
+        print('[AUDIO DEBUG] Audio player not initialized, calling initialize() AFTER AudioService is ready...');
         await initialize();
       }
 
@@ -631,7 +704,7 @@ class GlobalAudioPlayerService extends ChangeNotifier {
         },
       );
       
-      // Create AudioSource with MediaItem tag for just_audio_background
+      // Create AudioSource with MediaItem tag for audio_service
       // Handle local files vs network URLs
       final Uri audioUri;
       if (item.isLocalFile) {
@@ -742,13 +815,36 @@ class GlobalAudioPlayerService extends ChangeNotifier {
           }
           
           print('[AUDIO DEBUG] Calling setAudioSource with URI: $audioUri');
-          await _audioPlayer.setAudioSource(audioSource);
-          print('[AUDIO DEBUG] Audio source set successfully');
-          sourceSet = true;
+          // Add timeout for slow network connections (30 seconds for URL loading)
+          // This prevents indefinite hanging when loading audio from slow URLs
+          try {
+            await _audioPlayer.setAudioSource(audioSource).timeout(
+              const Duration(seconds: 30),
+              onTimeout: () {
+                print('[AUDIO DEBUG] Timeout: Audio source loading took too long (>30s)');
+                throw TimeoutException(
+                  'Audio URL loading timeout: The audio file took too long to load. Please check your internet connection.',
+                  const Duration(seconds: 30),
+                );
+              },
+            );
+            print('[AUDIO DEBUG] Audio source set successfully');
+            sourceSet = true;
+          } on TimeoutException catch (timeoutError) {
+            // Re-throw timeout exceptions immediately
+            lastError = timeoutError.toString();
+            print('[AUDIO DEBUG] Timeout error: $timeoutError');
+            throw timeoutError;
+          }
         } catch (e, stackTrace) {
           lastError = e.toString();
           print('[AUDIO DEBUG] ERROR setting audio source: $e');
           print('[AUDIO DEBUG] Stack trace: $stackTrace');
+          
+          // Check if it's a timeout error
+          final isTimeoutError = e is TimeoutException || 
+                                e.toString().contains('TimeoutException') ||
+                                e.toString().contains('timeout');
           
           // Check if it's a source error (network/file not found)
           final isSourceError = e.toString().contains('Source error') ||
@@ -762,9 +858,15 @@ class GlobalAudioPlayerService extends ChangeNotifier {
                              e.toString().contains('not been initialized') ||
                              e.toString().contains('LateInitializationError');
           
-          print('[AUDIO DEBUG] Error type - Source: $isSourceError, Init: $isInitError');
+          print('[AUDIO DEBUG] Error type - Timeout: $isTimeoutError, Source: $isSourceError, Init: $isInitError');
           
-          if (isSourceError && retryCount < maxRetries - 1) {
+          // Handle timeout errors - retry with longer timeout for slow connections
+          if (isTimeoutError && retryCount < maxRetries - 1) {
+            retryCount++;
+            final waitTime = 2000 * retryCount; // 2s, 4s, 6s
+            print('[AUDIO DEBUG] Timeout error, retrying in ${waitTime}ms...');
+            await Future.delayed(Duration(milliseconds: waitTime));
+          } else if (isSourceError && retryCount < maxRetries - 1) {
             // For source errors, wait longer before retry
             retryCount++;
             final waitTime = 1000 * retryCount; // 1s, 2s, 3s
@@ -833,6 +935,18 @@ class GlobalAudioPlayerService extends ChangeNotifier {
       print('[AUDIO DEBUG] ========== ERROR in playItem() ==========');
       print('[AUDIO DEBUG] Error: $e');
       print('[AUDIO DEBUG] Stack trace: $stackTrace');
+      
+      // Update MediaItem with error - shows in notification/lock screen
+      if (_audioHandler != null && _audioHandler is TeekoobAudioHandler && _currentItem != null) {
+        try {
+          final errorMessage = _getUserFriendlyErrorMessage(e);
+          await (_audioHandler as TeekoobAudioHandler).updateMediaItemWithError(errorMessage);
+          print('[AUDIO DEBUG] Error displayed in notification/lock screen');
+        } catch (updateError) {
+          print('[AUDIO DEBUG] Failed to update MediaItem with error: $updateError');
+        }
+      }
+      
       _state = AudioPlayerState.error;
       notifyListeners();
     }
@@ -1176,6 +1290,27 @@ class GlobalAudioPlayerService extends ChangeNotifier {
     return _position.inMilliseconds / _duration.inMilliseconds;
   }
 
+  /// Get user-friendly error message from exception
+  String _getUserFriendlyErrorMessage(dynamic error) {
+    final errorStr = error.toString().toLowerCase();
+    
+    if (errorStr.contains('timeout') || errorStr.contains('timed out')) {
+      return 'Connection timeout. Please check your internet connection.';
+    } else if (errorStr.contains('network') || errorStr.contains('connection')) {
+      return 'Network error. Please check your internet connection.';
+    } else if (errorStr.contains('not found') || errorStr.contains('404')) {
+      return 'Audio file not found.';
+    } else if (errorStr.contains('permission') || errorStr.contains('denied')) {
+      return 'Permission denied. Please check app permissions.';
+    } else if (errorStr.contains('format') || errorStr.contains('codec')) {
+      return 'Unsupported audio format.';
+    } else if (errorStr.contains('source error')) {
+      return 'Failed to load audio. Please try again.';
+    } else {
+      return 'Playback error occurred. Please try again.';
+    }
+  }
+
   // Handle episode completion and auto-advance to next episode
   void _handleEpisodeCompletion() {
     
@@ -1189,7 +1324,7 @@ class GlobalAudioPlayerService extends ChangeNotifier {
     }
   }
 
-  // Note: Lock screen controls are automatically handled by just_audio_background
+  // Note: Lock screen controls are automatically handled by audio_service
   // when using AudioSource.uri() with MediaItem tags
 
   // Dispose resources
@@ -1198,7 +1333,7 @@ class GlobalAudioPlayerService extends ChangeNotifier {
     _positionSubscription?.cancel();
     _durationSubscription?.cancel();
     _playerStateSubscription?.cancel();
-    _audioPlayer.dispose();
+    _audioPlayerInstance?.dispose();
     super.dispose();
   }
 }

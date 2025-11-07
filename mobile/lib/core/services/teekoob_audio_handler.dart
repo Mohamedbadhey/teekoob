@@ -38,6 +38,23 @@ class TeekoobAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandle
     print('[AUDIO HANDLER DEBUG] Setting up playback event stream listener...');
     _playbackSubscription = _player.playbackEventStream.listen((event) {
       print('[AUDIO HANDLER DEBUG] Playback event: ${event.processingState}, playing: ${_player.playing}');
+      
+      // Check for errors in playback event
+      // If we're idle unexpectedly (not after completion), it might be an error
+      if (event.processingState == ProcessingState.idle && 
+          !_player.playing &&
+          _player.duration == null &&
+          mediaItem.value != null) {
+        // This might indicate an error - update MediaItem with error
+        // Note: We check duration == null because successful loads have duration
+        final currentItem = mediaItem.value;
+        if (currentItem != null && 
+            currentItem.extras?['hasError'] != true) {
+          // Only update if we haven't already shown an error
+          updateMediaItemWithError('Failed to load audio');
+        }
+      }
+      
       final newState = _transformState(event);
       playbackState.add(newState);
       if (event.processingState == ProcessingState.ready && _player.playing) {
@@ -170,24 +187,95 @@ class TeekoobAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandle
     );
   }
 
+  /// Update MediaItem with error state - shows error in notification/lock screen
+  /// Professional apps like Spotify/YouTube Music show errors in the artist field (which acts as subtitle)
+  Future<void> updateMediaItemWithError(String errorMessage) async {
+    print('[AUDIO HANDLER DEBUG] updateMediaItemWithError() called: $errorMessage');
+    final currentItem = mediaItem.value;
+    if (currentItem != null) {
+      // Update MediaItem with error in artist field - this shows prominently in notification/lock screen
+      // Format: "Original Artist • Error: [message]"
+      final originalArtist = currentItem.artist ?? currentItem.album ?? '';
+      final errorArtist = originalArtist.isNotEmpty 
+          ? '$originalArtist • Error: $errorMessage'
+          : 'Error: $errorMessage';
+      
+      final errorMediaItem = currentItem.copyWith(
+        artist: errorArtist,
+        // Add error to extras for tracking
+        extras: {
+          ...?currentItem.extras,
+          'error': errorMessage,
+          'hasError': true,
+          'originalArtist': originalArtist, // Store original for recovery
+        },
+      );
+      mediaItem.add(errorMediaItem);
+      print('[AUDIO HANDLER DEBUG] MediaItem updated with error - will show in notification/lock screen');
+      
+      // Update playback state to show error - this updates the notification
+      playbackState.add(playbackState.value.copyWith(
+        processingState: AudioProcessingState.error,
+        playing: false,
+      ));
+    }
+  }
+
   @override
   Future<void> play() async {
     print('[AUDIO HANDLER DEBUG] play() called');
-    await _player.play();
-    print('[AUDIO HANDLER DEBUG] Player.play() completed');
-    // Ensure playback state is updated immediately
-    playbackState.add(_transformStateFromState(_player.playerState));
-    print('[AUDIO HANDLER DEBUG] Playback state updated');
+    try {
+      await _player.play();
+      print('[AUDIO HANDLER DEBUG] Player.play() completed');
+      // Ensure playback state is updated immediately
+      playbackState.add(_transformStateFromState(_player.playerState));
+      print('[AUDIO HANDLER DEBUG] Playback state updated');
+    } catch (e) {
+      print('[AUDIO HANDLER DEBUG] ERROR in play(): $e');
+      // Update MediaItem with error - this will show in notification/lock screen
+      final errorMessage = _getUserFriendlyErrorMessage(e);
+      await updateMediaItemWithError(errorMessage);
+      rethrow;
+    }
+  }
+
+  /// Get user-friendly error message from exception
+  String _getUserFriendlyErrorMessage(dynamic error) {
+    final errorStr = error.toString().toLowerCase();
+    
+    if (errorStr.contains('timeout') || errorStr.contains('timed out')) {
+      return 'Connection timeout. Please check your internet connection.';
+    } else if (errorStr.contains('network') || errorStr.contains('connection')) {
+      return 'Network error. Please check your internet connection.';
+    } else if (errorStr.contains('not found') || errorStr.contains('404')) {
+      return 'Audio file not found.';
+    } else if (errorStr.contains('permission') || errorStr.contains('denied')) {
+      return 'Permission denied. Please check app permissions.';
+    } else if (errorStr.contains('format') || errorStr.contains('codec')) {
+      return 'Unsupported audio format.';
+    } else if (errorStr.contains('source error')) {
+      return 'Failed to load audio. Please try again.';
+    } else {
+      return 'Playback error occurred. Please try again.';
+    }
   }
 
   @override
   Future<void> pause() async {
     print('[AUDIO HANDLER DEBUG] pause() called');
-    await _player.pause();
-    print('[AUDIO HANDLER DEBUG] Player.pause() completed');
-    // Ensure playback state is updated immediately
-    playbackState.add(_transformStateFromState(_player.playerState));
-    print('[AUDIO HANDLER DEBUG] Playback state updated');
+    try {
+      await _player.pause();
+      print('[AUDIO HANDLER DEBUG] Player.pause() completed');
+      // Ensure playback state is updated immediately
+      playbackState.add(_transformStateFromState(_player.playerState));
+      print('[AUDIO HANDLER DEBUG] Playback state updated');
+    } catch (e) {
+      print('[AUDIO HANDLER DEBUG] ERROR in pause(): $e');
+      // Update MediaItem with error
+      final errorMessage = _getUserFriendlyErrorMessage(e);
+      await updateMediaItemWithError(errorMessage);
+      rethrow;
+    }
   }
 
   @override

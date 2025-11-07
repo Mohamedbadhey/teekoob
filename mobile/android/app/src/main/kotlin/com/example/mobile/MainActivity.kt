@@ -6,6 +6,7 @@ import io.flutter.embedding.engine.FlutterEngine
 class MainActivity : FlutterActivity() {
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
-        // AudioService plugin will automatically find the FlutterEngine
+        // AudioService plugin automatically registers itself when FlutterEngine is configured
+        // No manual registration needed - the plugin finds the FlutterEngine automatically
     }
 }

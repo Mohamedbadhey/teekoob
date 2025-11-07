@@ -2,10 +2,23 @@ import 'dart:async';
 import 'package:audio_service/audio_service.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:teekoob/core/models/book_model.dart';
+import 'package:teekoob/core/services/global_audio_player_service.dart';
 
-/// Enhanced audio handler for background playback with full system media controls
+/// DEPRECATED: Enhanced audio handler for background playback with full system media controls
+/// This service is deprecated - use GlobalAudioPlayerService instead
+/// Kept for backward compatibility only
+@Deprecated('Use GlobalAudioPlayerService instead')
 class EnhancedAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandler {
-  final AudioPlayer _audioPlayer = AudioPlayer();
+  // This service is deprecated - use GlobalAudioPlayerService instead
+  // AudioPlayer can be created directly (no just_audio_background needed)
+  AudioPlayer? _audioPlayerInstance;
+  AudioPlayer get _audioPlayer {
+    if (_audioPlayerInstance == null) {
+      // AudioPlayer can be created directly (no just_audio_background needed)
+      _audioPlayerInstance = AudioPlayer();
+    }
+    return _audioPlayerInstance!;
+  }
   
   // Current book/podcast being played
   Book? _currentBook;
@@ -267,12 +280,24 @@ class EnhancedAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandl
     await _playerStateSubscription?.cancel();
     await _durationSubscription?.cancel();
     await _playbackStateController.close();
-    await _audioPlayer.dispose();
+    await _audioPlayerInstance?.dispose();
   }
 }
 
-/// Initialize enhanced audio service
+/// DEPRECATED: This function should NOT be called
+/// AudioService.init() can only be called ONCE per app lifecycle
+/// Use GlobalAudioPlayerService instead
+/// 
+/// This function is kept for backward compatibility but will throw an error
+/// if GlobalAudioPlayerService is already handling AudioService
+@Deprecated('Use GlobalAudioPlayerService instead')
 Future<EnhancedAudioHandler> initEnhancedAudioService() async {
+  // CRITICAL: Check if GlobalAudioPlayerService is already handling AudioService
+  if (GlobalAudioPlayerService.isInitializingAudioService || 
+      GlobalAudioPlayerService().isAudioServiceInitialized) {
+    throw Exception('AudioService is already initialized by GlobalAudioPlayerService. Use GlobalAudioPlayerService instead.');
+  }
+  
   return await AudioService.init(
     builder: () => EnhancedAudioHandler(),
     config: const AudioServiceConfig(

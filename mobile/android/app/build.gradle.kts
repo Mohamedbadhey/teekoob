@@ -7,7 +7,8 @@ plugins {
 
 android {
     namespace = "com.example.mobile"
-    compileSdk = flutter.compileSdkVersion
+    // Use SDK 35 if Platform 31 is not available (SDK 35 is installed according to flutter doctor)
+    compileSdk = 35
     ndkVersion = "27.0.12077973"
 
     compileOptions {
