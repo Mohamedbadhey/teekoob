@@ -59,7 +59,6 @@ class PodcastCard extends StatelessWidget {
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
           children: [
             // Cover Image Section - Top 65% of card
             Expanded(

@@ -253,40 +253,42 @@ class _BookCardState extends State<BookCard> with TickerProviderStateMixin {
     
     Widget cardContent = widget.compact
         ? _buildCompactContent(cardWidth)
-        : Container(
+        : SizedBox(
       width: cardWidth,
-      // height: cardHeight, // REMOVED FIXED HEIGHT - let content determine height
-      margin: widget.compact
-          ? const EdgeInsets.symmetric(vertical: 6)
-          : EdgeInsets.zero, // No margin for grid layout
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(widget.compact ? 12 : 20),
-        boxShadow: widget.compact
-            ? [
-                BoxShadow(
-                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.06),
-                  blurRadius: 6,
-                  offset: const Offset(0, 2),
-                ),
-              ]
-            : [
-                BoxShadow(
-                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.15),
-                  blurRadius: 20,
-                  offset: const Offset(0, 10),
-                ),
-                BoxShadow(
-                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.08),
-                  blurRadius: 8,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
+      height: cardHeight,
+      child: Container(
+        width: cardWidth,
+        height: cardHeight,
+        margin: widget.compact
+            ? const EdgeInsets.symmetric(vertical: 6)
+            : EdgeInsets.zero, // No margin for grid layout
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: BorderRadius.circular(widget.compact ? 12 : 20),
+          boxShadow: widget.compact
+              ? [
+                  BoxShadow(
+                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.06),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : [
+                  BoxShadow(
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.15),
+                    blurRadius: 20,
+                    offset: const Offset(0, 10),
+                  ),
+                  BoxShadow(
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.08),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
           // Cover Image Section - Top 65% of card
           Expanded(
             flex: 65,
@@ -563,6 +565,7 @@ class _BookCardState extends State<BookCard> with TickerProviderStateMixin {
             ),
           ),
         ],
+      ),
       ),
     );
 

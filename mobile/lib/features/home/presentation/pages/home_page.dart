@@ -791,6 +791,18 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin<
   }
 
   Widget _buildFeaturedBookSection() {
+    // Lazy load - only load when section is built (prevent duplicate calls)
+    if (!_isLoadingFeatured && _featuredBooks.isEmpty && _featuredBooksError == null && !_lazyLoadTriggered.contains('featured_books')) {
+      _lazyLoadTriggered.add('featured_books');
+      // Use Future.microtask to defer the call after the build completes
+      Future.microtask(() {
+        if (mounted) {
+          setState(() => _isLoadingFeatured = true);
+          context.read<BooksBloc>().add(const LoadFeaturedBooks(limit: 6));
+        }
+      });
+    }
+    
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20),
       child: Column(
@@ -884,6 +896,17 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin<
   }
 
   Widget _buildFreeBooksSection() {
+    // Lazy load - only load when section is built (prevent duplicate calls)
+    if (!_isLoadingFreeBooks && _freeBooks.isEmpty && _freeBooksError == null && !_lazyLoadTriggered.contains('free_books')) {
+      _lazyLoadTriggered.add('free_books');
+      // Use Future.microtask to defer the call after the build completes
+      Future.microtask(() {
+        if (mounted) {
+          setState(() => _isLoadingFreeBooks = true);
+          context.read<BooksBloc>().add(const LoadFreeBooks(limit: 6));
+        }
+      });
+    }
     
     if (_isLoadingFreeBooks)
       return _buildLoadingHorizontalScroll();
@@ -896,12 +919,23 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin<
         context.read<BooksBloc>().add(const LoadFreeBooks(limit: 6));
       });
     else if (_freeBooks.isNotEmpty)
-      return _buildBooksHorizontalScroll(_freeBooks, 'Free Books');
+      return _buildBooksHorizontalScroll(_freeBooks, LocalizationService.getFreeBooksText);
     else
-      return _buildEmptyState('No free books available');
+      return _buildEmptyState(LocalizationService.getNoFreeBooksAvailableText);
   }
 
   Widget _buildRecentBooksSection() {
+    // Lazy load - only load when section is built (prevent duplicate calls)
+    if (!_isLoadingRecentBooks && _recentBooks.isEmpty && _recentBooksError == null && !_lazyLoadTriggered.contains('recent_books')) {
+      _lazyLoadTriggered.add('recent_books');
+      // Use Future.microtask to defer the call after the build completes
+      Future.microtask(() {
+        if (mounted) {
+          setState(() => _isLoadingRecentBooks = true);
+          context.read<BooksBloc>().add(const LoadRecentBooks(limit: 6));
+        }
+      });
+    }
     
     if (_isLoadingRecentBooks)
       return _buildLoadingHorizontalScroll();
@@ -920,6 +954,17 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin<
   }
 
   Widget _buildNewReleasesSection() {
+    // Lazy load - only load when section is built (prevent duplicate calls)
+    if (!_isLoadingNewReleases && _newReleases.isEmpty && _newReleasesError == null && !_lazyLoadTriggered.contains('new_releases')) {
+      _lazyLoadTriggered.add('new_releases');
+      // Use Future.microtask to defer the call after the build completes
+      Future.microtask(() {
+        if (mounted) {
+          setState(() => _isLoadingNewReleases = true);
+          context.read<BooksBloc>().add(const LoadNewReleases(limit: 10));
+        }
+      });
+    }
     
     if (_isLoadingNewReleases)
       return _buildLoadingHorizontalScroll();
@@ -1029,6 +1074,9 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin<
     } else if (message.contains('recommended') || message.contains('la soo jeediyay')) {
       sectionTitle = LocalizationService.getRecommendedBooksText;
       route = '/all-books/recommended/${LocalizationService.getRecommendedBooksText}';
+    } else if (message.contains('free') || message.contains('bilaashka')) {
+      sectionTitle = LocalizationService.getFreeBooksText;
+      route = '/all-books/free/${LocalizationService.getFreeBooksText}';
     }
     
     return Column(
@@ -1179,6 +1227,8 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin<
                     context.go('/all-books/new-releases/${LocalizationService.getNewReleasesText}');
                   } else if (sectionTitle == LocalizationService.getRecommendedBooksText) {
                     context.go('/all-books/recommended/${LocalizationService.getRecommendedBooksText}');
+                  } else if (sectionTitle == LocalizationService.getFreeBooksText) {
+                    context.go('/all-books/free/${LocalizationService.getFreeBooksText}');
                   }
                 },
                 child: Text(
@@ -1328,6 +1378,18 @@ class _HomePageState extends State<HomePage> with AutomaticKeepAliveClientMixin<
 
   // Podcast Section Builders
   Widget _buildFeaturedPodcastsSection() {
+    // Lazy load - only load when section is built (prevent duplicate calls)
+    if (!_isLoadingFeaturedPodcasts && _featuredPodcasts.isEmpty && _featuredPodcastsError == null && !_lazyLoadTriggered.contains('featured_podcasts')) {
+      _lazyLoadTriggered.add('featured_podcasts');
+      // Use Future.microtask to defer the call after the build completes
+      Future.microtask(() {
+        if (mounted) {
+          setState(() => _isLoadingFeaturedPodcasts = true);
+          context.read<PodcastsBloc>().add(const LoadFeaturedPodcasts(limit: 6));
+        }
+      });
+    }
+    
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20),
       child: Column(

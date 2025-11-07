@@ -193,9 +193,9 @@ class AudioHandlerService extends BaseAudioHandler with QueueHandler, SeekHandle
 @Deprecated('Use GlobalAudioPlayerService instead')
 Future<AudioHandlerService> initAudioService() async {
   // CRITICAL: Check if GlobalAudioPlayerService is already handling AudioService
-  // If so, throw an error to prevent multiple initialization
-  if (GlobalAudioPlayerService.isInitializingAudioService || 
-      GlobalAudioPlayerService().isAudioServiceInitialized) {
+  // This deprecated function should NEVER be called - use GlobalAudioPlayerService instead
+  if (GlobalAudioPlayerService().isAudioServiceInitialized || 
+      GlobalAudioPlayerService.getGlobalHandler() != null) {
     throw Exception('AudioService is already initialized by GlobalAudioPlayerService. Use GlobalAudioPlayerService instead.');
   }
   

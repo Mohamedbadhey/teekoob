@@ -23,7 +23,7 @@
     
     <application
         android:label="Teekoob"
-        android:name="${applicationName}"
+        android:name=".TeekoobApplication"
         android:icon="@mipmap/ic_launcher"
         android:usesCleartextTraffic="true"
         android:requestLegacyExternalStorage="true"

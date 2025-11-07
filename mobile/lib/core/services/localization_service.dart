@@ -639,6 +639,14 @@ class LocalizationService {
     );
   }
   
+  // Get localized free books text
+  static String get getFreeBooksText {
+    return getLocalizedText(
+      englishText: 'Free Books',
+      somaliText: 'Kutubta Bilaashka',
+    );
+  }
+  
   // Get localized view all text
   static String get getViewAllText {
     return getLocalizedText(
@@ -684,6 +692,14 @@ class LocalizationService {
     return getLocalizedText(
       englishText: 'No recommended books available',
       somaliText: 'Ma jiraan kutub la soo jeediyay',
+    );
+  }
+  
+  // Get localized no free books available text
+  static String get getNoFreeBooksAvailableText {
+    return getLocalizedText(
+      englishText: 'No free books available',
+      somaliText: 'Ma jiraan kutub bilaashka',
     );
   }
   

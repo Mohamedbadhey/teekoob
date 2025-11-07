@@ -55,8 +55,8 @@ void main() async {
     // This improves app startup time and only initializes when needed
     print('[AUDIO DEBUG] AudioService will be initialized on-demand when user clicks play');
     
-    // Mark that we're planning to initialize (prevents other services from trying)
-    GlobalAudioPlayerService.markInitializing();
+    // DO NOT call markInitializing() here - it causes premature initialization
+    // AudioService will only initialize when user actually plays audio
     
     // Now run the app
     print('[AUDIO DEBUG] Calling runApp()...');

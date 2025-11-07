@@ -9,11 +9,13 @@ class TeekoobAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandle
   StreamSubscription<PlaybackEvent>? _playbackSubscription;
   StreamSubscription<PlayerState>? _playerStateSubscription;
   StreamSubscription<Duration>? _positionSubscription;
+  StreamSubscription<Duration?>? _durationSubscription;
   Timer? _positionUpdateTimer;
 
   TeekoobAudioHandler(this._player) {
-    print('[AUDIO HANDLER DEBUG] TeekoobAudioHandler created');
-    // Initialize playback state with default values to ensure notification shows
+    print('[AUDIO HANDLER DEBUG] ✅ TeekoobAudioHandler created');
+    // Initialize playback state with default values to ensure notification shows immediately
+    // This ensures the notification appears as soon as MediaItem is set
     playbackState.add(PlaybackState(
       controls: [
         MediaControl.skipToPrevious,
@@ -26,34 +28,25 @@ class TeekoobAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandle
         MediaAction.seekBackward,
         MediaAction.stop,
       },
-      androidCompactActionIndices: const [0, 1, 2],
+      androidCompactActionIndices: const [0, 1, 2], // Show controls in compact notification
       processingState: AudioProcessingState.idle,
       playing: false,
       updatePosition: Duration.zero,
       bufferedPosition: Duration.zero,
       speed: 1.0,
+      queueIndex: null, // Will be set when MediaItem is added
     ));
+    print('[AUDIO HANDLER DEBUG] ✅ Initial playback state set - notification ready to display');
     
     // Listen to player state changes and update playback state
     print('[AUDIO HANDLER DEBUG] Setting up playback event stream listener...');
     _playbackSubscription = _player.playbackEventStream.listen((event) {
       print('[AUDIO HANDLER DEBUG] Playback event: ${event.processingState}, playing: ${_player.playing}');
       
-      // Check for errors in playback event
-      // If we're idle unexpectedly (not after completion), it might be an error
-      if (event.processingState == ProcessingState.idle && 
-          !_player.playing &&
-          _player.duration == null &&
-          mediaItem.value != null) {
-        // This might indicate an error - update MediaItem with error
-        // Note: We check duration == null because successful loads have duration
-        final currentItem = mediaItem.value;
-        if (currentItem != null && 
-            currentItem.extras?['hasError'] != true) {
-          // Only update if we haven't already shown an error
-          updateMediaItemWithError('Failed to load audio');
-        }
-      }
+      // DON'T show immediate error on idle state
+      // Large audio files take time to load (especially from remote URLs)
+      // Let the audio player's own error handling take care of actual errors
+      // The idle state is normal during initial loading phase
       
       final newState = _transformState(event);
       playbackState.add(newState);
@@ -67,7 +60,7 @@ class TeekoobAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandle
       }
     });
     
-    // Also listen to player state for processing state updates
+    // Listen to player state for processing state updates (like Spotify)
     _playerStateSubscription = _player.playerStateStream.listen((state) {
       final newState = _transformStateFromState(state);
       playbackState.add(newState);
@@ -80,13 +73,31 @@ class TeekoobAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandle
       }
     });
     
-    // Listen to position stream to update notification position more frequently
+    // Listen to duration changes and update MediaItem (critical for notification progress bar)
+    // This ensures the notification shows the full duration once audio loads (like Spotify)
+    _durationSubscription = _player.durationStream.listen((duration) {
+      if (duration != null && duration != Duration.zero && mediaItem.value != null) {
+        final currentItem = mediaItem.value!;
+        // Only update if duration changed (avoid unnecessary updates)
+        if (currentItem.duration != duration) {
+          print('[AUDIO HANDLER DEBUG] ✅ Duration updated: $duration');
+          final updatedItem = currentItem.copyWith(duration: duration);
+          mediaItem.add(updatedItem);
+          queue.value = [updatedItem]; // Update queue too
+          print('[AUDIO HANDLER DEBUG] ✅ MediaItem updated with duration - notification progress bar will show full duration');
+        }
+      }
+    });
+    
+    // Listen to position stream to update notification position in real-time (like Spotify)
+    // This ensures smooth progress bar updates in the notification
     _positionSubscription = _player.positionStream.listen((position) {
       final currentState = playbackState.value;
-      // Always update position when playing or buffering
-      if (currentState.playing || 
+      // Update position whenever audio is ready, playing, or buffering
+      // This keeps the notification progress bar in sync with playback
+      if (currentState.processingState == AudioProcessingState.ready ||
           currentState.processingState == AudioProcessingState.buffering ||
-          currentState.processingState == AudioProcessingState.ready) {
+          currentState.playing) {
         playbackState.add(currentState.copyWith(
           updatePosition: position,
           bufferedPosition: _player.bufferedPosition,
@@ -95,17 +106,23 @@ class TeekoobAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandle
     });
   }
 
-  // Start periodic position updates for better notification sync
+  // Start periodic position updates for smooth notification progress bar (like Spotify)
+  // Updates every second to keep notification in perfect sync
   void _startPositionUpdates() {
     _stopPositionUpdates(); // Cancel any existing timer
     _positionUpdateTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (_player.playing || _player.processingState == ProcessingState.buffering) {
-        final currentState = playbackState.value;
+      final currentState = playbackState.value;
+      // Update position continuously while playing or buffering
+      // This ensures the progress bar in notification moves smoothly
+      if (_player.playing || 
+          _player.processingState == ProcessingState.buffering ||
+          currentState.processingState == AudioProcessingState.ready) {
         playbackState.add(currentState.copyWith(
           updatePosition: _player.position,
           bufferedPosition: _player.bufferedPosition,
         ));
       } else {
+        // Stop updates when not playing
         timer.cancel();
       }
     });
@@ -120,42 +137,56 @@ class TeekoobAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandle
   // Method to update media item - ensures notification shows properly
   @override
   Future<void> updateMediaItem(MediaItem item) async {
-    print('[AUDIO HANDLER DEBUG] updateMediaItem() called');
+    print('[AUDIO HANDLER DEBUG] ✅ updateMediaItem() called');
     print('[AUDIO HANDLER DEBUG] MediaItem ID: ${item.id}');
     print('[AUDIO HANDLER DEBUG] MediaItem Title: ${item.title}');
-    print('[AUDIO HANDLER DEBUG] MediaItem Artist: ${item.artist}');
+    print('[AUDIO HANDLER DEBUG] MediaItem Artist: ${item.artist ?? "N/A"}');
+    print('[AUDIO HANDLER DEBUG] MediaItem Album: ${item.album ?? "N/A"}');
+    print('[AUDIO HANDLER DEBUG] MediaItem Art URI: ${item.artUri}');
+    print('[AUDIO HANDLER DEBUG] MediaItem Duration: ${item.duration}');
     
-    // Set the media item first
-    mediaItem.add(item);
-    print('[AUDIO HANDLER DEBUG] MediaItem added to stream');
-    
-    // Set the queue with this single item for proper notification display
-    // This is critical for the notification to show properly
+    // CRITICAL: Set the queue FIRST before setting mediaItem
+    // This ensures the notification has all the context it needs
     queue.value = [item];
-    print('[AUDIO HANDLER DEBUG] Queue set with 1 item');
+    print('[AUDIO HANDLER DEBUG] ✅ Queue set with 1 item');
     
-    // Update the queue index to 0 (current item)
-    playbackState.add(playbackState.value.copyWith(
+    // Set the media item - this triggers notification update
+    mediaItem.add(item);
+    print('[AUDIO HANDLER DEBUG] ✅ MediaItem added to stream');
+    
+    // Update playback state with queue index and ensure notification is visible
+    // Setting queueIndex tells the system this is the current playing item
+    final currentState = playbackState.value;
+    playbackState.add(currentState.copyWith(
       queueIndex: 0,
+      // Ensure notification shows even if not playing yet
+      processingState: currentState.processingState == AudioProcessingState.idle
+          ? AudioProcessingState.loading
+          : currentState.processingState,
     ));
-    print('[AUDIO HANDLER DEBUG] Queue index set to 0');
+    print('[AUDIO HANDLER DEBUG] ✅ Queue index set to 0, playback state updated');
+    print('[AUDIO HANDLER DEBUG] ✅ Notification should now be visible with all metadata');
   }
 
   PlaybackState _transformState(PlaybackEvent event) {
     final currentState = playbackState.value;
+    final newProcessingState = const {
+      ProcessingState.idle: AudioProcessingState.idle,
+      ProcessingState.loading: AudioProcessingState.loading,
+      ProcessingState.buffering: AudioProcessingState.buffering,
+      ProcessingState.ready: AudioProcessingState.ready,
+      ProcessingState.completed: AudioProcessingState.completed,
+    }[_player.processingState] ?? AudioProcessingState.idle;
+    
+    // Update playback state with current player state (like Spotify)
+    // This keeps notification controls and progress in perfect sync
     return currentState.copyWith(
       controls: [
         MediaControl.skipToPrevious,
         if (_player.playing) MediaControl.pause else MediaControl.play,
         MediaControl.skipToNext,
       ],
-      processingState: const {
-        ProcessingState.idle: AudioProcessingState.idle,
-        ProcessingState.loading: AudioProcessingState.loading,
-        ProcessingState.buffering: AudioProcessingState.buffering,
-        ProcessingState.ready: AudioProcessingState.ready,
-        ProcessingState.completed: AudioProcessingState.completed,
-      }[_player.processingState] ?? AudioProcessingState.idle,
+      processingState: newProcessingState,
       playing: _player.playing,
       updatePosition: _player.position,
       bufferedPosition: _player.bufferedPosition,
@@ -166,19 +197,23 @@ class TeekoobAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandle
 
   PlaybackState _transformStateFromState(PlayerState state) {
     final currentState = playbackState.value;
+    final newProcessingState = const {
+      ProcessingState.idle: AudioProcessingState.idle,
+      ProcessingState.loading: AudioProcessingState.loading,
+      ProcessingState.buffering: AudioProcessingState.buffering,
+      ProcessingState.ready: AudioProcessingState.ready,
+      ProcessingState.completed: AudioProcessingState.completed,
+    }[state.processingState] ?? AudioProcessingState.idle;
+    
+    // Update playback state from player state (like Spotify)
+    // Ensures notification reflects exact player state
     return currentState.copyWith(
       controls: [
         MediaControl.skipToPrevious,
         if (state.playing) MediaControl.pause else MediaControl.play,
         MediaControl.skipToNext,
       ],
-      processingState: const {
-        ProcessingState.idle: AudioProcessingState.idle,
-        ProcessingState.loading: AudioProcessingState.loading,
-        ProcessingState.buffering: AudioProcessingState.buffering,
-        ProcessingState.ready: AudioProcessingState.ready,
-        ProcessingState.completed: AudioProcessingState.completed,
-      }[state.processingState] ?? AudioProcessingState.idle,
+      processingState: newProcessingState,
       playing: state.playing,
       updatePosition: _player.position,
       bufferedPosition: _player.bufferedPosition,
@@ -326,6 +361,7 @@ class TeekoobAudioHandler extends BaseAudioHandler with QueueHandler, SeekHandle
     _playbackSubscription?.cancel();
     _playerStateSubscription?.cancel();
     _positionSubscription?.cancel();
+    _durationSubscription?.cancel();
     // Note: Don't dispose _player here as it's managed by GlobalAudioPlayerService
   }
 }
