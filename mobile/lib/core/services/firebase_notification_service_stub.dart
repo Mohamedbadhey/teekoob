@@ -101,4 +101,18 @@ class FirebaseNotificationService implements NotificationServiceInterface {
   @override
   Future<void> showInstantBookReminder({required Book book, String? customMessage}) async {
   }
+
+  @override
+  Future<void> sendNotification({
+    required String title,
+    required String body,
+    Map<String, dynamic>? data,
+  }) async {
+    // No-op for web/stub
+  }
+
+  // Register token with backend when user logs in
+  Future<void> registerTokenOnLogin() async {
+    // No-op for web/stub
+  }
 }

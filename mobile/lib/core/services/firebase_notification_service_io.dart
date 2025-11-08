@@ -139,9 +139,15 @@ class FirebaseNotificationService implements NotificationServiceInterface {
     await _localNotifications.initialize(
       initSettings,
       onDidReceiveNotificationResponse: (NotificationResponse response) {
+        print('🔔 Local notification tapped!');
         if (response.payload != null) {
-          final data = json.decode(response.payload!);
-          _messageOpenedAppController.add(data);
+          try {
+            final data = json.decode(response.payload!);
+            print('🔔 Local notification data: $data');
+            _messageOpenedAppController.add(data);
+          } catch (e) {
+            print('🔔 Error parsing notification payload: $e');
+          }
         }
       },
     );

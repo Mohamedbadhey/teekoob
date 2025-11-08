@@ -37,6 +37,9 @@ import 'package:audio_service/audio_service.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:teekoob/core/services/teekoob_audio_handler.dart';
 
+// Global navigation key for accessing navigation from anywhere
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
 void main() async {
   // Prevent multiple calls to main()
   if (_mainCalled) {
@@ -86,8 +89,42 @@ void _initializeFirebaseInBackground() async {
       return;
     }
     
-    await FirebaseNotificationService().initialize();
+    final notificationService = FirebaseNotificationService();
+    await notificationService.initialize();
+    
+    // Listen for notification taps (when app is in background/closed)
+    notificationService.onMessageOpenedApp.listen((data) {
+      print('🔔 📱 Notification tapped (background)! Data: $data');
+      _handleNotificationTap(data);
+    });
+    
+    // Listen for messages when app is in foreground
+    notificationService.onMessage.listen((data) {
+      print('🔔 📱 Message received (foreground)! Data: $data');
+      // The local notification is already shown by the service
+      // We can optionally handle tap on local notification here
+    });
   } catch (e) {
+    print('⚠️ Error initializing Firebase: $e');
+  }
+}
+
+/// Handle notification tap and navigate to book
+void _handleNotificationTap(Map<String, dynamic> data) {
+  try {
+    final bookId = data['bookId']?.toString();
+    
+    if (bookId != null && bookId.isNotEmpty) {
+      print('🔔 📖 Navigating to book: $bookId');
+      
+      // Navigate using GoRouter
+      AppRouter.router.go('/book/$bookId');
+      print('🔔 ✅ Navigation successful!');
+    } else {
+      print('🔔 ⚠️ No bookId in notification data');
+    }
+  } catch (e) {
+    print('🔔 ❌ Error handling notification tap: $e');
   }
 }
 
