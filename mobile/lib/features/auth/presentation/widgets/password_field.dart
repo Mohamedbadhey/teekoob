@@ -46,7 +46,7 @@ class _PasswordFieldState extends State<PasswordField> {
           icon: Icon(
             _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
           ),
-          onPressed: _togglePasswordVisibility,
+          onPressed: widget.enabled ? _togglePasswordVisibility : null,
         ),
         filled: true,
         fillColor: Colors.white.withOpacity(0.95),
@@ -69,6 +69,13 @@ class _PasswordFieldState extends State<PasswordField> {
           borderSide: BorderSide(
             color: Theme.of(context).colorScheme.primary,
             width: 2,
+          ),
+        ),
+        disabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(
+            color: Theme.of(context).colorScheme.outline.withOpacity(0.3),
+            width: 1.5,
           ),
         ),
       ),

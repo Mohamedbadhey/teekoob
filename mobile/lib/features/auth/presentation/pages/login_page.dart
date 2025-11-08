@@ -54,8 +54,8 @@ class _LoginPageState extends State<LoginPage> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(LocalizationService.getLocalizedText(
-              englishText: 'Enter your email address to receive a password reset link.',
-              somaliText: 'Geli iimaylkaaga si aad u hesho linkiga dib u dejinta furaha.',
+              englishText: 'Enter your email address to receive a verification code.',
+              somaliText: 'Geli iimaylkaaga si aad u hesho lambarka xaqiijinta.',
             )),
             const SizedBox(height: 16),
             TextFormField(
@@ -90,16 +90,19 @@ class _LoginPageState extends State<LoginPage> {
           ),
           ElevatedButton(
             onPressed: () {
-              if (emailController.text.isNotEmpty) {
+              final email = emailController.text.trim();
+              if (email.isNotEmpty && context.read<AuthBloc>().validateEmail(email)) {
                 context.read<AuthBloc>().add(
-                  ForgotPasswordRequested(email: emailController.text.trim()),
+                  ForgotPasswordRequested(email: email),
                 );
                 Navigator.of(context).pop();
+                // Navigate to verify code page
+                context.go('/verify-reset-code?email=${Uri.encodeComponent(email)}');
               }
             },
             child: Text(LocalizationService.getLocalizedText(
-              englishText: 'Send Reset Link',
-              somaliText: 'Dir Linkiga Dib U Dejinta',
+              englishText: 'Send Code',
+              somaliText: 'Dir Lambarka',
             )),
           ),
         ],
@@ -131,244 +134,254 @@ class _LoginPageState extends State<LoginPage> {
             );
           }
         },
-        child: Stack(
-          children: [
-            // Background Image
-            Positioned(
-              top: 0,
-              left: 0,
-              right: 0,
-              height: MediaQuery.of(context).size.height * 0.4, // Cover upper 40% of screen
-              child: Container(
-                decoration: const BoxDecoration(
-                  image: DecorationImage(
-                    image: AssetImage('assets/people.png'),
-                    fit: BoxFit.cover,
-                  ),
-                ),
-                child: Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        Colors.transparent,
-                        Colors.white.withOpacity(0.3),
-                        Colors.white.withOpacity(0.9),
-                      ],
-                      stops: const [0.0, 0.7, 1.0],
+        child: BlocBuilder<AuthBloc, AuthState>(
+          builder: (context, state) {
+            final isLoading = state is AuthLoading;
+            return Stack(
+              children: [
+                // Background Image
+                Positioned(
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  height: MediaQuery.of(context).size.height * 0.4, // Cover upper 40% of screen
+                  child: Container(
+                    decoration: const BoxDecoration(
+                      image: DecorationImage(
+                        image: AssetImage('assets/people.png'),
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.transparent,
+                            Colors.white.withOpacity(0.3),
+                            Colors.white.withOpacity(0.9),
+                          ],
+                          stops: const [0.0, 0.7, 1.0],
+                        ),
+                      ),
                     ),
                   ),
                 ),
-              ),
-            ),
-            // Content
-            SafeArea(
-              child: Center(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(24),
-                  child: Form(
-                    key: _formKey,
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        const SizedBox(height: 20), // Space for background image
-                        
-                        // Welcome Text
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.95),
-                            borderRadius: BorderRadius.circular(16),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.1),
-                                blurRadius: 10,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
-                          ),
-                          child: Text(
-                            LocalizationService.getLocalizedText(
-                              englishText: 'Welcome Back!',
-                              somaliText: 'Ku Soo Dhowow!',
-                            ),
-                            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              color: Theme.of(context).colorScheme.primary,
-                              shadows: [
-                                Shadow(
-                                  color: Colors.black.withOpacity(0.3),
-                                  blurRadius: 2,
-                                  offset: const Offset(0, 1),
-                                ),
-                              ],
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                        
-                        const SizedBox(height: 8),
-                        
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.9),
-                            borderRadius: BorderRadius.circular(12),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.08),
-                                blurRadius: 8,
-                                offset: const Offset(0, 3),
-                              ),
-                            ],
-                          ),
-                          child: Text(
-                            LocalizationService.getLocalizedText(
-                              englishText: 'Sign in to continue reading',
-                              somaliText: 'Gal si aad u sii akhrin',
-                            ),
-                            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
-                              fontWeight: FontWeight.w500,
-                              shadows: [
-                                Shadow(
-                                  color: Colors.black.withOpacity(0.2),
-                                  blurRadius: 1,
-                                  offset: const Offset(0, 1),
-                                ),
-                              ],
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                        
-                        const SizedBox(height: 48),
-                    
-                        // Email Field
-                        TextFormField(
-                          controller: _emailController,
-                          decoration: InputDecoration(
-                            labelText: LocalizationService.getEmailLabel,
-                            hintText: LocalizationService.getLocalizedText(
-                              englishText: 'Enter your email',
-                              somaliText: 'Geli iimaylkaaga',
-                            ),
-                            prefixIcon: const Icon(Icons.email_outlined),
-                            filled: true,
-                            fillColor: Colors.white.withOpacity(0.95),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide(
-                                color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
-                                width: 1.5,
-                              ),
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide(
-                                color: Theme.of(context).colorScheme.outline.withOpacity(0.5),
-                                width: 1.5,
-                              ),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide(
-                                color: Theme.of(context).colorScheme.primary,
-                                width: 2,
-                              ),
-                            ),
-                          ),
-                          keyboardType: TextInputType.emailAddress,
-                          textInputAction: TextInputAction.next,
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return LocalizationService.getLocalizedText(
-                                englishText: 'Email is required',
-                                somaliText: 'Iimaylka waa loo baahan yahay',
-                              );
-                            }
-                            if (!context.read<AuthBloc>().validateEmail(value)) {
-                              return LocalizationService.getLocalizedText(
-                                englishText: 'Please enter a valid email',
-                                somaliText: 'Fadlan geli iimayl sax ah',
-                              );
-                            }
-                            return null;
-                          },
-                        ),
-                        
-                        const SizedBox(height: 16),
-                        
-                        // Password Field
-                        PasswordField(
-                          controller: _passwordController,
-                          labelText: LocalizationService.getPasswordLabel,
-                          hintText: LocalizationService.getLocalizedText(
-                            englishText: 'Enter your password',
-                            somaliText: 'Geli furahaaga',
-                          ),
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return LocalizationService.getLocalizedText(
-                                englishText: 'Password is required',
-                                somaliText: 'Furaha waa loo baahan yahay',
-                              );
-                            }
-                            return null;
-                          },
-                        ),
-                        
-                        const SizedBox(height: 16),
-                        
-                        // Remember Me & Forgot Password
-                        Row(
+                // Content
+                SafeArea(
+                  child: Center(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(24),
+                      child: Form(
+                        key: _formKey,
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            Expanded(
-                              child: Row(
-                                children: [
-                                  Checkbox(
-                                    value: _rememberMe,
-                                    onChanged: (value) {
-                                      setState(() {
-                                        _rememberMe = value ?? false;
-                                      });
-                                    },
-                                  ),
-                                  Flexible(
-                                    child: Text(LocalizationService.getLocalizedText(
-                                      englishText: 'Remember me',
-                                      somaliText: 'I xasuus',
-                                    )),
+                            const SizedBox(height: 20), // Space for background image
+                            
+                            // Welcome Text
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.95),
+                                borderRadius: BorderRadius.circular(16),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.1),
+                                    blurRadius: 10,
+                                    offset: const Offset(0, 4),
                                   ),
                                 ],
                               ),
+                              child: Text(
+                                LocalizationService.getLocalizedText(
+                                  englishText: 'Welcome Back!',
+                                  somaliText: 'Ku Soo Dhowow!',
+                                ),
+                                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: Theme.of(context).colorScheme.primary,
+                                  shadows: [
+                                    Shadow(
+                                      color: Colors.black.withOpacity(0.3),
+                                      blurRadius: 2,
+                                      offset: const Offset(0, 1),
+                                    ),
+                                  ],
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
                             ),
-                            TextButton(
-                              onPressed: _handleForgotPassword,
-                              child: Text(LocalizationService.getLocalizedText(
-                                englishText: 'Forgot Password?',
-                                somaliText: 'Furaha La Illaaway?',
-                              )),
+                            
+                            const SizedBox(height: 8),
+                            
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.9),
+                                borderRadius: BorderRadius.circular(12),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.08),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 3),
+                                  ),
+                                ],
+                              ),
+                              child: Text(
+                                LocalizationService.getLocalizedText(
+                                  englishText: 'Sign in to continue reading',
+                                  somaliText: 'Gal si aad u sii akhrin',
+                                ),
+                                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
+                                  fontWeight: FontWeight.w500,
+                                  shadows: [
+                                    Shadow(
+                                      color: Colors.black.withOpacity(0.2),
+                                      blurRadius: 1,
+                                      offset: const Offset(0, 1),
+                                    ),
+                                  ],
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
                             ),
-                          ],
-                        ),
+                            
+                            const SizedBox(height: 48),
                         
-                        const SizedBox(height: 24),
-                        
-                        // Login Button
-                        BlocBuilder<AuthBloc, AuthState>(
-                          builder: (context, state) {
-                            return ElevatedButton(
-                              onPressed: state is AuthLoading ? null : _handleLogin,
+                            // Email Field
+                            TextFormField(
+                              controller: _emailController,
+                              enabled: !isLoading,
+                              decoration: InputDecoration(
+                                labelText: LocalizationService.getEmailLabel,
+                                hintText: LocalizationService.getLocalizedText(
+                                  englishText: 'Enter your email',
+                                  somaliText: 'Geli iimaylkaaga',
+                                ),
+                                prefixIcon: const Icon(Icons.email_outlined),
+                                filled: true,
+                                fillColor: Colors.white.withOpacity(0.95),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide(
+                                    color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
+                                    width: 1.5,
+                                  ),
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide(
+                                    color: Theme.of(context).colorScheme.outline.withOpacity(0.5),
+                                    width: 1.5,
+                                  ),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide(
+                                    color: Theme.of(context).colorScheme.primary,
+                                    width: 2,
+                                  ),
+                                ),
+                                disabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide(
+                                    color: Theme.of(context).colorScheme.outline.withOpacity(0.3),
+                                    width: 1.5,
+                                  ),
+                                ),
+                              ),
+                              keyboardType: TextInputType.emailAddress,
+                              textInputAction: TextInputAction.next,
+                              validator: (value) {
+                                if (value == null || value.isEmpty) {
+                                  return LocalizationService.getLocalizedText(
+                                    englishText: 'Email is required',
+                                    somaliText: 'Iimaylka waa loo baahan yahay',
+                                  );
+                                }
+                                if (!context.read<AuthBloc>().validateEmail(value)) {
+                                  return LocalizationService.getLocalizedText(
+                                    englishText: 'Please enter a valid email',
+                                    somaliText: 'Fadlan geli iimayl sax ah',
+                                  );
+                                }
+                                return null;
+                              },
+                            ),
+                            
+                            const SizedBox(height: 16),
+                            
+                            // Password Field
+                            PasswordField(
+                              controller: _passwordController,
+                              labelText: LocalizationService.getPasswordLabel,
+                              hintText: LocalizationService.getLocalizedText(
+                                englishText: 'Enter your password',
+                                somaliText: 'Geli furahaaga',
+                              ),
+                              enabled: !isLoading,
+                              validator: (value) {
+                                if (value == null || value.isEmpty) {
+                                  return LocalizationService.getLocalizedText(
+                                    englishText: 'Password is required',
+                                    somaliText: 'Furaha waa loo baahan yahay',
+                                  );
+                                }
+                                return null;
+                              },
+                            ),
+                            
+                            const SizedBox(height: 16),
+                            
+                            // Remember Me & Forgot Password
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Row(
+                                    children: [
+                                      Checkbox(
+                                        value: _rememberMe,
+                                        onChanged: isLoading ? null : (value) {
+                                          setState(() {
+                                            _rememberMe = value ?? false;
+                                          });
+                                        },
+                                      ),
+                                      Flexible(
+                                        child: Text(LocalizationService.getLocalizedText(
+                                          englishText: 'Remember me',
+                                          somaliText: 'I xasuus',
+                                        )),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                TextButton(
+                                  onPressed: isLoading ? null : _handleForgotPassword,
+                                  child: Text(LocalizationService.getLocalizedText(
+                                    englishText: 'Forgot Password?',
+                                    somaliText: 'Furaha La Illaaway?',
+                                  )),
+                                ),
+                              ],
+                            ),
+                            
+                            const SizedBox(height: 24),
+                            
+                            // Login Button
+                            ElevatedButton(
+                              onPressed: isLoading ? null : _handleLogin,
                               style: ElevatedButton.styleFrom(
                                 padding: const EdgeInsets.symmetric(vertical: 16),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                               ),
-                              child: state is AuthLoading
+                              child: isLoading
                                   ? const SizedBox(
                                       height: 20,
                                       width: 20,
@@ -378,17 +391,13 @@ class _LoginPageState extends State<LoginPage> {
                                       LocalizationService.getLoginText,
                                       style: const TextStyle(fontSize: 16),
                                     ),
-                            );
-                          },
-                        ),
-                        
-                        const SizedBox(height: 24),
-                        
-                        // Social Login - Google
-                        BlocBuilder<AuthBloc, AuthState>(
-                          builder: (context, state) {
-                            return OutlinedButton.icon(
-                              onPressed: state is AuthLoading
+                            ),
+                            
+                            const SizedBox(height: 24),
+                            
+                            // Social Login - Google
+                            OutlinedButton.icon(
+                              onPressed: isLoading
                                   ? null
                                   : () {
                                       context.read<AuthBloc>().add(const GoogleLoginRequested());
@@ -415,64 +424,112 @@ class _LoginPageState extends State<LoginPage> {
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                               ),
-                            );
-                          },
-                        ),
-
-                        const SizedBox(height: 24),
-
-                        // Divider
-                        Row(
-                          children: [
-                            const Expanded(child: Divider()),
-                            Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 8),
-                              child: Text(
-                                LocalizationService.getLocalizedText(
-                                  englishText: 'OR',
-                                  somaliText: 'AMA',
-                                ),
-                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-                                ),
-                              ),
                             ),
-                            const Expanded(child: Divider()),
+
+                            const SizedBox(height: 24),
+
+                            // Divider
+                            Row(
+                              children: [
+                                const Expanded(child: Divider()),
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                                  child: Text(
+                                    LocalizationService.getLocalizedText(
+                                      englishText: 'OR',
+                                      somaliText: 'AMA',
+                                    ),
+                                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                                    ),
+                                  ),
+                                ),
+                                const Expanded(child: Divider()),
+                              ],
+                            ),
+                            
+                            const SizedBox(height: 24),
+                            
+                            // Register Link
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  LocalizationService.getLocalizedText(
+                                    englishText: "Don't have an account?",
+                                    somaliText: 'Ma haysataa akoon?',
+                                  ),
+                                  style: Theme.of(context).textTheme.bodyMedium,
+                                ),
+                                TextButton(
+                                  onPressed: isLoading ? null : () => context.go('/register'),
+                                  child: Text(
+                                    LocalizationService.getRegisterText,
+                                    style: TextStyle(
+                                      color: Theme.of(context).colorScheme.primary,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ],
                         ),
-                        
-                        const SizedBox(height: 24),
-                        
-                        // Register Link
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              LocalizationService.getLocalizedText(
-                                englishText: "Don't have an account?",
-                                somaliText: 'Ma haysataa akoon?',
-                              ),
-                              style: Theme.of(context).textTheme.bodyMedium,
-                            ),
-                            TextButton(
-                              onPressed: () => context.go('/register'),
-                              child: Text(
-                                LocalizationService.getRegisterText,
-                                style: TextStyle(
-                                  color: Theme.of(context).colorScheme.primary,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
+                      ),
                     ),
                   ),
                 ),
-              ),
-            ),
-          ],
+                // Modal barrier to prevent touches during authentication
+                if (isLoading)
+                  AbsorbPointer(
+                    child: Container(
+                      color: Colors.black.withOpacity(0.3),
+                      child: Center(
+                        child: Container(
+                          padding: const EdgeInsets.all(24),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.surface,
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.2),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const CircularProgressIndicator(),
+                              const SizedBox(height: 16),
+                              Text(
+                                LocalizationService.getLocalizedText(
+                                  englishText: 'Signing in...',
+                                  somaliText: 'Waa la galiyaa...',
+                                ),
+                                style: Theme.of(context).textTheme.bodyLarge,
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                LocalizationService.getLocalizedText(
+                                  englishText: 'Please wait and do not touch the screen',
+                                  somaliText: 'Fadlan sug oo ha taabin shaashadda',
+                                ),
+                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            );
+          },
         ),
       ),
     );

@@ -68,17 +68,32 @@ class ForgotPasswordRequested extends AuthEvent {
   List<Object?> get props => [email];
 }
 
+class VerifyResetCodeRequested extends AuthEvent {
+  final String email;
+  final String code;
+
+  const VerifyResetCodeRequested({
+    required this.email,
+    required this.code,
+  });
+
+  @override
+  List<Object?> get props => [email, code];
+}
+
 class ResetPasswordRequested extends AuthEvent {
-  final String token;
+  final String email;
+  final String code;
   final String newPassword;
 
   const ResetPasswordRequested({
-    required this.token,
+    required this.email,
+    required this.code,
     required this.newPassword,
   });
 
   @override
-  List<Object?> get props => [token, newPassword];
+  List<Object?> get props => [email, code, newPassword];
 }
 
 class ChangePasswordRequested extends AuthEvent {
@@ -187,6 +202,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<RegisterRequested>(_onRegisterRequested);
     on<LogoutRequested>(_onLogoutRequested);
     on<ForgotPasswordRequested>(_onForgotPasswordRequested);
+    on<VerifyResetCodeRequested>(_onVerifyResetCodeRequested);
     on<ResetPasswordRequested>(_onResetPasswordRequested);
     on<ChangePasswordRequested>(_onChangePasswordRequested);
     on<UpdateProfileRequested>(_onUpdateProfileRequested);
@@ -328,6 +344,24 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     }
   }
 
+  Future<void> _onVerifyResetCodeRequested(
+    VerifyResetCodeRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    try {
+      emit(const AuthLoading());
+      
+      await _authService.verifyResetCode(
+        email: event.email,
+        code: event.code,
+      );
+      
+      emit(const AuthSuccess('Verification code is valid!'));
+    } catch (e) {
+      emit(AuthError('Code verification failed: $e'));
+    }
+  }
+
   Future<void> _onResetPasswordRequested(
     ResetPasswordRequested event,
     Emitter<AuthState> emit,
@@ -336,7 +370,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       emit(const AuthLoading());
       
       await _authService.resetPassword(
-        token: event.token,
+        email: event.email,
+        code: event.code,
         newPassword: event.newPassword,
         confirmPassword: event.newPassword, // For now, use same password
       );

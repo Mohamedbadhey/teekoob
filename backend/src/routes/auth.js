@@ -5,6 +5,7 @@ const { body, validationResult } = require('express-validator');
 const db = require('../config/database');
 const { asyncHandler } = require('../middleware/errorHandler');
 const logger = require('../utils/logger');
+const emailService = require('../utils/emailService');
 
 const router = express.Router();
 
@@ -378,7 +379,7 @@ router.post('/refresh', asyncHandler(async (req, res) => {
   }
 }));
 
-// Forgot password
+// Forgot password - Generate and send 6-digit verification code
 router.post('/forgot-password', asyncHandler(async (req, res) => {
   const { email } = req.body;
 
@@ -391,39 +392,96 @@ router.post('/forgot-password', asyncHandler(async (req, res) => {
 
   const user = await db('users').where('email', email).first();
   if (!user) {
-    // Don't reveal if user exists or not
+    // Don't reveal if user exists or not for security
     return res.json({ 
-      message: 'If an account with that email exists, a password reset link has been sent'
+      message: 'If an account with that email exists, a password reset code has been sent'
     });
   }
 
-  // Generate reset token (in production, send email)
-  const resetToken = require('crypto').randomBytes(32).toString('hex');
-  const resetExpires = new Date(Date.now() + 3600000); // 1 hour
+  // Generate 6-digit verification code
+  const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
+  const codeExpires = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
 
+  // Store code in database
   await db('users')
     .where('id', user.id)
     .update({
-      reset_password_token: resetToken,
-      reset_password_expires_at: resetExpires
+      reset_password_code: resetCode,
+      reset_password_code_expires_at: codeExpires,
+      // Clear old token if exists
+      reset_password_token: null,
+      reset_password_expires_at: null
     });
 
-  // TODO: Send email with reset link
-  logger.info('Password reset requested:', { email, userId: user.id });
+  // Send email with verification code
+  const emailSent = await emailService.sendPasswordResetCode(email, resetCode);
+
+  if (!emailSent) {
+    logger.error('Failed to send password reset email:', { email, userId: user.id });
+    // Still return success to not reveal if user exists
+  }
+
+  logger.info('Password reset code generated:', { email, userId: user.id, code: resetCode });
 
   res.json({ 
-    message: 'If an account with that email exists, a password reset link has been sent'
+    message: 'If an account with that email exists, a password reset code has been sent'
   });
 }));
 
-// Reset password
-router.post('/reset-password', asyncHandler(async (req, res) => {
-  const { token, newPassword } = req.body;
+// Verify reset code
+router.post('/verify-reset-code', asyncHandler(async (req, res) => {
+  const { email, code } = req.body;
 
-  if (!token || !newPassword) {
+  if (!email || !code) {
     return res.status(400).json({ 
-      error: 'Token and new password are required',
+      error: 'Email and code are required',
       code: 'MISSING_FIELDS'
+    });
+  }
+
+  if (!/^\d{6}$/.test(code)) {
+    return res.status(400).json({ 
+      error: 'Invalid code format. Code must be 6 digits',
+      code: 'INVALID_CODE_FORMAT'
+    });
+  }
+
+  const user = await db('users')
+    .where('email', email)
+    .where('reset_password_code', code)
+    .where('reset_password_code_expires_at', '>', new Date())
+    .first();
+
+  if (!user) {
+    return res.status(400).json({ 
+      error: 'Invalid or expired verification code',
+      code: 'INVALID_RESET_CODE'
+    });
+  }
+
+  logger.info('Reset code verified:', { email, userId: user.id });
+
+  res.json({ 
+    message: 'Verification code is valid',
+    verified: true
+  });
+}));
+
+// Reset password - Requires verified code
+router.post('/reset-password', asyncHandler(async (req, res) => {
+  const { email, code, newPassword } = req.body;
+
+  if (!email || !code || !newPassword) {
+    return res.status(400).json({ 
+      error: 'Email, code, and new password are required',
+      code: 'MISSING_FIELDS'
+    });
+  }
+
+  if (!/^\d{6}$/.test(code)) {
+    return res.status(400).json({ 
+      error: 'Invalid code format. Code must be 6 digits',
+      code: 'INVALID_CODE_FORMAT'
     });
   }
 
@@ -434,15 +492,17 @@ router.post('/reset-password', asyncHandler(async (req, res) => {
     });
   }
 
+  // Verify code is valid and not expired
   const user = await db('users')
-    .where('reset_password_token', token)
-    .where('reset_password_expires_at', '>', new Date())
+    .where('email', email)
+    .where('reset_password_code', code)
+    .where('reset_password_code_expires_at', '>', new Date())
     .first();
 
   if (!user) {
     return res.status(400).json({ 
-      error: 'Invalid or expired reset token',
-      code: 'INVALID_RESET_TOKEN'
+      error: 'Invalid or expired verification code',
+      code: 'INVALID_RESET_CODE'
     });
   }
 
@@ -450,16 +510,18 @@ router.post('/reset-password', asyncHandler(async (req, res) => {
   const saltRounds = 12;
   const passwordHash = await bcrypt.hash(newPassword, saltRounds);
 
-  // Update password and clear reset token
+  // Update password and clear reset code and token
   await db('users')
     .where('id', user.id)
     .update({
       password_hash: passwordHash,
+      reset_password_code: null,
+      reset_password_code_expires_at: null,
       reset_password_token: null,
       reset_password_expires_at: null
     });
 
-  logger.info('Password reset successful:', { userId: user.id });
+  logger.info('Password reset successful:', { email, userId: user.id });
 
   res.json({ 
     message: 'Password reset successfully'

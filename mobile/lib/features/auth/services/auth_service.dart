@@ -389,9 +389,29 @@ class AuthService {
     }
   }
 
+  // Verify reset code
+  Future<void> verifyResetCode({
+    required String email,
+    required String code,
+  }) async {
+    try {
+      final response = await _networkService.post('/auth/verify-reset-code', data: {
+        'email': email,
+        'code': code,
+      });
+
+      if (response.statusCode != 200) {
+        throw Exception('Invalid or expired verification code');
+      }
+    } catch (e) {
+      throw Exception('Code verification failed: $e');
+    }
+  }
+
   // Reset password
   Future<void> resetPassword({
-    required String token,
+    required String email,
+    required String code,
     required String newPassword,
     required String confirmPassword,
   }) async {
@@ -401,7 +421,8 @@ class AuthService {
       }
 
       final response = await _networkService.post('/auth/reset-password', data: {
-        'token': token,
+        'email': email,
+        'code': code,
         'newPassword': newPassword,
       });
 
