@@ -117,7 +117,7 @@ router.put('/profile', asyncHandler(async (req, res) => {
     });
   }
   
-  // Get current user data to preserve existing values
+  // Validate user exists
   const currentUser = await db('users')
     .select('first_name', 'last_name')
     .where('id', userId)
@@ -131,23 +131,33 @@ router.put('/profile', asyncHandler(async (req, res) => {
   }
   
   const updateData = {};
-  const newFirstName = firstName ? firstName.trim() : currentUser.first_name;
-  const newLastName = lastName ? lastName.trim() : currentUser.last_name;
   
-  if (firstName) {
-    updateData.first_name = newFirstName;
+  // Only update fields that are provided - don't preserve existing corrupted values
+  if (firstName !== undefined && firstName !== null) {
+    updateData.first_name = firstName.trim();
   }
-  if (lastName) {
-    updateData.last_name = newLastName;
+  if (lastName !== undefined && lastName !== null) {
+    updateData.last_name = lastName.trim();
   }
   
-  // Update display_name based on both firstName and lastName (current or new)
-  // This ensures display_name is always in sync
-  if (firstName || lastName) {
-    if (newLastName && newLastName.trim().length > 0) {
-      updateData.display_name = `${newFirstName} ${newLastName}`.trim();
-    } else {
-      updateData.display_name = newFirstName;
+  // Update display_name based on the NEW values (not the corrupted existing ones)
+  // Only update display_name if we're updating firstName or lastName
+  if ((firstName !== undefined && firstName !== null) || (lastName !== undefined && lastName !== null)) {
+    // Use the new values if provided, otherwise use existing values
+    // This ensures display_name always reflects the actual first_name and last_name
+    const finalFirstName = (firstName !== undefined && firstName !== null) 
+      ? firstName.trim() 
+      : (currentUser.first_name || '');
+    const finalLastName = (lastName !== undefined && lastName !== null) 
+      ? lastName.trim() 
+      : (currentUser.last_name || '');
+    
+    // Build display_name from the final values
+    // Remove any extra spaces and ensure clean formatting
+    if (finalLastName && finalLastName.trim().length > 0) {
+      updateData.display_name = `${finalFirstName.trim()} ${finalLastName.trim()}`.trim();
+    } else if (finalFirstName && finalFirstName.trim().length > 0) {
+      updateData.display_name = finalFirstName.trim();
     }
   }
   

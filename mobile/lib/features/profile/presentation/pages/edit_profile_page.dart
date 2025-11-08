@@ -160,35 +160,33 @@ class _EditProfilePageState extends State<EditProfilePage> {
       String? newImageUrl = _currentImageUrl;
       if (_imageFile != null) {
         setState(() => _isImageUploading = true);
-        newImageUrl = await profileService.uploadProfileImage(userId, _imageFile!);
-        setState(() => _isImageUploading = false);
+        try {
+          newImageUrl = await profileService.uploadProfileImage(userId, _imageFile!);
+          // Update local state immediately to show the new image
+          setState(() {
+            _currentImageUrl = newImageUrl;
+            _imageFile = null; // Clear the local file since we've uploaded it
+          });
+        } finally {
+          setState(() => _isImageUploading = false);
+        }
       }
 
       // Split display name into firstName and lastName
+      // Take the first word as firstName, rest as lastName
       final nameParts = _nameController.text.trim().split(' ').where((part) => part.isNotEmpty).toList();
-      final firstName = nameParts.isNotEmpty ? nameParts.first : '';
-      final lastName = nameParts.length > 1 ? nameParts.sublist(1).join(' ') : '';
+      final firstName = nameParts.isNotEmpty ? nameParts.first : null;
+      final lastName = nameParts.length > 1 ? nameParts.sublist(1).join(' ') : null;
 
-      // Update profile using AuthService
+      // Update profile using AuthService - this handles the backend update
       final authService = AuthService();
       final updatedUser = await authService.updateProfile(
-        firstName: firstName.isNotEmpty ? firstName : null,
-        lastName: lastName.isNotEmpty ? lastName : null,
+        firstName: firstName,
+        lastName: lastName,
         profilePicture: newImageUrl,
       );
 
-      // Update local auth state with the updated user - use the updated user's displayName
-      final displayNameToUse = updatedUser.displayName.isNotEmpty 
-          ? updatedUser.displayName 
-          : _nameController.text.trim();
-      
-      context.read<AuthBloc>().add(UpdateProfileRequested(
-        displayName: displayNameToUse,
-        phoneNumber: _phoneController.text.trim().isEmpty ? null : _phoneController.text.trim(),
-        avatarUrl: newImageUrl,
-      ));
-      
-      // Refresh user data to ensure state is up to date
+      // Refresh user data to ensure state is up to date - this will load the correct data from backend
       final refreshedUser = await authService.getCurrentUser();
       if (refreshedUser != null) {
         context.read<AuthBloc>().add(CheckAuthStatus());

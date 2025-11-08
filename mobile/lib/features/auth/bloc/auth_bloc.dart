@@ -373,9 +373,19 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     try {
       emit(const AuthLoading());
       
+      // Split displayName into firstName and lastName if provided
+      String? firstName;
+      String? lastName;
+      
+      if (event.displayName != null && event.displayName!.isNotEmpty) {
+        final nameParts = event.displayName!.trim().split(' ').where((part) => part.isNotEmpty).toList();
+        firstName = nameParts.isNotEmpty ? nameParts.first : null;
+        lastName = nameParts.length > 1 ? nameParts.sublist(1).join(' ') : null;
+      }
+      
       final updatedUser = await _authService.updateProfile(
-        firstName: event.displayName, // Use displayName as firstName
-        lastName: null,
+        firstName: firstName,
+        lastName: lastName,
         profilePicture: event.avatarUrl,
         preferredLanguage: event.language,
         phoneNumber: event.phoneNumber,

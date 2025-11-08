@@ -625,17 +625,23 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Widget _buildProfileAvatar(String? avatarUrl) {
+    if (avatarUrl == null || avatarUrl.isEmpty) {
+      return CircleAvatar(
+        radius: 25,
+        backgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+        child: Icon(
+          Icons.person,
+          size: 30,
+          color: Theme.of(context).colorScheme.primary,
+        ),
+      );
+    }
+    
     return CircleAvatar(
       radius: 25,
       backgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-      backgroundImage: avatarUrl != null ? NetworkImage(avatarUrl) : null,
-      child: avatarUrl == null
-          ? Icon(
-              Icons.person,
-              size: 30,
-              color: Theme.of(context).colorScheme.primary,
-            )
-          : null,
+      backgroundImage: NetworkImage(avatarUrl),
+      child: null,
     );
   }
 

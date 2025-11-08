@@ -1,5 +1,6 @@
 import 'package:json_annotation/json_annotation.dart';
 import 'package:equatable/equatable.dart';
+import 'package:teekoob/core/config/app_config.dart';
 
 class User extends Equatable {
   final String id;
@@ -68,7 +69,9 @@ class User extends Equatable {
           ?? json['displayName']
           ?? (email.contains('@') ? email.split('@')[0] : email)) as String;
 
-    final String? profilePicture = (json['profilePicture'] ?? json['avatarUrl']) as String?;
+    // Get avatar URL and convert to absolute URL if relative
+    final String? rawAvatarUrl = (json['profilePicture'] ?? json['avatarUrl']) as String?;
+    final String? profilePicture = _buildFullImageUrl(rawAvatarUrl);
 
     final String preferredLanguage = (json['preferredLanguage'] ?? json['languagePreference'] ?? 'en') as String;
 
@@ -262,4 +265,29 @@ class User extends Equatable {
     preferences, favoriteGenres, totalBooksRead, totalReadingTime, averageRating,
     readingGoals, isActive, bio
   ];
+
+  // Helper method to build full image URL from relative or absolute URL
+  static String? _buildFullImageUrl(String? url) {
+    if (url == null || url.isEmpty) return null;
+    
+    // If URL already starts with http/https, return as is
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return url;
+    }
+    
+    // If URL starts with /, it's a relative path - prepend media base URL
+    if (url.startsWith('/')) {
+      // Remove trailing slash from mediaBaseUrl if present, then add the path
+      final baseUrl = AppConfig.mediaBaseUrl.endsWith('/') 
+          ? AppConfig.mediaBaseUrl.substring(0, AppConfig.mediaBaseUrl.length - 1)
+          : AppConfig.mediaBaseUrl;
+      return '$baseUrl$url';
+    }
+    
+    // Otherwise, assume it's a relative path and prepend media base URL
+    final baseUrl = AppConfig.mediaBaseUrl.endsWith('/') 
+        ? AppConfig.mediaBaseUrl 
+        : '${AppConfig.mediaBaseUrl}/';
+    return '$baseUrl$url';
+  }
 }
