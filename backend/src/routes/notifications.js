@@ -50,8 +50,8 @@ if (!admin.apps.length) {
 const userTokens = new Map();
 const notificationPreferences = new Map();
 
-// Schedule random book notifications every 1 hour
-cron.schedule('0 * * * *', async () => {
+// Schedule random book notifications every 1 minute (for testing)
+cron.schedule('* * * * *', async () => {
   try {
     console.log('🔔 Running scheduled random book notification...');
     await sendRandomBookNotifications();

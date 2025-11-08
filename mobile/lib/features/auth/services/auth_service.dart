@@ -25,9 +25,13 @@ class AuthService {
   /// Register user for notifications after successful login
   Future<void> _registerUserForNotifications() async {
     try {
+      // Register FCM token with backend
+      await _notificationServiceInstance.registerTokenOnLogin();
+      // Enable random book notifications by default
       await _notificationServiceInstance.enableRandomBookNotifications();
     } catch (e) {
       // Don't throw error - login should succeed even if notifications fail
+      print('⚠️ Failed to register for notifications: $e');
     }
   }
 
