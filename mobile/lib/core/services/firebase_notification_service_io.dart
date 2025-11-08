@@ -155,7 +155,7 @@ class FirebaseNotificationService implements NotificationServiceInterface {
     // Create notification channel for Android
     const androidChannel = AndroidNotificationChannel(
       'teekoob_notifications',
-      'Teekoob Notifications',
+      'Bookdoon Notifications',
       description: 'Notifications for new books and updates',
       importance: Importance.high,
       playSound: true,
@@ -181,7 +181,7 @@ class FirebaseNotificationService implements NotificationServiceInterface {
         NotificationDetails(
           android: AndroidNotificationDetails(
             'teekoob_notifications',
-            'Teekoob Notifications',
+            'Bookdoon Notifications',
             channelDescription: 'Notifications for new books and updates',
             importance: Importance.high,
             priority: Priority.high,
@@ -254,7 +254,7 @@ class FirebaseNotificationService implements NotificationServiceInterface {
       const NotificationDetails(
         android: AndroidNotificationDetails(
           'teekoob_notifications',
-          'Teekoob Notifications',
+          'Bookdoon Notifications',
           channelDescription: 'Notifications for new books and updates',
           importance: Importance.high,
           priority: Priority.high,

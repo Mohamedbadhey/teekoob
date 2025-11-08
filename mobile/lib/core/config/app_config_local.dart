@@ -10,7 +10,7 @@ class AppConfigLocal {
   static const String mediaBaseUrl = 'https://teekoob-production.up.railway.app';
   
   // App Information
-  static const String appName = 'Teekoob';
+  static const String appName = 'Bookdoon';
   static const String appVersion = '1.0.0';
   static const String appBuildNumber = '1';
   

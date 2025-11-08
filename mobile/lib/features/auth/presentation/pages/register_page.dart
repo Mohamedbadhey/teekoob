@@ -179,8 +179,8 @@ class _RegisterPageState extends State<RegisterPage> {
                         ),
                         child: Text(
                           LocalizationService.getLocalizedText(
-                            englishText: 'Join Teekoob and start your reading journey',
-                            somaliText: 'Ku biir Teekoob oo bilaabo safarkaaga akhrinta',
+                            englishText: 'Join Bookdoon and start your reading journey',
+                            somaliText: 'Ku biir Bookdoon oo bilaabo safarkaaga akhrinta',
                           ),
                           style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                             color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),

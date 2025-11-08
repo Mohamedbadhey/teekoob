@@ -279,7 +279,7 @@ class _TeekoobAppState extends State<TeekoobApp> with WidgetsBindingObserver {
                 return Consumer<ThemeService>(
                   builder: (context, themeService, child) {
                     return MaterialApp.router(
-                      title: 'Teekoob',
+                      title: 'Bookdoon',
                       theme: AppTheme.lightTheme,
                       darkTheme: AppTheme.darkTheme,
                       themeMode: themeService.currentTheme,

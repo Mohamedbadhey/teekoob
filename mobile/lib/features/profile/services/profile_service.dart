@@ -12,20 +12,32 @@ class ProfileService {
   // Upload profile image
   Future<String> uploadProfileImage(String userId, File imageFile) async {
     try {
+      // Extract filename from path (works on both '/' and '\' separators)
+      final filename = imageFile.path.split(RegExp(r'[/\\]')).last;
+      
       final formData = FormData.fromMap({
         'avatar': await MultipartFile.fromFile(
           imageFile.path,
-          filename: imageFile.path.split('/').last,
+          filename: filename,
         ),
       });
 
       final response = await _networkService.put('/users/avatar', data: formData);
 
       if (response.statusCode == 200) {
-        final avatarUrl = response.data['avatarUrl'] as String;
+        // Handle both avatarUrl and user.avatarUrl response formats
+        final avatarUrl = response.data['avatarUrl'] as String? 
+            ?? (response.data['user'] != null 
+                ? (response.data['user'] as Map<String, dynamic>)['avatarUrl'] as String?
+                : null);
+        
+        if (avatarUrl == null) {
+          throw Exception('Avatar URL not found in response');
+        }
+        
         return avatarUrl;
       } else {
-        throw Exception('Failed to upload avatar');
+        throw Exception('Failed to upload avatar: ${response.statusMessage}');
       }
     } catch (e) {
       throw Exception('Avatar upload failed: $e');

@@ -97,22 +97,30 @@ class User extends Equatable {
       return null;
     })();
 
+    // Handle firstName and lastName - support both camelCase and snake_case
+    final firstName = json['firstName'] as String? ?? json['first_name'] as String?;
+    final lastName = json['lastName'] as String? ?? json['last_name'] as String?;
+    
     return User(
       id: id,
       email: email,
       username: username,
-      firstName: json['firstName'] as String?,
-      lastName: json['lastName'] as String?,
+      firstName: firstName,
+      lastName: lastName,
       profilePicture: profilePicture,
       preferredLanguage: preferredLanguage,
-      phoneNumber: json['phoneNumber'] as String?,
+      phoneNumber: json['phoneNumber'] as String? ?? json['phone_number'] as String?,
       dateOfBirth: json['dateOfBirth'] != null ? DateTime.parse(json['dateOfBirth'] as String) : null,
       country: json['country'] as String?,
       city: json['city'] as String?,
       subscriptionPlan: subscriptionPlan,
-      subscriptionExpiry: json['subscriptionExpiry'] != null ? DateTime.parse(json['subscriptionExpiry'] as String) : null,
+      subscriptionExpiry: json['subscriptionExpiry'] != null 
+          ? DateTime.parse(json['subscriptionExpiry'] as String) 
+          : (json['subscription_expires_at'] != null 
+              ? DateTime.parse(json['subscription_expires_at'] as String) 
+              : null),
       isEmailVerified: isEmailVerified,
-      isPhoneVerified: json['isPhoneVerified'] as bool? ?? false,
+      isPhoneVerified: json['isPhoneVerified'] as bool? ?? json['is_phone_verified'] as bool? ?? false,
       createdAt: createdAt,
       updatedAt: updatedAt,
       lastLoginAt: lastLoginAt,
@@ -122,7 +130,7 @@ class User extends Equatable {
       totalReadingTime: json['totalReadingTime'] as int? ?? 0,
       averageRating: (json['averageRating'] as num?)?.toDouble() ?? 0.0,
       readingGoals: List<String>.from(json['readingGoals'] as List? ?? []),
-      isActive: json['isActive'] as bool? ?? true,
+      isActive: json['isActive'] as bool? ?? json['is_active'] as bool? ?? true,
       bio: json['bio'] as String?,
     );
   }

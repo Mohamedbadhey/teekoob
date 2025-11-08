@@ -4,13 +4,30 @@ const multer = require('multer');
 const db = require('../config/database');
 const { asyncHandler } = require('../middleware/errorHandler');
 const logger = require('../utils/logger');
+const fs = require('fs');
+const path = require('path');
 
 const router = express.Router();
+
+// Ensure uploads/avatars directory exists
+const uploadsDir = process.env.RAILWAY_VOLUME_MOUNT_PATH || path.join(__dirname, '../../uploads');
+const avatarsDir = path.join(uploadsDir, 'avatars');
+
+// Create directories if they don't exist
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+  logger.info('Created uploads directory:', uploadsDir);
+}
+
+if (!fs.existsSync(avatarsDir)) {
+  fs.mkdirSync(avatarsDir, { recursive: true });
+  logger.info('Created avatars directory:', avatarsDir);
+}
 
 // Configure multer for avatar uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, 'uploads/avatars/');
+    cb(null, avatarsDir);
   },
   filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
@@ -40,7 +57,7 @@ router.get('/profile', asyncHandler(async (req, res) => {
   
   const user = await db('users')
     .select(
-      'id', 'email', 'first_name', 'last_name', 'avatar_url',
+      'id', 'email', 'first_name', 'last_name', 'display_name', 'avatar_url',
       'language_preference', 'subscription_plan', 'subscription_expires_at',
       'is_verified', 'created_at', 'last_login_at'
     )
@@ -54,7 +71,23 @@ router.get('/profile', asyncHandler(async (req, res) => {
     });
   }
   
-  res.json({ user });
+  // Transform to camelCase to match frontend expectations
+  const transformedUser = {
+    id: user.id,
+    email: user.email,
+    firstName: user.first_name,
+    lastName: user.last_name,
+    displayName: user.display_name,
+    avatarUrl: user.avatar_url,
+    languagePreference: user.language_preference,
+    subscriptionPlan: user.subscription_plan,
+    subscriptionExpiresAt: user.subscription_expires_at,
+    isVerified: !!user.is_verified,
+    createdAt: user.created_at,
+    lastLoginAt: user.last_login_at
+  };
+  
+  res.json({ user: transformedUser });
 }));
 
 // Update user profile
@@ -84,17 +117,40 @@ router.put('/profile', asyncHandler(async (req, res) => {
     });
   }
   
+  // Get current user data to preserve existing values
+  const currentUser = await db('users')
+    .select('first_name', 'last_name')
+    .where('id', userId)
+    .first();
+  
+  if (!currentUser) {
+    return res.status(404).json({ 
+      error: 'User not found',
+      code: 'USER_NOT_FOUND'
+    });
+  }
+  
   const updateData = {};
+  const newFirstName = firstName ? firstName.trim() : currentUser.first_name;
+  const newLastName = lastName ? lastName.trim() : currentUser.last_name;
+  
   if (firstName) {
-    updateData.first_name = firstName.trim();
-    // Also update display_name if it exists
-    if (lastName) {
-      updateData.display_name = `${firstName.trim()} ${lastName.trim()}`;
+    updateData.first_name = newFirstName;
+  }
+  if (lastName) {
+    updateData.last_name = newLastName;
+  }
+  
+  // Update display_name based on both firstName and lastName (current or new)
+  // This ensures display_name is always in sync
+  if (firstName || lastName) {
+    if (newLastName && newLastName.trim().length > 0) {
+      updateData.display_name = `${newFirstName} ${newLastName}`.trim();
     } else {
-      updateData.display_name = firstName.trim();
+      updateData.display_name = newFirstName;
     }
   }
-  if (lastName) updateData.last_name = lastName.trim();
+  
   if (preferredLanguage) updateData.language_preference = preferredLanguage;
   
   if (Object.keys(updateData).length === 0) {
@@ -112,7 +168,7 @@ router.put('/profile', asyncHandler(async (req, res) => {
   
   logger.info('User profile updated:', { userId, updateData });
   
-  // Fetch and return updated user
+  // Fetch and return updated user with camelCase fields
   const updatedUser = await db('users')
     .select(
       'id', 'email', 'first_name', 'last_name', 'display_name', 'avatar_url',
@@ -122,9 +178,25 @@ router.put('/profile', asyncHandler(async (req, res) => {
     .where('id', userId)
     .first();
   
+  // Transform to camelCase to match frontend expectations
+  const transformedUser = {
+    id: updatedUser.id,
+    email: updatedUser.email,
+    firstName: updatedUser.first_name,
+    lastName: updatedUser.last_name,
+    displayName: updatedUser.display_name,
+    avatarUrl: updatedUser.avatar_url,
+    languagePreference: updatedUser.language_preference,
+    subscriptionPlan: updatedUser.subscription_plan,
+    subscriptionExpiresAt: updatedUser.subscription_expires_at,
+    isVerified: !!updatedUser.is_verified,
+    createdAt: updatedUser.created_at,
+    lastLoginAt: updatedUser.last_login_at
+  };
+  
   res.json({
     message: 'Profile updated successfully',
-    user: updatedUser
+    user: transformedUser
   });
 }));
 
@@ -154,7 +226,7 @@ router.put('/avatar', upload.single('avatar'), asyncHandler(async (req, res) => 
     
     logger.info('Avatar uploaded:', { userId, avatarUrl });
     
-    // Fetch updated user to return
+    // Fetch updated user to return with camelCase fields
     const updatedUser = await db('users')
       .select(
         'id', 'email', 'first_name', 'last_name', 'display_name', 'avatar_url',
@@ -164,17 +236,34 @@ router.put('/avatar', upload.single('avatar'), asyncHandler(async (req, res) => 
       .where('id', userId)
       .first();
     
+    // Transform to camelCase to match frontend expectations
+    const transformedUser = {
+      id: updatedUser.id,
+      email: updatedUser.email,
+      firstName: updatedUser.first_name,
+      lastName: updatedUser.last_name,
+      displayName: updatedUser.display_name,
+      avatarUrl: updatedUser.avatar_url,
+      languagePreference: updatedUser.language_preference,
+      subscriptionPlan: updatedUser.subscription_plan,
+      subscriptionExpiresAt: updatedUser.subscription_expires_at,
+      isVerified: !!updatedUser.is_verified,
+      createdAt: updatedUser.created_at,
+      lastLoginAt: updatedUser.last_login_at
+    };
+    
     res.json({
       message: 'Avatar uploaded successfully',
       avatarUrl,
-      user: updatedUser
+      user: transformedUser
     });
     
   } catch (error) {
     logger.error('Avatar upload failed:', error);
     res.status(500).json({ 
       error: 'Failed to upload avatar',
-      code: 'AVATAR_UPLOAD_FAILED'
+      code: 'AVATAR_UPLOAD_FAILED',
+      details: error.message
     });
   }
 }));

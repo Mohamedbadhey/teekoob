@@ -169,6 +169,15 @@ try {
     console.log('✅ Uploads directory exists');
   }
   
+  // Ensure avatars subdirectory exists
+  const avatarsPath = path.join(uploadsPath, 'avatars');
+  if (!fs.existsSync(avatarsPath)) {
+    fs.mkdirSync(avatarsPath, { recursive: true });
+    console.log('✅ Created avatars directory:', avatarsPath);
+  } else {
+    console.log('✅ Avatars directory exists');
+  }
+  
   app.use('/uploads', express.static(uploadsPath));
   console.log('✅ Static file serving for uploads directory added');
   

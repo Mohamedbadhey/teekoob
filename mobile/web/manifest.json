@@ -1,11 +1,11 @@
 {
-    "name": "Teekoob",
-    "short_name": "Teekoob",
+    "name": "Bookdoon",
+    "short_name": "Bookdoon",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A multilingual eBook and audiobook platform supporting Somali and English languages.",
+    "description": "Bookdoon - A multilingual eBook and audiobook platform supporting Somali and English languages.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

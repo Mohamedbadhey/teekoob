@@ -37,7 +37,13 @@ class _EditProfilePageState extends State<EditProfilePage> {
     final authState = context.read<AuthBloc>().state;
     if (authState is Authenticated) {
       final user = authState.user;
-      _nameController.text = user.displayName;
+      // Use displayName if available, otherwise use firstName + lastName, or fallback to username
+      final displayName = user.displayName.isNotEmpty && user.displayName != user.username
+          ? user.displayName
+          : (user.firstName != null || user.lastName != null
+              ? '${user.firstName ?? ''} ${user.lastName ?? ''}'.trim()
+              : user.username);
+      _nameController.text = displayName;
       _emailController.text = user.email;
       _phoneController.text = user.phoneNumber ?? '';
       _bioController.text = user.bio ?? '';
@@ -158,19 +164,26 @@ class _EditProfilePageState extends State<EditProfilePage> {
         setState(() => _isImageUploading = false);
       }
 
+      // Split display name into firstName and lastName
+      final nameParts = _nameController.text.trim().split(' ').where((part) => part.isNotEmpty).toList();
+      final firstName = nameParts.isNotEmpty ? nameParts.first : '';
+      final lastName = nameParts.length > 1 ? nameParts.sublist(1).join(' ') : '';
+
       // Update profile using AuthService
       final authService = AuthService();
       final updatedUser = await authService.updateProfile(
-        firstName: _nameController.text.trim().split(' ').first,
-        lastName: _nameController.text.trim().split(' ').length > 1 
-            ? _nameController.text.trim().split(' ').sublist(1).join(' ') 
-            : null,
+        firstName: firstName.isNotEmpty ? firstName : null,
+        lastName: lastName.isNotEmpty ? lastName : null,
         profilePicture: newImageUrl,
       );
 
-      // Update local auth state with the updated user
+      // Update local auth state with the updated user - use the updated user's displayName
+      final displayNameToUse = updatedUser.displayName.isNotEmpty 
+          ? updatedUser.displayName 
+          : _nameController.text.trim();
+      
       context.read<AuthBloc>().add(UpdateProfileRequested(
-        displayName: _nameController.text.trim(),
+        displayName: displayNameToUse,
         phoneNumber: _phoneController.text.trim().isEmpty ? null : _phoneController.text.trim(),
         avatarUrl: newImageUrl,
       ));

@@ -90,8 +90,8 @@ class LocalizationService {
   // Get localized app name
   static String get getAppName {
     return getLocalizedText(
-      englishText: 'Teekoob',
-      somaliText: 'Teekoob',
+      englishText: 'Bookdoon',
+      somaliText: 'Bookdoon',
     );
   }
   
