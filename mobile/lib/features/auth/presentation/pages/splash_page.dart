@@ -132,6 +132,8 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
       body: BlocListener<AuthBloc, AuthState>(
         listener: (context, state) {
           if (state is Authenticated) {
+            // Always navigate to home (not a nested route) when authenticated
+            // This ensures app always starts from home navigation
             context.go('/home');
           } else if (state is Unauthenticated || state is AuthInitial) {
             context.go('/login');

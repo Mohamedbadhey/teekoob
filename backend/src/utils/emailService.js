@@ -19,11 +19,20 @@ class EmailService {
     const smtpHost = process.env.SMTP_HOST;
     const smtpPort = process.env.SMTP_PORT;
     const smtpUser = process.env.SMTP_USER;
-    const smtpPassword = process.env.SMTP_PASS || process.env.SMTP_PASSWORD;
+    const smtpPassword = (process.env.SMTP_PASS || process.env.SMTP_PASSWORD)?.trim(); // Trim whitespace
     // Support both EMAIL_FROM and SMTP_FROM for backward compatibility
     const smtpFrom = process.env.EMAIL_FROM || process.env.SMTP_FROM || smtpUser || 'noreply@bookdoon.com';
     // Support SMTP_SECURE environment variable (true/false string)
     const smtpSecure = process.env.SMTP_SECURE === 'true' || smtpPort === '465';
+
+    // Debug logging to help identify missing configuration
+    console.log('📧 Email Service Configuration Check:');
+    console.log('  - SMTP_HOST:', smtpHost ? '✅ SET' : '❌ MISSING');
+    console.log('  - SMTP_PORT:', smtpPort ? `✅ SET (${smtpPort})` : '❌ MISSING');
+    console.log('  - SMTP_USER:', smtpUser ? '✅ SET' : '❌ MISSING');
+    console.log('  - SMTP_PASS:', smtpPassword ? '✅ SET (***hidden***)' : '❌ MISSING');
+    console.log('  - SMTP_SECURE:', smtpSecure);
+    console.log('  - EMAIL_FROM:', smtpFrom);
 
     if (smtpHost && smtpPort && smtpUser && smtpPassword) {
       try {
@@ -40,18 +49,29 @@ class EmailService {
         });
 
         this.isConfigured = true;
-        logger.info('Email service configured with SMTP', {
+        logger.info('✅ Email service configured with SMTP', {
           host: smtpHost,
           port: smtpPort,
           secure: smtpSecure,
           from: smtpFrom
         });
+        console.log('✅ Email service successfully initialized!');
       } catch (error) {
-        logger.error('Failed to initialize email transporter:', error);
+        logger.error('❌ Failed to initialize email transporter:', error);
+        console.error('❌ Email transporter initialization error:', error.message);
         this.isConfigured = false;
       }
     } else {
-      logger.warn('Email service not configured. Emails will be logged to console only.');
+      const missing = [];
+      if (!smtpHost) missing.push('SMTP_HOST');
+      if (!smtpPort) missing.push('SMTP_PORT');
+      if (!smtpUser) missing.push('SMTP_USER');
+      if (!smtpPassword) missing.push('SMTP_PASS or SMTP_PASSWORD');
+      
+      logger.warn('⚠️ Email service not configured. Missing:', missing);
+      logger.warn('⚠️ Emails will be logged to console only.');
+      console.warn('⚠️ Email service not configured. Missing variables:', missing.join(', '));
+      console.warn('⚠️ Emails will be logged to console only in development mode.');
       this.isConfigured = false;
     }
   }

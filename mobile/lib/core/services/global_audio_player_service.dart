@@ -129,6 +129,7 @@ class GlobalAudioPlayerService extends ChangeNotifier {
   final DownloadService _downloadService = DownloadService();
   
   AudioItem? _currentItem;
+  Book? _currentBook; // Store the current book being played
   AudioPlayerState _state = AudioPlayerState.stopped;
   Duration _position = Duration.zero;
   Duration _duration = Duration.zero;
@@ -156,6 +157,7 @@ class GlobalAudioPlayerService extends ChangeNotifier {
 
   // Getters
   AudioItem? get currentItem => _currentItem;
+  Book? get currentBook => _currentBook; // Get the current book being played
   AudioPlayerState get state => _state;
   Duration get position => _position;
   Duration get duration => _duration;
@@ -625,6 +627,10 @@ class GlobalAudioPlayerService extends ChangeNotifier {
       }
 
       _currentItem = item;
+      // Clear book if item is not a book
+      if (item.type != AudioType.book) {
+        _currentBook = null;
+      }
       
       // Build cover image URL for MediaItem - CRITICAL: Must be full URL for notification artwork
       String? coverImageUrl;
@@ -1023,6 +1029,7 @@ class GlobalAudioPlayerService extends ChangeNotifier {
       );
       
       final audioItem = AudioItem.fromBook(bookWithFullUrl);
+      _currentBook = bookWithFullUrl; // Store the book object
       await playItem(audioItem);
     } catch (e, stackTrace) {
       rethrow;
@@ -1216,6 +1223,7 @@ class GlobalAudioPlayerService extends ChangeNotifier {
       if (!_isInitialized) {
         _position = Duration.zero;
         _currentItem = null;
+        _currentBook = null;
         _state = AudioPlayerState.stopped;
         notifyListeners();
         return;
@@ -1224,12 +1232,14 @@ class GlobalAudioPlayerService extends ChangeNotifier {
       await _audioPlayer.stop();
       _position = Duration.zero;
       _currentItem = null;
+      _currentBook = null;
       _state = AudioPlayerState.stopped;
       notifyListeners();
     } catch (e, stackTrace) {
       // Reset state even if stop fails
       _position = Duration.zero;
       _currentItem = null;
+      _currentBook = null;
       _state = AudioPlayerState.stopped;
       notifyListeners();
     }

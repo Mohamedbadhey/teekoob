@@ -6,6 +6,8 @@ import 'package:teekoob/core/config/app_config.dart';
 import 'package:teekoob/features/player/services/audio_player_service.dart';
 import 'package:teekoob/features/player/services/audio_state_manager.dart';
 import 'package:teekoob/core/config/app_router.dart';
+import 'package:teekoob/core/services/global_audio_player_service.dart';
+import 'package:teekoob/features/books/services/books_service.dart';
 
 class AudioPlayerPage extends StatefulWidget {
   final String bookId;
@@ -71,32 +73,46 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
         error = null;
       });
 
-      // TODO: Fetch book details from the backend
-      // For now, we'll create a placeholder book
-      await Future.delayed(const Duration(milliseconds: 500));
-      
-      // Get book from route extra
+      // First, try to get book from route extra
       final args = GoRouterState.of(context).extra;
       if (args != null && args is Book) {
         setState(() {
           book = args;
           isLoading = false;
         });
-      } else {
-        // If no book data in route, fetch from backend using bookId
-        try {
-          // TODO: Implement book fetching from backend
-          // For now, show error
+        return;
+      }
+
+      // Second, try to get book from GlobalAudioPlayerService
+      final audioService = GlobalAudioPlayerService();
+      if (audioService.currentBook != null && audioService.currentBook!.id == widget.bookId) {
+        setState(() {
+          book = audioService.currentBook;
+          isLoading = false;
+        });
+        return;
+      }
+
+      // Third, fetch from backend using bookId
+      try {
+        final booksService = BooksService();
+        final fetchedBook = await booksService.getBookById(widget.bookId);
+        if (fetchedBook != null) {
           setState(() {
-            error = 'No book provided';
+            book = fetchedBook;
             isLoading = false;
           });
-        } catch (e) {
+        } else {
           setState(() {
-            error = 'Failed to load book: $e';
+            error = 'Book not found';
             isLoading = false;
           });
         }
+      } catch (e) {
+        setState(() {
+          error = 'Failed to load book: $e';
+          isLoading = false;
+        });
       }
     } catch (e) {
       setState(() {

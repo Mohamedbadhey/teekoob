@@ -172,6 +172,12 @@ class _TeekoobAppState extends State<TeekoobApp> with WidgetsBindingObserver {
     // Handle app lifecycle changes for background audio
     final audioService = GlobalAudioPlayerService();
     audioService.handleAppLifecycleChange(state);
+    
+    // When app is detached (closed), ensure next start goes to splash
+    if (state == AppLifecycleState.detached) {
+      // App is being closed - navigation will reset on next start
+      // This ensures app always starts from splash/home
+    }
   }
 
   // Removed automatic initialization - audio service will initialize on-demand when user clicks play

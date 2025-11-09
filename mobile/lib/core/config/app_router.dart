@@ -24,6 +24,7 @@ import 'package:teekoob/features/notifications/presentation/pages/notifications_
 import 'package:teekoob/features/auth/services/auth_service.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:teekoob/features/auth/bloc/auth_bloc.dart';
+import 'package:teekoob/core/models/book_model.dart';
 
 class AppRouter {
   static const String splash = '/';
@@ -45,6 +46,8 @@ class AppRouter {
   
   static final GoRouter router = GoRouter(
     initialLocation: splash,
+    // Disable state restoration to always start fresh
+    restorationScopeId: null,
     routes: [
       // Splash Screen
       GoRoute(
@@ -221,6 +224,29 @@ class AppRouter {
         return '/home';
       }
       
+      // If authenticated and trying to access a nested route (not a main tab route),
+      // ensure we redirect to home on app start to prevent restoring nested routes.
+      // This ensures app always starts from home navigation, not from a nested route
+      if (isAuthenticated && !isPublicRoute && state.uri.path != '/') {
+        final mainRoutes = ['/home', '/home/books', '/home/library', '/home/settings'];
+        final isMainRoute = mainRoutes.contains(state.uri.path);
+        
+        // If it's a nested route (not a main route), check if this is app start
+        // Nested routes include paths like /home/books/:id/read, /home/player/:id, etc.
+        // On app start, GoRouter might try to restore these routes, so we redirect to home
+        if (!isMainRoute) {
+          // Check if this is coming from splash (app start)
+          // The matchedLocation will be '/' if coming from splash
+          final isFromSplash = state.matchedLocation == '/' || state.uri.path == '/';
+          
+          // If coming from splash and trying to access a nested route, redirect to home
+          // This prevents app from restoring nested routes on app start
+          if (isFromSplash) {
+            return '/home';
+          }
+        }
+      }
+      
       return null; // Allow navigation
     },
     
@@ -266,8 +292,13 @@ class AppRouter {
   static void goToLibrary(BuildContext context) => context.go('$home/library');
   static void goToReader(BuildContext context, String bookId) => 
       context.go('$home/reader/$bookId');
-  static void goToAudioPlayer(BuildContext context, String bookId) => 
+  static void goToAudioPlayer(BuildContext context, String bookId, {Book? bookObject}) {
+    if (bookObject != null) {
+      context.go('$home/player/$bookId', extra: bookObject);
+    } else {
       context.go('$home/player/$bookId');
+    }
+  }
   static void goToSettings(BuildContext context) => context.go('$home/settings');
   static void goToSubscription(BuildContext context) => context.go('$home/subscription');
   static void goToPodcastDetail(BuildContext context, String podcastId) => 

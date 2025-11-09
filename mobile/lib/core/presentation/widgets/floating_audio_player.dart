@@ -107,7 +107,9 @@ class _FloatingAudioPlayerState extends State<FloatingAudioPlayer>
     final audioService = GlobalAudioPlayerService();
     if (audioService.currentItem != null) {
       if (audioService.currentItem!.type == AudioType.book) {
-        AppRouter.goToAudioPlayer(context, audioService.currentItem!.id);
+        // Pass the book object from the service if available
+        final book = audioService.currentBook;
+        AppRouter.goToAudioPlayer(context, audioService.currentItem!.id, bookObject: book);
       } else {
         // For podcasts, navigate to episode page
         // Get the podcast ID from the service

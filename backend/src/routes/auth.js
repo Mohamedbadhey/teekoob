@@ -410,10 +410,7 @@ router.post('/forgot-password', asyncHandler(async (req, res) => {
     .where('id', user.id)
     .update({
       reset_password_code: resetCode,
-      reset_password_code_expires_at: codeExpires,
-      // Clear old token if exists
-      reset_password_token: null,
-      reset_password_expires_at: null
+      reset_password_code_expires_at: codeExpires
     });
 
   // Send email with verification code
@@ -513,15 +510,13 @@ router.post('/reset-password', asyncHandler(async (req, res) => {
   const saltRounds = 12;
   const passwordHash = await bcrypt.hash(newPassword, saltRounds);
 
-  // Update password and clear reset code and token
+  // Update password and clear reset code
   await db('users')
     .where('id', user.id)
     .update({
       password_hash: passwordHash,
       reset_password_code: null,
-      reset_password_code_expires_at: null,
-      reset_password_token: null,
-      reset_password_expires_at: null
+      reset_password_code_expires_at: null
     });
 
   // Get updated user data
@@ -777,6 +772,87 @@ router.get('/google-config', asyncHandler(async (req, res) => {
     config,
     status: config.clientIdsCount > 0 ? 'CONFIGURED' : 'MISSING_CONFIG'
   });
+}));
+
+// Test email configuration endpoint
+router.get('/test-email-config', asyncHandler(async (req, res) => {
+  const emailConfig = {
+    hasSmtpHost: !!process.env.SMTP_HOST,
+    hasSmtpPort: !!process.env.SMTP_PORT,
+    hasSmtpUser: !!process.env.SMTP_USER,
+    hasSmtpPass: !!(process.env.SMTP_PASS || process.env.SMTP_PASSWORD),
+    smtpHost: process.env.SMTP_HOST,
+    smtpPort: process.env.SMTP_PORT,
+    smtpUser: process.env.SMTP_USER,
+    smtpSecure: process.env.SMTP_SECURE,
+    emailFrom: process.env.EMAIL_FROM || process.env.SMTP_FROM,
+    isConfigured: emailService.isConfigured,
+    appName: process.env.APP_NAME || 'Bookdoon',
+    resetCodeExpiry: process.env.RESET_CODE_EXPIRY_MINUTES || '10'
+  };
+  
+  res.json({
+    message: 'Email configuration status',
+    config: emailConfig,
+    status: emailConfig.isConfigured ? 'CONFIGURED' : 'MISSING_CONFIG',
+    missing: [
+      !emailConfig.hasSmtpHost && 'SMTP_HOST',
+      !emailConfig.hasSmtpPort && 'SMTP_PORT',
+      !emailConfig.hasSmtpUser && 'SMTP_USER',
+      !emailConfig.hasSmtpPass && 'SMTP_PASS or SMTP_PASSWORD'
+    ].filter(Boolean)
+  });
+}));
+
+// Test send email endpoint (for testing email functionality)
+router.post('/test-send-email', asyncHandler(async (req, res) => {
+  const { email } = req.body;
+  
+  if (!email) {
+    return res.status(400).json({
+      error: 'Email address is required',
+      code: 'EMAIL_REQUIRED'
+    });
+  }
+  
+  if (!emailService.isConfigured) {
+    return res.status(503).json({
+      error: 'Email service is not configured',
+      code: 'EMAIL_NOT_CONFIGURED',
+      message: 'Please configure SMTP settings in your .env file'
+    });
+  }
+  
+  // Generate a test code
+  const testCode = Math.floor(100000 + Math.random() * 900000).toString();
+  
+  try {
+    const emailSent = await emailService.sendPasswordResetCode(email, testCode);
+    
+    if (emailSent) {
+      res.json({
+        success: true,
+        message: 'Test email sent successfully',
+        email: email,
+        testCode: testCode,
+        note: 'This is a test code. Check your inbox!'
+      });
+    } else {
+      res.status(500).json({
+        success: false,
+        error: 'Failed to send test email',
+        code: 'EMAIL_SEND_FAILED'
+      });
+    }
+  } catch (error) {
+    logger.error('Test email send error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error sending test email',
+      code: 'EMAIL_ERROR',
+      details: error.message
+    });
+  }
 }));
 
 module.exports = router;
