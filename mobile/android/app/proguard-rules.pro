@@ -1,7 +1,3 @@
-# Keep Stripe SDK classes to prevent R8 from removing them
--keep class com.stripe.** { *; }
--dontwarn com.stripe.**
-
 # Keep Flutter classes
 -keep class io.flutter.** { *; }
 -dontwarn io.flutter.**

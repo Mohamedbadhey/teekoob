@@ -38,24 +38,44 @@ class EmailService {
       try {
         const nodemailer = require('nodemailer');
         
+        // For Gmail, prefer port 587 with STARTTLS over 465 with SSL
+        // Port 587 is more reliable from cloud platforms like Railway
+        const port = parseInt(smtpPort, 10);
+        const useSecure = smtpSecure && port === 465;
+        const useStartTLS = !useSecure && (port === 587 || port === 25);
+        
         this.transporter = nodemailer.createTransport({
           host: smtpHost,
-          port: parseInt(smtpPort, 10),
-          secure: smtpSecure, // Use SMTP_SECURE or default to port 465 check
+          port: port,
+          secure: useSecure, // true for 465, false for other ports
+          requireTLS: useStartTLS, // Use STARTTLS for port 587
           auth: {
             user: smtpUser,
             pass: smtpPassword,
           },
+          // Connection timeout settings (in milliseconds)
+          connectionTimeout: 10000, // 10 seconds
+          greetingTimeout: 10000, // 10 seconds
+          socketTimeout: 10000, // 10 seconds
+          // Retry settings
+          pool: true,
+          maxConnections: 1,
+          maxMessages: 3,
+          // Debug mode (set to true for troubleshooting)
+          debug: process.env.SMTP_DEBUG === 'true',
+          logger: process.env.SMTP_DEBUG === 'true',
         });
 
         this.isConfigured = true;
         logger.info('✅ Email service configured with SMTP', {
           host: smtpHost,
           port: smtpPort,
-          secure: smtpSecure,
+          secure: useSecure,
+          requireTLS: useStartTLS,
           from: smtpFrom
         });
         console.log('✅ Email service successfully initialized!');
+        console.log(`   Using ${useSecure ? 'SSL' : useStartTLS ? 'STARTTLS' : 'plain'} connection on port ${port}`);
       } catch (error) {
         logger.error('❌ Failed to initialize email transporter:', error);
         console.error('❌ Email transporter initialization error:', error.message);
@@ -172,7 +192,23 @@ This is an automated message. Please do not reply to this email.
 
         return true;
       } catch (error) {
-        logger.error('Failed to send email:', error);
+        logger.error('Failed to send email:', {
+          message: error.message,
+          code: error.code,
+          command: error.command,
+          response: error.response,
+          responseCode: error.responseCode
+        });
+        
+        // Log more details for connection errors
+        if (error.code === 'ETIMEDOUT' || error.code === 'ECONNREFUSED') {
+          logger.error('SMTP Connection Error Details:', {
+            host: process.env.SMTP_HOST,
+            port: process.env.SMTP_PORT,
+            suggestion: 'Try using port 587 with STARTTLS instead of 465 with SSL, or check if your hosting provider allows SMTP connections'
+          });
+        }
+        
         return false;
       }
     } else {
