@@ -85,15 +85,17 @@ class ResetPasswordRequested extends AuthEvent {
   final String email;
   final String code;
   final String newPassword;
+  final String confirmPassword;
 
   const ResetPasswordRequested({
     required this.email,
     required this.code,
     required this.newPassword,
+    required this.confirmPassword,
   });
 
   @override
-  List<Object?> get props => [email, code, newPassword];
+  List<Object?> get props => [email, code, newPassword, confirmPassword];
 }
 
 class ChangePasswordRequested extends AuthEvent {
@@ -186,6 +188,15 @@ class AuthSuccess extends AuthState {
 
   @override
   List<Object?> get props => [message, user];
+}
+
+class ForgotPasswordSuccess extends AuthState {
+  final String email;
+
+  const ForgotPasswordSuccess(this.email);
+
+  @override
+  List<Object?> get props => [email];
 }
 
 // BLoC
@@ -338,7 +349,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       
       await _authService.forgotPassword(event.email);
       
-      emit(const AuthSuccess('Password reset email sent!'));
+      // Emit success with email for navigation
+      emit(ForgotPasswordSuccess(event.email));
     } catch (e) {
       emit(AuthError('Failed to send password reset email: $e'));
     }
@@ -369,14 +381,26 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     try {
       emit(const AuthLoading());
       
-      await _authService.resetPassword(
+      final result = await _authService.resetPassword(
         email: event.email,
         code: event.code,
         newPassword: event.newPassword,
-        confirmPassword: event.newPassword, // For now, use same password
+        confirmPassword: event.confirmPassword,
       );
       
-      emit(const AuthSuccess('Password reset successful!'));
+      // Auto-login after successful password reset
+      if (result != null && result['user'] != null && result['token'] != null) {
+        final user = User.fromJson(result['user']);
+        final token = result['token'] as String;
+        
+        // Store token and user email
+        await _authService.storeAuthToken(token, user.email);
+        
+        emit(Authenticated(user));
+        emit(AuthSuccess('Password reset successful! You are now logged in.', user: user));
+      } else {
+        emit(const AuthSuccess('Password reset successful!'));
+      }
     } catch (e) {
       emit(AuthError('Password reset failed: $e'));
     }

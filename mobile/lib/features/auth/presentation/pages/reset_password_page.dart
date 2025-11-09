@@ -41,6 +41,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
           email: widget.email,
           code: widget.code,
           newPassword: _newPasswordController.text,
+          confirmPassword: _confirmPasswordController.text,
         ),
       );
     }
@@ -66,9 +67,23 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
                 backgroundColor: Theme.of(context).colorScheme.primary,
               ),
             );
-            // Navigate to login page after successful reset
+            // Auto-login after successful reset
+            if (state.user != null) {
+              // User is already logged in, navigate to home
+              Future.delayed(const Duration(seconds: 1), () {
+                context.go('/home');
+              });
+            } else {
+              // Fallback: navigate to login page
+              Future.delayed(const Duration(seconds: 1), () {
+                context.go('/login');
+              });
+            }
+          } else if (state is Authenticated) {
+            // User is authenticated, navigate to home
+            setState(() => _isLoading = false);
             Future.delayed(const Duration(seconds: 1), () {
-              context.go('/login');
+              context.go('/home');
             });
           } else if (state is AuthError) {
             setState(() => _isLoading = false);

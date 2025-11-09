@@ -392,15 +392,18 @@ router.post('/forgot-password', asyncHandler(async (req, res) => {
 
   const user = await db('users').where('email', email).first();
   if (!user) {
-    // Don't reveal if user exists or not for security
-    return res.json({ 
-      message: 'If an account with that email exists, a password reset code has been sent'
+    // Return error if email doesn't exist (for better UX - user knows to check email)
+    return res.status(404).json({ 
+      error: 'No account found with this email address',
+      code: 'USER_NOT_FOUND'
     });
   }
 
   // Generate 6-digit verification code
   const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
-  const codeExpires = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+  // Get expiry time from environment (default to 10 minutes)
+  const expiryMinutes = parseInt(process.env.RESET_CODE_EXPIRY_MINUTES || '10', 10);
+  const codeExpires = new Date(Date.now() + expiryMinutes * 60 * 1000);
 
   // Store code in database
   await db('users')
@@ -521,10 +524,45 @@ router.post('/reset-password', asyncHandler(async (req, res) => {
       reset_password_expires_at: null
     });
 
+  // Get updated user data
+  const updatedUser = await db('users')
+    .select('id', 'email', 'first_name', 'last_name', 'display_name', 'language_preference', 'subscription_plan', 'subscription_expires_at', 'avatar_url', 'is_admin', 'is_active', 'is_verified', 'created_at')
+    .where('id', user.id)
+    .first();
+
+  // Generate JWT token for auto-login
+  const token = jwt.sign(
+    { userId: user.id },
+    process.env.JWT_SECRET,
+    { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+  );
+
+  // Transform field names to match frontend expectations
+  const adminField = updatedUser.is_admin !== undefined ? updatedUser.is_admin : 
+                    updatedUser.isAdmin !== undefined ? updatedUser.isAdmin : 
+                    updatedUser.admin !== undefined ? updatedUser.admin : false;
+
+  const transformedUser = {
+    id: updatedUser.id,
+    email: updatedUser.email,
+    firstName: updatedUser.first_name,
+    lastName: updatedUser.last_name,
+    displayName: updatedUser.display_name,
+    avatarUrl: updatedUser.avatar_url,
+    languagePreference: updatedUser.language_preference,
+    subscriptionPlan: updatedUser.subscription_plan,
+    isActive: !!updatedUser.is_active,
+    isVerified: !!updatedUser.is_verified,
+    isAdmin: !!adminField,
+    createdAt: updatedUser.created_at
+  };
+
   logger.info('Password reset successful:', { email, userId: user.id });
 
   res.json({ 
-    message: 'Password reset successfully'
+    message: 'Password reset successfully',
+    user: transformedUser,
+    token: token
   });
 }));
 

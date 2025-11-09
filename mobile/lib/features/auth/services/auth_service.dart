@@ -49,6 +49,16 @@ class AuthService {
   static const String _tokenKey = 'auth_token';
   static const String _userEmailKey = 'auth_user_email';
 
+  // Store auth token (used for auto-login after password reset)
+  Future<void> storeAuthToken(String token, String email) async {
+    await _secureStorage.write(key: _tokenKey, value: token);
+    await _secureStorage.write(key: _userEmailKey, value: email);
+    _networkService.setAuthToken(token);
+    
+    // Register user for notifications
+    await _registerUserForNotifications();
+  }
+
   // Login user
   Future<User> login({
     required String email,
@@ -408,8 +418,8 @@ class AuthService {
     }
   }
 
-  // Reset password
-  Future<void> resetPassword({
+  // Reset password - Returns user and token for auto-login
+  Future<Map<String, dynamic>?> resetPassword({
     required String email,
     required String code,
     required String newPassword,
@@ -429,6 +439,16 @@ class AuthService {
       if (response.statusCode != 200) {
         throw Exception('Password reset failed');
       }
+
+      // Return user and token for auto-login
+      if (response.data['user'] != null && response.data['token'] != null) {
+        return {
+          'user': response.data['user'],
+          'token': response.data['token'],
+        };
+      }
+      
+      return null;
     } catch (e) {
       throw Exception('Password reset failed: $e');
     }

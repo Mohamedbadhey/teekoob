@@ -15,11 +15,15 @@ class EmailService {
 
   _initializeTransporter() {
     // Check if email is configured
+    // Support both SMTP_PASS and SMTP_PASSWORD for backward compatibility
     const smtpHost = process.env.SMTP_HOST;
     const smtpPort = process.env.SMTP_PORT;
     const smtpUser = process.env.SMTP_USER;
-    const smtpPassword = process.env.SMTP_PASSWORD;
-    const smtpFrom = process.env.SMTP_FROM || smtpUser || 'noreply@teekoob.com';
+    const smtpPassword = process.env.SMTP_PASS || process.env.SMTP_PASSWORD;
+    // Support both EMAIL_FROM and SMTP_FROM for backward compatibility
+    const smtpFrom = process.env.EMAIL_FROM || process.env.SMTP_FROM || smtpUser || 'noreply@bookdoon.com';
+    // Support SMTP_SECURE environment variable (true/false string)
+    const smtpSecure = process.env.SMTP_SECURE === 'true' || smtpPort === '465';
 
     if (smtpHost && smtpPort && smtpUser && smtpPassword) {
       try {
@@ -28,7 +32,7 @@ class EmailService {
         this.transporter = nodemailer.createTransport({
           host: smtpHost,
           port: parseInt(smtpPort, 10),
-          secure: smtpPort === '465', // true for 465, false for other ports
+          secure: smtpSecure, // Use SMTP_SECURE or default to port 465 check
           auth: {
             user: smtpUser,
             pass: smtpPassword,
@@ -36,7 +40,12 @@ class EmailService {
         });
 
         this.isConfigured = true;
-        logger.info('Email service configured with SMTP');
+        logger.info('Email service configured with SMTP', {
+          host: smtpHost,
+          port: smtpPort,
+          secure: smtpSecure,
+          from: smtpFrom
+        });
       } catch (error) {
         logger.error('Failed to initialize email transporter:', error);
         this.isConfigured = false;
@@ -54,7 +63,11 @@ class EmailService {
    * @returns {Promise<boolean>} - Success status
    */
   async sendPasswordResetCode(email, code) {
-    const subject = 'Password Reset Code - Teekoob';
+    // Get app name and expiry time from environment
+    const appName = process.env.APP_NAME || 'Bookdoon';
+    const expiryMinutes = parseInt(process.env.RESET_CODE_EXPIRY_MINUTES || '10', 10);
+    
+    const subject = `Password Reset Code - ${appName}`;
     const html = `
       <!DOCTYPE html>
       <html>
@@ -69,13 +82,13 @@ class EmailService {
           
           <p>Hello,</p>
           
-          <p>You have requested to reset your password for your Teekoob account. Please use the following verification code to reset your password:</p>
+          <p>You have requested to reset your password for your ${appName} account. Please use the following verification code to reset your password:</p>
           
           <div style="background-color: #ffffff; border: 2px dashed #3498db; border-radius: 5px; padding: 20px; text-align: center; margin: 20px 0;">
             <h2 style="color: #3498db; font-size: 32px; letter-spacing: 5px; margin: 0;">${code}</h2>
           </div>
           
-          <p style="color: #e74c3c; font-weight: bold;">This code will expire in 15 minutes.</p>
+          <p style="color: #e74c3c; font-weight: bold;">This code will expire in ${expiryMinutes} ${expiryMinutes === 1 ? 'minute' : 'minutes'}.</p>
           
           <p>If you did not request this password reset, please ignore this email. Your password will remain unchanged.</p>
           
@@ -90,15 +103,15 @@ class EmailService {
     `;
 
     const text = `
-Password Reset Request - Teekoob
+Password Reset Request - ${appName}
 
 Hello,
 
-You have requested to reset your password for your Teekoob account. Please use the following verification code to reset your password:
+You have requested to reset your password for your ${appName} account. Please use the following verification code to reset your password:
 
 Verification Code: ${code}
 
-This code will expire in 15 minutes.
+This code will expire in ${expiryMinutes} ${expiryMinutes === 1 ? 'minute' : 'minutes'}.
 
 If you did not request this password reset, please ignore this email. Your password will remain unchanged.
 
@@ -117,7 +130,8 @@ This is an automated message. Please do not reply to this email.
    * @returns {Promise<boolean>} - Success status
    */
   async _sendEmail(to, subject, text, html) {
-    const smtpFrom = process.env.SMTP_FROM || process.env.SMTP_USER || 'noreply@teekoob.com';
+    // Support both EMAIL_FROM and SMTP_FROM for backward compatibility
+    const smtpFrom = process.env.EMAIL_FROM || process.env.SMTP_FROM || process.env.SMTP_USER || 'noreply@bookdoon.com';
 
     if (this.isConfigured && this.transporter) {
       try {
@@ -132,6 +146,7 @@ This is an automated message. Please do not reply to this email.
         logger.info('Email sent successfully:', {
           to,
           subject,
+          from: smtpFrom,
           messageId: info.messageId,
         });
 
@@ -143,6 +158,7 @@ This is an automated message. Please do not reply to this email.
     } else {
       // Development mode: Log email to console
       logger.info('=== EMAIL (NOT CONFIGURED - DEVELOPMENT MODE) ===');
+      logger.info('From:', smtpFrom);
       logger.info('To:', to);
       logger.info('Subject:', subject);
       logger.info('Text:', text);

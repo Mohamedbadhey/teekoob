@@ -89,15 +89,29 @@ class _LoginPageState extends State<LoginPage> {
             child: Text(LocalizationService.getCancelText),
           ),
           ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
               final email = emailController.text.trim();
               if (email.isNotEmpty && context.read<AuthBloc>().validateEmail(email)) {
+                // Show loading
+                Navigator.of(context).pop();
+                
+                // Request password reset and check if email exists
                 context.read<AuthBloc>().add(
                   ForgotPasswordRequested(email: email),
                 );
-                Navigator.of(context).pop();
-                // Navigate to verify code page
-                context.go('/verify-reset-code?email=${Uri.encodeComponent(email)}');
+                
+                // Wait for the result - navigation will happen in BlocListener
+              } else {
+                // Show validation error
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(LocalizationService.getLocalizedText(
+                      englishText: 'Please enter a valid email address',
+                      somaliText: 'Fadlan geli iimayl sax ah',
+                    )),
+                    backgroundColor: Theme.of(context).colorScheme.error,
+                  ),
+                );
               }
             },
             child: Text(LocalizationService.getLocalizedText(
@@ -125,6 +139,18 @@ class _LoginPageState extends State<LoginPage> {
             if (state.user != null) {
               context.go('/home');
             }
+          } else if (state is ForgotPasswordSuccess) {
+            // Navigate to verify code page when email is sent successfully
+            context.go('/verify-reset-code?email=${Uri.encodeComponent(state.email)}');
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(LocalizationService.getLocalizedText(
+                  englishText: 'Verification code sent to your email',
+                  somaliText: 'Lambarka xaqiijinta ayaa loo diray iimaylkaaga',
+                )),
+                backgroundColor: Theme.of(context).colorScheme.primary,
+              ),
+            );
           } else if (state is AuthError) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
