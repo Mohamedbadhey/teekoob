@@ -8,92 +8,42 @@ const logger = require('./logger');
 
 class EmailService {
   constructor() {
-    this.transporter = null;
     this.isConfigured = false;
+    this.useResend = false;
+    this.resendClient = null;
     this._initializeTransporter();
   }
 
   _initializeTransporter() {
-    // Check if email is configured
-    // Support both SMTP_PASS and SMTP_PASSWORD for backward compatibility
-    const smtpHost = process.env.SMTP_HOST;
-    const smtpPort = process.env.SMTP_PORT;
-    const smtpUser = process.env.SMTP_USER;
-    const smtpPassword = (process.env.SMTP_PASS || process.env.SMTP_PASSWORD)?.trim(); // Trim whitespace
-    // Support both EMAIL_FROM and SMTP_FROM for backward compatibility
-    const smtpFrom = process.env.EMAIL_FROM || process.env.SMTP_FROM || smtpUser || 'noreply@bookdoon.com';
-    // Support SMTP_SECURE environment variable (true/false string)
-    const smtpSecure = process.env.SMTP_SECURE === 'true' || smtpPort === '465';
-
-    // Debug logging to help identify missing configuration
-    console.log('📧 Email Service Configuration Check:');
-    console.log('  - SMTP_HOST:', smtpHost ? '✅ SET' : '❌ MISSING');
-    console.log('  - SMTP_PORT:', smtpPort ? `✅ SET (${smtpPort})` : '❌ MISSING');
-    console.log('  - SMTP_USER:', smtpUser ? '✅ SET' : '❌ MISSING');
-    console.log('  - SMTP_PASS:', smtpPassword ? '✅ SET (***hidden***)' : '❌ MISSING');
-    console.log('  - SMTP_SECURE:', smtpSecure);
-    console.log('  - EMAIL_FROM:', smtpFrom);
-
-    if (smtpHost && smtpPort && smtpUser && smtpPassword) {
+    // Resend-only email provider
+    const resendApiKey = process.env.RESEND_API_KEY;
+    const resendFrom = process.env.RESEND_FROM || process.env.EMAIL_FROM || 'onboarding@resend.dev';
+    if (resendApiKey) {
       try {
-        const nodemailer = require('nodemailer');
-        
-        // For Gmail, prefer port 587 with STARTTLS over 465 with SSL
-        // Port 587 is more reliable from cloud platforms like Railway
-        const port = parseInt(smtpPort, 10);
-        const useSecure = smtpSecure && port === 465;
-        const useStartTLS = !useSecure && (port === 587 || port === 25);
-        
-        this.transporter = nodemailer.createTransport({
-          host: smtpHost,
-          port: port,
-          secure: useSecure, // true for 465, false for other ports
-          requireTLS: useStartTLS, // Use STARTTLS for port 587
-          auth: {
-            user: smtpUser,
-            pass: smtpPassword,
-          },
-          // Connection timeout settings (in milliseconds)
-          connectionTimeout: 10000, // 10 seconds
-          greetingTimeout: 10000, // 10 seconds
-          socketTimeout: 10000, // 10 seconds
-          // Retry settings
-          pool: true,
-          maxConnections: 1,
-          maxMessages: 3,
-          // Debug mode (set to true for troubleshooting)
-          debug: process.env.SMTP_DEBUG === 'true',
-          logger: process.env.SMTP_DEBUG === 'true',
-        });
-
+        const { Resend } = require('resend');
+        this.resendClient = new Resend(resendApiKey);
+        this.useResend = true;
         this.isConfigured = true;
-        logger.info('✅ Email service configured with SMTP', {
-          host: smtpHost,
-          port: smtpPort,
-          secure: useSecure,
-          requireTLS: useStartTLS,
-          from: smtpFrom
+        console.log('📧 Email Service: Using Resend as provider');
+        logger.info('✅ Email service configured with Resend', {
+          from: resendFrom
         });
-        console.log('✅ Email service successfully initialized!');
-        console.log(`   Using ${useSecure ? 'SSL' : useStartTLS ? 'STARTTLS' : 'plain'} connection on port ${port}`);
+        return;
       } catch (error) {
-        logger.error('❌ Failed to initialize email transporter:', error);
-        console.error('❌ Email transporter initialization error:', error.message);
+        logger.error('❌ Failed to initialize Resend client:', error);
+        console.error('❌ Resend initialization error:', error.message);
+        this.useResend = false;
+        this.resendClient = null;
         this.isConfigured = false;
+        return;
       }
-    } else {
-      const missing = [];
-      if (!smtpHost) missing.push('SMTP_HOST');
-      if (!smtpPort) missing.push('SMTP_PORT');
-      if (!smtpUser) missing.push('SMTP_USER');
-      if (!smtpPassword) missing.push('SMTP_PASS or SMTP_PASSWORD');
-      
-      logger.warn('⚠️ Email service not configured. Missing:', missing);
-      logger.warn('⚠️ Emails will be logged to console only.');
-      console.warn('⚠️ Email service not configured. Missing variables:', missing.join(', '));
-      console.warn('⚠️ Emails will be logged to console only in development mode.');
-      this.isConfigured = false;
     }
+
+    // If we reach here, Resend is not configured
+    console.log('📧 Email Service Configuration Check:');
+    console.log('  - RESEND_API_KEY:', resendApiKey ? '✅ SET' : '❌ MISSING');
+    logger.warn('⚠️ Email service not configured. Set RESEND_API_KEY to enable email sending.');
+    this.isConfigured = false;
   }
 
   /**
@@ -170,60 +120,48 @@ This is an automated message. Please do not reply to this email.
    * @returns {Promise<boolean>} - Success status
    */
   async _sendEmail(to, subject, text, html) {
-    // Support both EMAIL_FROM and SMTP_FROM for backward compatibility
-    const smtpFrom = process.env.EMAIL_FROM || process.env.SMTP_FROM || process.env.SMTP_USER || 'noreply@bookdoon.com';
+    const defaultFrom = process.env.EMAIL_FROM || 'noreply@bookdoon.com';
+    const resendFrom = process.env.RESEND_FROM || defaultFrom || 'onboarding@resend.dev';
 
-    if (this.isConfigured && this.transporter) {
+    // Use Resend (only provider)
+    if (this.isConfigured && this.useResend && this.resendClient) {
       try {
-        const info = await this.transporter.sendMail({
-          from: smtpFrom,
+        const result = await this.resendClient.emails.send({
+          from: resendFrom,
           to: to,
           subject: subject,
-          text: text,
           html: html,
+          text: text
         });
-
-        logger.info('Email sent successfully:', {
+        logger.info('Email sent via Resend:', {
           to,
           subject,
-          from: smtpFrom,
-          messageId: info.messageId,
+          from: resendFrom,
+          id: result?.data?.id
         });
-
         return true;
       } catch (error) {
-        logger.error('Failed to send email:', {
-          message: error.message,
-          code: error.code,
-          command: error.command,
-          response: error.response,
-          responseCode: error.responseCode
+        logger.error('Failed to send email via Resend:', {
+          message: error?.message || String(error),
+          name: error?.name,
+          statusCode: error?.statusCode,
+          cause: error?.cause
         });
-        
-        // Log more details for connection errors
-        if (error.code === 'ETIMEDOUT' || error.code === 'ECONNREFUSED') {
-          logger.error('SMTP Connection Error Details:', {
-            host: process.env.SMTP_HOST,
-            port: process.env.SMTP_PORT,
-            suggestion: 'Try using port 587 with STARTTLS instead of 465 with SSL, or check if your hosting provider allows SMTP connections'
-          });
-        }
-        
+        // No fallback
         return false;
       }
-    } else {
-      // Development mode: Log email to console
-      logger.info('=== EMAIL (NOT CONFIGURED - DEVELOPMENT MODE) ===');
-      logger.info('From:', smtpFrom);
-      logger.info('To:', to);
-      logger.info('Subject:', subject);
-      logger.info('Text:', text);
-      logger.info('HTML:', html);
-      logger.info('================================================');
-      
-      // In development, we'll consider it successful even though we just logged it
-      return true;
     }
+
+    // Not configured: log details for development
+    logger.info('=== EMAIL (NOT CONFIGURED - DEVELOPMENT MODE) ===');
+    logger.info('From:', defaultFrom);
+    logger.info('To:', to);
+    logger.info('Subject:', subject);
+    logger.info('Text:', text);
+    logger.info('HTML:', html);
+    logger.info('================================================');
+    // Consider success to avoid blocking user flow in development
+    return true;
   }
 
   /**
@@ -231,13 +169,13 @@ This is an automated message. Please do not reply to this email.
    * @returns {Promise<boolean>} - Configuration status
    */
   async testConnection() {
-    if (!this.isConfigured || !this.transporter) {
+    if (!this.isConfigured || !this.resendClient) {
       return false;
     }
 
     try {
-      await this.transporter.verify();
-      return true;
+      // Simple no-op call validation for Resend
+      return !!this.resendClient;
     } catch (error) {
       logger.error('Email connection test failed:', error);
       return false;

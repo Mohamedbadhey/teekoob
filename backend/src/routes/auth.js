@@ -418,13 +418,33 @@ router.post('/forgot-password', asyncHandler(async (req, res) => {
 
   if (!emailSent) {
     logger.error('Failed to send password reset email:', { email, userId: user.id });
+    // In development or when email fails, log the code prominently for testing
+    if (process.env.NODE_ENV === 'development' || process.env.LOG_RESET_CODES === 'true') {
+      logger.warn('⚠️ PASSWORD RESET CODE (Email failed, but code generated):', {
+        email: email,
+        code: resetCode,
+        expiresAt: codeExpires,
+        note: 'This code is logged because email sending failed. Use this code to test password reset.'
+      });
+      console.log('\n⚠️ ============================================');
+      console.log('⚠️ PASSWORD RESET CODE GENERATED');
+      console.log('⚠️ Email:', email);
+      console.log('⚠️ Code:', resetCode);
+      console.log('⚠️ Expires at:', codeExpires);
+      console.log('⚠️ ============================================\n');
+    }
     // Still return success to not reveal if user exists
   }
 
   logger.info('Password reset code generated:', { email, userId: user.id, code: resetCode });
 
   res.json({ 
-    message: 'If an account with that email exists, a password reset code has been sent'
+    message: 'If an account with that email exists, a password reset code has been sent',
+    // Include code in development mode for testing (remove in production)
+    ...(process.env.NODE_ENV === 'development' || process.env.LOG_RESET_CODES === 'true' ? { 
+      code: resetCode,
+      note: 'Code included in response for development/testing. Remove in production!'
+    } : {})
   });
 }));
 

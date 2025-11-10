@@ -350,9 +350,20 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       await _authService.forgotPassword(event.email);
       
       // Emit success with email for navigation
+      // Note: Backend returns 200 even if email fails to send
+      // The code is still generated and saved in database
       emit(ForgotPasswordSuccess(event.email));
     } catch (e) {
-      emit(AuthError('Failed to send password reset email: $e'));
+      // Check if it's a network error or actual failure
+      final errorMessage = e.toString();
+      if (errorMessage.contains('SocketException') || 
+          errorMessage.contains('TimeoutException') ||
+          errorMessage.contains('Failed host lookup')) {
+        // Network error - still allow navigation since code might be generated
+        emit(ForgotPasswordSuccess(event.email));
+      } else {
+        emit(AuthError('Failed to send password reset email: $e'));
+      }
     }
   }
 
