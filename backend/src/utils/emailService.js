@@ -133,20 +133,75 @@ This is an automated message. Please do not reply to this email.
           html: html,
           text: text
         });
+
+        // Log full response for debugging
+        console.log('📧 Resend API Response:', JSON.stringify(result, null, 2));
+        
+        // Check if there are any errors in the response
+        if (result?.error) {
+          logger.error('Resend API returned an error:', {
+            error: result.error,
+            to,
+            from: resendFrom,
+            fullResponse: result
+          });
+          return false;
+        }
+
+        // Check if we got a valid email ID
+        if (!result?.data?.id) {
+          logger.warn('Resend API response missing email ID:', {
+            to,
+            from: resendFrom,
+            fullResponse: result,
+            note: 'Email may not have been sent successfully'
+          });
+          // Still return true if no error was thrown, but log warning
+        }
+
         logger.info('Email sent via Resend:', {
           to,
           subject,
           from: resendFrom,
-          id: result?.data?.id
+          id: result?.data?.id,
+          status: result?.data?.status || 'unknown'
         });
         return true;
       } catch (error) {
-        logger.error('Failed to send email via Resend:', {
-          message: error?.message || String(error),
-          name: error?.name,
-          statusCode: error?.statusCode,
-          cause: error?.cause
+        // Enhanced error logging with specific handling for validation errors
+        const errorResponse = error?.response?.data || error?.response || {};
+        const errorMessage = errorResponse?.message || error?.message || String(error);
+        const errorName = errorResponse?.name || error?.name || 'UnknownError';
+        
+        console.error('❌ Resend API Error Details:', {
+          message: errorMessage,
+          name: errorName,
+          statusCode: error?.statusCode || error?.response?.status,
+          response: errorResponse,
+          fullError: error
         });
+        
+        // Check for domain verification error specifically
+        if (errorMessage.includes('domain is not verified') || errorName === 'validation_error') {
+          logger.error('❌ DOMAIN NOT VERIFIED - Email sending failed:', {
+            message: errorMessage,
+            domain: resendFrom.split('@')[1],
+            solution: 'Please verify your domain at https://resend.com/domains',
+            temporaryFix: 'Use onboarding@resend.dev for testing',
+            to,
+            from: resendFrom
+          });
+        } else {
+          logger.error('Failed to send email via Resend:', {
+            message: errorMessage,
+            name: errorName,
+            statusCode: error?.statusCode || error?.response?.status,
+            response: errorResponse,
+            cause: error?.cause,
+            to,
+            from: resendFrom
+          });
+        }
         // No fallback
         return false;
       }

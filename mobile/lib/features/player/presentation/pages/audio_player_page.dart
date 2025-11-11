@@ -3,8 +3,6 @@ import 'package:go_router/go_router.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:teekoob/core/models/book_model.dart';
 import 'package:teekoob/core/config/app_config.dart';
-import 'package:teekoob/features/player/services/audio_player_service.dart';
-import 'package:teekoob/features/player/services/audio_state_manager.dart';
 import 'package:teekoob/core/config/app_router.dart';
 import 'package:teekoob/core/services/global_audio_player_service.dart';
 import 'package:teekoob/features/books/services/books_service.dart';
@@ -30,39 +28,35 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
   Duration currentTime = Duration.zero;
   Duration totalDuration = const Duration(minutes: 12);
   
-  // Audio state manager
-  final AudioStateManager _audioStateManager = AudioStateManager();
+  // Global audio service (single source of truth across app)
+  late final GlobalAudioPlayerService _audioService;
 
   @override
   void initState() {
     super.initState();
     _loadBookDetails();
-    _setupAudioStreams();
+    _setupAudioBindings();
   }
 
-  void _setupAudioStreams() {
-    // Listen to playback state changes
-    _audioStateManager.audioPlayerService.isPlayingStream.listen((playing) {
-      setState(() {
-        isPlaying = playing;
-      });
-    });
+  void _setupAudioBindings() {
+    _audioService = GlobalAudioPlayerService();
+    _audioService.addListener(_onAudioServiceChanged);
+    _syncFromService();
+  }
 
-    // Listen to position changes
-    _audioStateManager.audioPlayerService.positionStream.listen((position) {
-      setState(() {
-        currentTime = position;
-        if (totalDuration.inSeconds > 0) {
-          currentProgress = position.inSeconds / totalDuration.inSeconds;
-        }
-      });
-    });
+  void _onAudioServiceChanged() {
+    if (!mounted) return;
+    _syncFromService();
+  }
 
-    // Listen to duration changes
-    _audioStateManager.audioPlayerService.durationStream.listen((duration) {
-      setState(() {
-        totalDuration = duration;
-      });
+  void _syncFromService() {
+    setState(() {
+      isPlaying = _audioService.isPlaying;
+      currentTime = _audioService.position;
+      totalDuration = _audioService.duration;
+      currentProgress = totalDuration.inSeconds > 0
+          ? currentTime.inSeconds / totalDuration.inSeconds
+          : 0.0;
     });
   }
 
@@ -138,7 +132,14 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
     try {
       if (book == null) return;
       
-      await _audioStateManager.togglePlayPause(book!);
+      final isCurrentBook = _audioService.currentItem?.id == book!.id;
+      if (_audioService.isPlaying && isCurrentBook) {
+        await _audioService.pause();
+      } else if (!_audioService.isPlaying && isCurrentBook) {
+        await _audioService.resume();
+      } else {
+        await _audioService.playBook(book!);
+      }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to ${isPlaying ? 'pause' : 'play'} audio: $e')),
@@ -148,7 +149,8 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
 
   void _skipBackward() async {
     try {
-      await _audioStateManager.audioPlayerService.skipBackward(const Duration(seconds: 10));
+      final newPos = currentTime - const Duration(seconds: 10);
+      await _audioService.seekTo(newPos < Duration.zero ? Duration.zero : newPos);
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to skip backward: $e')),
@@ -158,7 +160,9 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
 
   void _skipForward() async {
     try {
-      await _audioStateManager.audioPlayerService.skipForward(const Duration(seconds: 10));
+      final newPos = currentTime + const Duration(seconds: 10);
+      final cap = totalDuration;
+      await _audioService.seekTo(newPos > cap ? cap : newPos);
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to skip forward: $e')),
@@ -169,7 +173,7 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
   void _onProgressChanged(double value) async {
     try {
       final newPosition = Duration(seconds: (value * totalDuration.inSeconds).round());
-      await _audioStateManager.audioPlayerService.seekTo(newPosition);
+      await _audioService.seekTo(newPosition);
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to seek: $e')),
@@ -182,6 +186,15 @@ class _AudioPlayerPageState extends State<AudioPlayerPage> {
     String twoDigitMinutes = twoDigits(duration.inMinutes.remainder(60));
     String twoDigitSeconds = twoDigits(duration.inSeconds.remainder(60));
     return "$twoDigitMinutes:$twoDigitSeconds";
+  }
+
+  @override
+  void dispose() {
+    // Remove listener to prevent leaks
+    try {
+      _audioService.removeListener(_onAudioServiceChanged);
+    } catch (_) {}
+    super.dispose();
   }
 
   @override
