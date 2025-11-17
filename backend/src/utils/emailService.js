@@ -1,5 +1,4 @@
 const logger = require('./logger');
-const nodemailer = require('nodemailer');
 
 /**
  * Email Service for sending emails
@@ -11,65 +10,11 @@ class EmailService {
   constructor() {
     this.isConfigured = false;
     this.useResend = false;
-    this.useSMTP = false;
     this.resendClient = null;
-    this.smtpTransporter = null;
     this._initializeTransporter();
   }
 
   _initializeTransporter() {
-    const smtpHost = process.env.SMTP_HOST;
-    const smtpPort = parseInt(process.env.SMTP_PORT || '587', 10);
-    const smtpUser = process.env.SMTP_USER;
-    const smtpPass = process.env.SMTP_PASS || process.env.SMTP_PASSWORD;
-    const smtpSecureEnv = process.env.SMTP_SECURE;
-    const smtpSecure = typeof smtpSecureEnv === 'string'
-      ? smtpSecureEnv.toLowerCase() === 'true'
-      : smtpPort === 465;
-
-    if (smtpHost && smtpPort && smtpUser && smtpPass) {
-      try {
-        const transportOptions = {
-          host: smtpHost,
-          port: smtpPort,
-          secure: smtpSecure,
-          auth: {
-            user: smtpUser,
-            pass: smtpPass
-          }
-        };
-
-        if (process.env.SMTP_IGNORE_TLS === 'true') {
-          transportOptions.ignoreTLS = true;
-        }
-
-        if (process.env.SMTP_TLS_REJECT_UNAUTHORIZED === 'false') {
-          transportOptions.tls = { rejectUnauthorized: false };
-        }
-
-        this.smtpTransporter = nodemailer.createTransport(transportOptions);
-        this.useSMTP = true;
-        this.isConfigured = true;
-
-        console.log('📧 Email Service: Using SMTP via Nodemailer');
-        logger.info('✅ Email service configured with SMTP', {
-          host: smtpHost,
-          port: smtpPort,
-          secure: transportOptions.secure,
-          ignoreTLS: transportOptions.ignoreTLS || false
-        });
-        return;
-      } catch (error) {
-        logger.error('❌ Failed to initialize SMTP transporter:', {
-          message: error.message,
-          stack: error.stack
-        });
-        this.useSMTP = false;
-        this.smtpTransporter = null;
-        // Continue to check for Resend configuration
-      }
-    }
-
     // Resend-only email provider
     const resendApiKey = process.env.RESEND_API_KEY;
     const resendFrom = process.env.RESEND_FROM || process.env.EMAIL_FROM || 'onboarding@resend.dev';
@@ -94,13 +39,10 @@ class EmailService {
       }
     }
 
-    // If we reach here, neither SMTP nor Resend is configured
+    // If we reach here, Resend is not configured
     console.log('📧 Email Service Configuration Check:');
-    console.log('  - SMTP_HOST:', smtpHost ? '✅ SET' : '❌ MISSING');
-    console.log('  - SMTP_USER:', smtpUser ? '✅ SET' : '❌ MISSING');
-    console.log('  - SMTP_PASS:', smtpPass ? '✅ SET' : '❌ MISSING');
     console.log('  - RESEND_API_KEY:', resendApiKey ? '✅ SET' : '❌ MISSING');
-    logger.warn('⚠️ Email service not configured. Set SMTP_* variables or RESEND_API_KEY to enable email sending.');
+    logger.warn('⚠️ Email service not configured. Set RESEND_API_KEY to enable email sending.');
     this.isConfigured = false;
   }
 
@@ -178,38 +120,8 @@ This is an automated message. Please do not reply to this email.
    * @returns {Promise<boolean>} - Success status
    */
   async _sendEmail(to, subject, text, html) {
-    const defaultFrom = process.env.EMAIL_FROM || process.env.SMTP_FROM || 'noreply@bookdoon.com';
+    const defaultFrom = process.env.EMAIL_FROM || 'noreply@bookdoon.com';
     const resendFrom = process.env.RESEND_FROM || defaultFrom || 'onboarding@resend.dev';
-    const smtpFrom = process.env.EMAIL_FROM || process.env.SMTP_FROM || process.env.SMTP_USER || defaultFrom;
-
-    if (this.isConfigured && this.useSMTP && this.smtpTransporter) {
-      try {
-        const info = await this.smtpTransporter.sendMail({
-          from: smtpFrom,
-          to,
-          subject,
-          text,
-          html
-        });
-
-        logger.info('Email sent via SMTP:', {
-          to,
-          subject,
-          from: smtpFrom,
-          messageId: info?.messageId,
-          response: info?.response
-        });
-        return true;
-      } catch (error) {
-        logger.error('Failed to send email via SMTP:', {
-          message: error.message,
-          to,
-          subject,
-          stack: error.stack
-        });
-        // Fall through to Resend if it's configured as backup
-      }
-    }
 
     // Use Resend (only provider)
     if (this.isConfigured && this.useResend && this.resendClient) {
