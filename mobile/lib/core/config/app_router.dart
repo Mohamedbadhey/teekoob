@@ -6,6 +6,8 @@ import 'package:teekoob/features/auth/presentation/pages/register_page.dart';
 import 'package:teekoob/features/auth/presentation/pages/splash_page.dart';
 import 'package:teekoob/features/auth/presentation/pages/verify_reset_code_page.dart';
 import 'package:teekoob/features/auth/presentation/pages/reset_password_page.dart';
+import 'package:teekoob/features/auth/presentation/pages/verify_registration_code_page.dart';
+import 'package:teekoob/features/auth/presentation/pages/complete_registration_page.dart';
 import 'package:teekoob/core/presentation/app_scaffold.dart';
 import 'package:teekoob/features/books/presentation/pages/books_page.dart';
 import 'package:teekoob/features/books/presentation/pages/book_detail_page.dart';
@@ -32,6 +34,8 @@ class AppRouter {
   static const String register = '/register';
   static const String verifyResetCode = '/verify-reset-code';
   static const String resetPassword = '/reset-password';
+  static const String verifyRegistrationCode = '/verify-registration-code';
+  static const String completeRegistration = '/complete-registration';
   static const String home = '/home';
   static const String books = '/books';
   static const String bookDetail = 'books/:id';
@@ -82,6 +86,44 @@ class AppRouter {
           final email = state.uri.queryParameters['email'] ?? '';
           final code = state.uri.queryParameters['code'] ?? '';
           return ResetPasswordPage(email: email, code: code);
+        },
+      ),
+      GoRoute(
+        path: verifyRegistrationCode,
+        name: 'verifyRegistrationCode',
+        builder: (context, state) {
+          final email = state.uri.queryParameters['email'] ?? '';
+          final displayName = state.uri.queryParameters['displayName'] ?? '';
+          final phoneNumber = state.uri.queryParameters['phoneNumber'];
+          final language = state.uri.queryParameters['language'] ?? 'en';
+          final themePreference = state.uri.queryParameters['themePreference'] ?? 'light';
+          return VerifyRegistrationCodePage(
+            email: email,
+            displayName: displayName,
+            phoneNumber: phoneNumber?.isEmpty ?? true ? null : phoneNumber,
+            language: language,
+            themePreference: themePreference,
+          );
+        },
+      ),
+      GoRoute(
+        path: completeRegistration,
+        name: 'completeRegistration',
+        builder: (context, state) {
+          final email = state.uri.queryParameters['email'] ?? '';
+          final code = state.uri.queryParameters['code'] ?? '';
+          final displayName = state.uri.queryParameters['displayName'] ?? '';
+          final phoneNumber = state.uri.queryParameters['phoneNumber'];
+          final language = state.uri.queryParameters['language'] ?? 'en';
+          final themePreference = state.uri.queryParameters['themePreference'] ?? 'light';
+          return CompleteRegistrationPage(
+            email: email,
+            code: code,
+            displayName: displayName,
+            phoneNumber: phoneNumber?.isEmpty ?? true ? null : phoneNumber,
+            language: language,
+            themePreference: themePreference,
+          );
         },
       ),
       
@@ -211,7 +253,7 @@ class AppRouter {
       final isAuthenticated = await authService.isAuthenticated();
       
       // Public routes that don't require authentication
-      final publicRoutes = ['/', '/login', '/register'];
+      final publicRoutes = ['/', '/login', '/register', '/verify-reset-code', '/reset-password', '/verify-registration-code', '/complete-registration'];
       final isPublicRoute = publicRoutes.contains(state.uri.path);
       
       // If not authenticated and trying to access protected route, redirect to login

@@ -91,16 +91,24 @@ class _LoginPageState extends State<LoginPage> {
           ElevatedButton(
             onPressed: () async {
               final email = emailController.text.trim();
+              print('🔵 Send Code button pressed - email: $email');
               if (email.isNotEmpty && context.read<AuthBloc>().validateEmail(email)) {
-                // Show loading
+                // Store email and bloc reference before closing dialog
+                final emailToSend = email;
+                final authBloc = context.read<AuthBloc>();
+                print('🔵 Email valid, closing dialog');
+                
+                // Close dialog
                 Navigator.of(context).pop();
+                print('🔵 Dialog closed');
                 
-                // Request password reset and check if email exists
-                context.read<AuthBloc>().add(
-                  ForgotPasswordRequested(email: email),
-                );
+                // Wait a brief moment for dialog to fully close, then dispatch
+                await Future.delayed(const Duration(milliseconds: 50));
+                print('🔵 Delay completed, dispatching ForgotPasswordRequested');
                 
-                // Wait for the result - navigation will happen in BlocListener
+                // Dispatch event - navigation will happen in BlocListener
+                authBloc.add(ForgotPasswordRequested(email: emailToSend));
+                print('🔵 Event dispatched: ForgotPasswordRequested with email: $emailToSend');
               } else {
                 // Show validation error
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -129,7 +137,11 @@ class _LoginPageState extends State<LoginPage> {
     return Scaffold(
       body: BlocListener<AuthBloc, AuthState>(
         listener: (context, state) {
+          // Debug: Log all states
+          print('🔵 LoginPage BlocListener - State received: ${state.runtimeType}');
+          
           if (state is AuthSuccess) {
+            print('🟢 AuthSuccess received - message: ${state.message}');
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(state.message),
@@ -137,32 +149,50 @@ class _LoginPageState extends State<LoginPage> {
               ),
             );
             if (state.user != null) {
+              print('🟢 Navigating to home');
               context.go('/home');
             }
           } else if (state is ForgotPasswordSuccess) {
-            // Navigate to verify code page when email is sent successfully
-            context.go('/verify-reset-code?email=${Uri.encodeComponent(state.email)}');
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(LocalizationService.getLocalizedText(
-                  englishText: 'Verification code sent to your email',
-                  somaliText: 'Lambarka xaqiijinta ayaa loo diray iimaylkaaga',
-                )),
-                backgroundColor: Theme.of(context).colorScheme.primary,
-              ),
-            );
+            print('🟢 ForgotPasswordSuccess received - email: ${state.email}');
+            print('🟢 Context mounted: ${context.mounted}');
+            // Immediately navigate to verify code page when email is sent successfully
+            // No snackbar - just redirect
+            // Use SchedulerBinding to ensure navigation happens in next frame
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (context.mounted) {
+                final route = '/verify-reset-code?email=${Uri.encodeComponent(state.email)}';
+                print('🟢 Navigating to: $route');
+                try {
+                  context.go(route);
+                  print('🟢 Navigation called successfully');
+                } catch (e) {
+                  print('🔴 Navigation error: $e');
+                }
+              } else {
+                print('🔴 Context not mounted! Cannot navigate');
+              }
+            });
+          } else if (state is AuthLoading) {
+            print('🟡 AuthLoading received');
           } else if (state is AuthError) {
+            print('🔴 AuthError received - message: ${state.message}');
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(state.message),
                 backgroundColor: Theme.of(context).colorScheme.error,
               ),
             );
+          } else {
+            print('⚪ Other state: ${state.runtimeType}');
           }
         },
         child: BlocBuilder<AuthBloc, AuthState>(
           builder: (context, state) {
-            final isLoading = state is AuthLoading;
+            // Show loading only for login/register, not for forgot password
+            // ForgotPasswordSuccess should navigate immediately
+            final isLoading = state is AuthLoading && 
+                             state is! ForgotPasswordSuccess;
+            print('🔵 BlocBuilder - state: ${state.runtimeType}, isLoading: $isLoading');
             return Stack(
               children: [
                 // Background Image

@@ -55,6 +55,57 @@ class RegisterRequested extends AuthEvent {
   ];
 }
 
+class SendRegistrationCodeRequested extends AuthEvent {
+  final String email;
+  final String displayName;
+  final String? phoneNumber;
+  final String language;
+  final String themePreference;
+
+  const SendRegistrationCodeRequested({
+    required this.email,
+    required this.displayName,
+    this.phoneNumber,
+    this.language = 'en',
+    this.themePreference = 'light',
+  });
+
+  @override
+  List<Object?> get props => [
+    email, displayName, phoneNumber, language, themePreference
+  ];
+}
+
+class VerifyRegistrationCodeRequested extends AuthEvent {
+  final String email;
+  final String code;
+
+  const VerifyRegistrationCodeRequested({
+    required this.email,
+    required this.code,
+  });
+
+  @override
+  List<Object?> get props => [email, code];
+}
+
+class CompleteRegistrationRequested extends AuthEvent {
+  final String email;
+  final String code;
+  final String password;
+  final String confirmPassword;
+
+  const CompleteRegistrationRequested({
+    required this.email,
+    required this.code,
+    required this.password,
+    required this.confirmPassword,
+  });
+
+  @override
+  List<Object?> get props => [email, code, password, confirmPassword];
+}
+
 class LogoutRequested extends AuthEvent {
   const LogoutRequested();
 }
@@ -199,6 +250,15 @@ class ForgotPasswordSuccess extends AuthState {
   List<Object?> get props => [email];
 }
 
+class RegistrationCodeSent extends AuthState {
+  final String email;
+
+  const RegistrationCodeSent(this.email);
+
+  @override
+  List<Object?> get props => [email];
+}
+
 // BLoC
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final AuthService _authService;
@@ -211,6 +271,9 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<LoginRequested>(_onLoginRequested);
     on<GoogleLoginRequested>(_onGoogleLoginRequested);
     on<RegisterRequested>(_onRegisterRequested);
+    on<SendRegistrationCodeRequested>(_onSendRegistrationCodeRequested);
+    on<VerifyRegistrationCodeRequested>(_onVerifyRegistrationCodeRequested);
+    on<CompleteRegistrationRequested>(_onCompleteRegistrationRequested);
     on<LogoutRequested>(_onLogoutRequested);
     on<ForgotPasswordRequested>(_onForgotPasswordRequested);
     on<VerifyResetCodeRequested>(_onVerifyResetCodeRequested);
@@ -320,7 +383,95 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       emit(AuthSuccess('Registration successful!', user: user));
       emit(Authenticated(user));
     } catch (e) {
-      emit(AuthError('Registration failed: $e'));
+      // Check if it's the "already exists" error
+      final errorString = e.toString();
+      String displayMessage;
+      if (errorString.contains('already exists') || errorString.contains('This email already exists')) {
+        displayMessage = 'This email already exists';
+      } else {
+        displayMessage = 'Registration failed: ${errorString.replaceAll('Exception: ', '')}';
+      }
+      emit(AuthError(displayMessage));
+    }
+  }
+
+  Future<void> _onSendRegistrationCodeRequested(
+    SendRegistrationCodeRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    try {
+      emit(const AuthLoading());
+      
+      await _authService.sendRegistrationCode(
+        email: event.email,
+        displayName: event.displayName,
+        phoneNumber: event.phoneNumber,
+        preferredLanguage: event.language,
+        themePreference: event.themePreference,
+      );
+      
+      emit(RegistrationCodeSent(event.email));
+    } catch (e) {
+      final errorString = e.toString();
+      String displayMessage;
+      if (errorString.contains('already exists') || errorString.contains('This email already exists')) {
+        displayMessage = 'This email already exists';
+      } else {
+        displayMessage = 'Failed to send verification code: ${errorString.replaceAll('Exception: ', '')}';
+      }
+      emit(AuthError(displayMessage));
+    }
+  }
+
+  Future<void> _onVerifyRegistrationCodeRequested(
+    VerifyRegistrationCodeRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    try {
+      emit(const AuthLoading());
+      
+      await _authService.verifyRegistrationCode(
+        email: event.email,
+        code: event.code,
+      );
+      
+      emit(const AuthSuccess('Verification code is valid!'));
+    } catch (e) {
+      emit(AuthError('Code verification failed: $e'));
+    }
+  }
+
+  Future<void> _onCompleteRegistrationRequested(
+    CompleteRegistrationRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    try {
+      emit(const AuthLoading());
+      
+      final result = await _authService.completeRegistration(
+        email: event.email,
+        code: event.code,
+        password: event.password,
+        confirmPassword: event.confirmPassword,
+      );
+      
+      if (result != null && result['user'] != null && result['token'] != null) {
+        final user = User.fromJson(result['user']);
+        // Token is already stored in completeRegistration method
+        emit(Authenticated(user));
+        emit(AuthSuccess('Registration completed successfully! You are now logged in.', user: user));
+      } else {
+        emit(const AuthSuccess('Registration completed successfully!'));
+      }
+    } catch (e) {
+      final errorString = e.toString();
+      String displayMessage;
+      if (errorString.contains('Invalid or expired')) {
+        displayMessage = 'Invalid or expired verification code';
+      } else {
+        displayMessage = 'Registration failed: ${errorString.replaceAll('Exception: ', '')}';
+      }
+      emit(AuthError(displayMessage));
     }
   }
 
@@ -344,25 +495,42 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     ForgotPasswordRequested event,
     Emitter<AuthState> emit,
   ) async {
+    print('🔵 AuthBloc - _onForgotPasswordRequested called with email: ${event.email}');
     try {
+      print('🔵 AuthBloc - Emitting AuthLoading');
       emit(const AuthLoading());
       
+      print('🔵 AuthBloc - Calling forgotPassword service');
       await _authService.forgotPassword(event.email);
+      print('🔵 AuthBloc - forgotPassword service completed successfully');
       
       // Emit success with email for navigation
       // Note: Backend returns 200 even if email fails to send
       // The code is still generated and saved in database
+      print('🔵 AuthBloc - Emitting ForgotPasswordSuccess with email: ${event.email}');
       emit(ForgotPasswordSuccess(event.email));
+      print('🔵 AuthBloc - ForgotPasswordSuccess emitted');
     } catch (e) {
+      print('🔴 AuthBloc - Error caught: $e');
       // Check if it's a network error or actual failure
       final errorMessage = e.toString();
       if (errorMessage.contains('SocketException') || 
           errorMessage.contains('TimeoutException') ||
           errorMessage.contains('Failed host lookup')) {
         // Network error - still allow navigation since code might be generated
+        print('🔵 AuthBloc - Network error detected, emitting ForgotPasswordSuccess anyway');
         emit(ForgotPasswordSuccess(event.email));
       } else {
-        emit(AuthError('Failed to send password reset email: $e'));
+        // Check if it's the "not registered" error
+        final errorString = errorMessage;
+        String displayMessage;
+        if (errorString.contains('not registered') || errorString.contains('This email is not registered')) {
+          displayMessage = 'This email is not registered';
+        } else {
+          displayMessage = 'Failed to send password reset email: ${errorString.replaceAll('Exception: ', '')}';
+        }
+        print('🔴 AuthBloc - Emitting AuthError: $displayMessage');
+        emit(AuthError(displayMessage));
       }
     }
   }
@@ -499,7 +667,55 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
   // Validate email format
   bool validateEmail(String email) {
-    return RegExp(r'^[^@]+@[^@]+\.[^@]+$').hasMatch(email);
+    // More robust email validation
+    // Must have: local part @ domain part with at least one dot and TLD
+    final emailRegex = RegExp(
+      r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
+      caseSensitive: false,
+    );
+    
+    // Basic checks first
+    if (email.isEmpty || !email.contains('@') || !email.contains('.')) {
+      return false;
+    }
+    
+    // Check that @ appears only once
+    final atCount = email.split('@').length - 1;
+    if (atCount != 1) {
+      return false;
+    }
+    
+    final parts = email.split('@');
+    if (parts.length != 2) {
+      return false;
+    }
+    
+    final localPart = parts[0];
+    final domainPart = parts[1];
+    
+    // Local part must not be empty and should not start/end with special chars
+    if (localPart.isEmpty || 
+        localPart.startsWith('.') || 
+        localPart.endsWith('.') ||
+        localPart.contains('..')) {
+      return false;
+    }
+    
+    // Domain part must have at least one dot and TLD
+    if (domainPart.isEmpty || !domainPart.contains('.')) {
+      return false;
+    }
+    
+    // Domain must not start/end with dot or hyphen
+    if (domainPart.startsWith('.') || 
+        domainPart.endsWith('.') ||
+        domainPart.startsWith('-') ||
+        domainPart.endsWith('-')) {
+      return false;
+    }
+    
+    // Final regex check
+    return emailRegex.hasMatch(email);
   }
 
   // Validate password strength

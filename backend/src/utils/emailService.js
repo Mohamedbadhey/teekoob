@@ -112,6 +112,71 @@ This is an automated message. Please do not reply to this email.
   }
 
   /**
+   * Send email verification code for registration
+   * @param {string} email - Recipient email
+   * @param {string} code - 6-digit verification code
+   * @returns {Promise<boolean>} - Success status
+   */
+  async sendEmailVerificationCode(email, code) {
+    // Get app name and expiry time from environment
+    const appName = process.env.APP_NAME || 'Bookdoon';
+    const expiryMinutes = parseInt(process.env.EMAIL_VERIFICATION_CODE_EXPIRY_MINUTES || process.env.RESET_CODE_EXPIRY_MINUTES || '10', 10);
+    
+    const subject = `Email Verification Code - ${appName}`;
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Email Verification Code</title>
+      </head>
+      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="background-color: #f4f4f4; padding: 20px; border-radius: 10px;">
+          <h1 style="color: #2c3e50; text-align: center;">Welcome to ${appName}!</h1>
+          
+          <p>Hello,</p>
+          
+          <p>Thank you for registering with ${appName}. Please use the following verification code to verify your email address and complete your registration:</p>
+          
+          <div style="background-color: #ffffff; border: 2px dashed #3498db; border-radius: 5px; padding: 20px; text-align: center; margin: 20px 0;">
+            <h2 style="color: #3498db; font-size: 32px; letter-spacing: 5px; margin: 0;">${code}</h2>
+          </div>
+          
+          <p style="color: #e74c3c; font-weight: bold;">This code will expire in ${expiryMinutes} ${expiryMinutes === 1 ? 'minute' : 'minutes'}.</p>
+          
+          <p>If you did not create an account with ${appName}, please ignore this email.</p>
+          
+          <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
+          
+          <p style="font-size: 12px; color: #7f8c8d; text-align: center;">
+            This is an automated message. Please do not reply to this email.
+          </p>
+        </div>
+      </body>
+      </html>
+    `;
+
+    const text = `
+Email Verification Code - ${appName}
+
+Hello,
+
+Thank you for registering with ${appName}. Please use the following verification code to verify your email address and complete your registration:
+
+Verification Code: ${code}
+
+This code will expire in ${expiryMinutes} ${expiryMinutes === 1 ? 'minute' : 'minutes'}.
+
+If you did not create an account with ${appName}, please ignore this email.
+
+This is an automated message. Please do not reply to this email.
+    `;
+
+    return this._sendEmail(email, subject, text, html);
+  }
+
+  /**
    * Internal method to send email
    * @param {string} to - Recipient email
    * @param {string} subject - Email subject

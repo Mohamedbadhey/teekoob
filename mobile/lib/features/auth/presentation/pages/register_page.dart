@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 import 'package:teekoob/core/services/localization_service.dart';
 import 'package:teekoob/core/presentation/widgets/app_logo.dart';
 import 'package:teekoob/features/auth/bloc/auth_bloc.dart';
-import 'package:teekoob/features/auth/presentation/widgets/password_field.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -18,8 +17,6 @@ class _RegisterPageState extends State<RegisterPage> {
   final _displayNameController = TextEditingController();
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
-  final _passwordController = TextEditingController();
-  final _confirmPasswordController = TextEditingController();
   
   String _selectedLanguage = 'en';
   String _selectedTheme = 'light';
@@ -30,16 +27,14 @@ class _RegisterPageState extends State<RegisterPage> {
     _displayNameController.dispose();
     _emailController.dispose();
     _phoneController.dispose();
-    _passwordController.dispose();
-    _confirmPasswordController.dispose();
     super.dispose();
   }
 
   void _handleRegister() {
     if (_formKey.currentState!.validate() && _agreeToTerms) {
-      context.read<AuthBloc>().add(RegisterRequested(
+      // Step 1: Send verification code with email and name
+      context.read<AuthBloc>().add(SendRegistrationCodeRequested(
         email: _emailController.text.trim(),
-        password: _passwordController.text,
         displayName: _displayNameController.text.trim(),
         phoneNumber: _phoneController.text.trim().isEmpty ? null : _phoneController.text.trim(),
         language: _selectedLanguage,
@@ -68,15 +63,23 @@ class _RegisterPageState extends State<RegisterPage> {
       body: BlocListener<AuthBloc, AuthState>(
         listener: (context, state) {
           if (state is AuthSuccess) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message),
-                backgroundColor: Theme.of(context).colorScheme.primary,
-              ),
-            );
             if (state.user != null) {
+              // Registration completed and user logged in
               context.go('/home');
             }
+          } else if (state is RegistrationCodeSent) {
+            // Navigate to verification code page
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (context.mounted) {
+                final email = _emailController.text.trim();
+                final displayName = _displayNameController.text.trim();
+                final phoneNumber = _phoneController.text.trim().isEmpty ? null : _phoneController.text.trim();
+                final language = _selectedLanguage;
+                final themePreference = _selectedTheme;
+                
+                context.go('/verify-registration-code?email=${Uri.encodeComponent(email)}&displayName=${Uri.encodeComponent(displayName)}&phoneNumber=${phoneNumber != null ? Uri.encodeComponent(phoneNumber) : ''}&language=${Uri.encodeComponent(language)}&themePreference=${Uri.encodeComponent(themePreference)}');
+              }
+            });
           } else if (state is AuthError) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
@@ -347,62 +350,6 @@ class _RegisterPageState extends State<RegisterPage> {
                         ),
                         keyboardType: TextInputType.phone,
                         textInputAction: TextInputAction.next,
-                      ),
-                      
-                      const SizedBox(height: 16),
-                      
-                      // Password Field
-                      PasswordField(
-                        controller: _passwordController,
-                        labelText: LocalizationService.getPasswordLabel,
-                        hintText: LocalizationService.getLocalizedText(
-                          englishText: 'Create a strong password',
-                          somaliText: 'Samee furah xooggan',
-                        ),
-                        textInputAction: TextInputAction.next,
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return LocalizationService.getLocalizedText(
-                              englishText: 'Password is required',
-                              somaliText: 'Furaha waa loo baahan yahay',
-                            );
-                          }
-                          if (value.length < 6) {
-                            return LocalizationService.getLocalizedText(
-                              englishText: 'Password must be at least 6 characters',
-                              somaliText: 'Furaha waa inuu ahaadaa ugu yaraan 6 xaraf',
-                            );
-                          }
-                          return null;
-                        },
-                      ),
-                      
-                      const SizedBox(height: 16),
-                      
-                      // Confirm Password Field
-                      PasswordField(
-                        controller: _confirmPasswordController,
-                        labelText: LocalizationService.getConfirmPasswordLabel,
-                        hintText: LocalizationService.getLocalizedText(
-                          englishText: 'Confirm your password',
-                          somaliText: 'Xaqiiji furahaaga',
-                        ),
-                        textInputAction: TextInputAction.done,
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return LocalizationService.getLocalizedText(
-                              englishText: 'Please confirm your password',
-                              somaliText: 'Fadlan xaqiiji furahaaga',
-                            );
-                          }
-                          if (value != _passwordController.text) {
-                            return LocalizationService.getLocalizedText(
-                              englishText: 'Passwords do not match',
-                              somaliText: 'Furaha ma isku mid aha',
-                            );
-                          }
-                          return null;
-                        },
                       ),
                       
                       const SizedBox(height: 24),

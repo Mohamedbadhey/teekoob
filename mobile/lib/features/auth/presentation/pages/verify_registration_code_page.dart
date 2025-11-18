@@ -6,19 +6,27 @@ import 'package:go_router/go_router.dart';
 import 'package:teekoob/core/services/localization_service.dart';
 import 'package:teekoob/features/auth/bloc/auth_bloc.dart';
 
-class VerifyResetCodePage extends StatefulWidget {
+class VerifyRegistrationCodePage extends StatefulWidget {
   final String email;
+  final String displayName;
+  final String? phoneNumber;
+  final String language;
+  final String themePreference;
 
-  const VerifyResetCodePage({
+  const VerifyRegistrationCodePage({
     super.key,
     required this.email,
+    required this.displayName,
+    this.phoneNumber,
+    required this.language,
+    required this.themePreference,
   });
 
   @override
-  State<VerifyResetCodePage> createState() => _VerifyResetCodePageState();
+  State<VerifyRegistrationCodePage> createState() => _VerifyRegistrationCodePageState();
 }
 
-class _VerifyResetCodePageState extends State<VerifyResetCodePage> {
+class _VerifyRegistrationCodePageState extends State<VerifyRegistrationCodePage> {
   final List<TextEditingController> _codeControllers = List.generate(6, (_) => TextEditingController());
   final List<FocusNode> _focusNodes = List.generate(6, (_) => FocusNode());
   bool _isLoading = false;
@@ -67,7 +75,13 @@ class _VerifyResetCodePageState extends State<VerifyResetCodePage> {
     _focusNodes[0].requestFocus();
 
     context.read<AuthBloc>().add(
-      ForgotPasswordRequested(email: widget.email),
+      SendRegistrationCodeRequested(
+        email: widget.email,
+        displayName: widget.displayName,
+        phoneNumber: widget.phoneNumber,
+        language: widget.language,
+        themePreference: widget.themePreference,
+      ),
     );
   }
 
@@ -103,7 +117,7 @@ class _VerifyResetCodePageState extends State<VerifyResetCodePage> {
     setState(() => _isLoading = true);
 
     context.read<AuthBloc>().add(
-      VerifyResetCodeRequested(
+      VerifyRegistrationCodeRequested(
         email: widget.email,
         code: code,
       ),
@@ -115,8 +129,8 @@ class _VerifyResetCodePageState extends State<VerifyResetCodePage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(LocalizationService.getLocalizedText(
-          englishText: 'Verify Code',
-          somaliText: 'Xaqiiji Lambarka',
+          englishText: 'Verify Email',
+          somaliText: 'Xaqiiji Iimaylka',
         )),
         elevation: 0,
       ),
@@ -124,12 +138,21 @@ class _VerifyResetCodePageState extends State<VerifyResetCodePage> {
         listener: (context, state) {
           if (state is AuthSuccess) {
             setState(() => _isLoading = false);
-            // Only navigate if we're verifying code, not resending
-            if (!_isResending) {
-              final code = _codeControllers.map((c) => c.text).join();
-              context.go('/reset-password?email=${Uri.encodeComponent(widget.email)}&code=${Uri.encodeComponent(code)}');
-            }
-          } else if (state is ForgotPasswordSuccess) {
+            // Navigate to complete registration page
+            final code = _codeControllers.map((c) => c.text).join();
+            final params = {
+              'email': widget.email,
+              'code': code,
+              'displayName': widget.displayName,
+              'phoneNumber': widget.phoneNumber ?? '',
+              'language': widget.language,
+              'themePreference': widget.themePreference,
+            };
+            final queryString = params.entries
+                .map((e) => '${Uri.encodeComponent(e.key)}=${Uri.encodeComponent(e.value)}')
+                .join('&');
+            context.go('/complete-registration?$queryString');
+          } else if (state is RegistrationCodeSent) {
             // Handle resend code success
             setState(() {
               _isResending = false;
@@ -343,13 +366,13 @@ class _VerifyResetCodePageState extends State<VerifyResetCodePage> {
                 
                 const SizedBox(height: 24),
                 
-                // Back to login
+                // Back to register
                 TextButton(
-                  onPressed: () => context.go('/login'),
+                  onPressed: () => context.go('/register'),
                   child: Text(
                     LocalizationService.getLocalizedText(
-                      englishText: 'Back to Login',
-                      somaliText: 'Ku Noqo Login',
+                      englishText: 'Back to Register',
+                      somaliText: 'Ku Noqo Diiwaan Geli',
                     ),
                   ),
                 ),

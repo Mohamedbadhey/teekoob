@@ -23,7 +23,231 @@ const validateLogin = [
   body('password').notEmpty().withMessage('Password is required')
 ];
 
-// Register new user
+// Send registration verification code
+router.post('/send-registration-code', asyncHandler(async (req, res) => {
+  const { email, firstName, lastName, phoneNumber, preferredLanguage = 'en' } = req.body;
+
+  if (!email) {
+    return res.status(400).json({ 
+      error: 'Email is required',
+      code: 'EMAIL_REQUIRED'
+    });
+  }
+
+  // Validate email format
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return res.status(400).json({ 
+      error: 'Invalid email format',
+      code: 'INVALID_EMAIL'
+    });
+  }
+
+  // Check if user already exists
+  const existingUser = await db('users').where('email', email).first();
+  if (existingUser) {
+    return res.status(400).json({ 
+      error: 'User with this email already exists',
+      code: 'USER_EXISTS'
+    });
+  }
+
+  // Generate 6-digit verification code
+  const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+  const expiryMinutes = parseInt(process.env.EMAIL_VERIFICATION_CODE_EXPIRY_MINUTES || process.env.RESET_CODE_EXPIRY_MINUTES || '10', 10);
+  const codeExpires = new Date(Date.now() + expiryMinutes * 60 * 1000);
+
+  // Store registration data temporarily in a pending registrations table or use a different approach
+  // For now, we'll use a temporary in-memory store or create a pending_registrations table
+  // Let's create a pending_registrations entry or store in users table with null password
+  
+  // Check if there's already a pending registration
+  let pendingUser = await db('users').where('email', email).whereNull('password_hash').first();
+  
+  if (pendingUser) {
+    // Update existing pending registration
+    await db('users')
+      .where('id', pendingUser.id)
+      .update({
+        email_verification_code: verificationCode,
+        email_verification_code_expires_at: codeExpires,
+        first_name: firstName || pendingUser.first_name,
+        last_name: lastName || pendingUser.last_name,
+        display_name: firstName && lastName ? `${firstName} ${lastName}` : pendingUser.display_name,
+        language_preference: preferredLanguage || pendingUser.language_preference,
+      });
+  } else {
+    // Create new pending user (without password)
+    const userId = require('crypto').randomUUID();
+    await db('users').insert({
+      id: userId,
+      email,
+      password_hash: null, // Will be set after verification
+      first_name: firstName || '',
+      last_name: lastName || '',
+      display_name: firstName && lastName ? `${firstName} ${lastName}` : firstName || lastName || '',
+      language_preference: preferredLanguage,
+      subscription_plan: 'free',
+      is_active: false, // Not active until verified
+      is_verified: false,
+      email_verification_code: verificationCode,
+      email_verification_code_expires_at: codeExpires,
+    });
+  }
+
+  // Send email with verification code
+  const emailSent = await emailService.sendEmailVerificationCode(email, verificationCode);
+
+  if (!emailSent) {
+    logger.error('Failed to send registration verification email:', { email });
+    // In development or when email fails, log the code prominently for testing
+    if (process.env.NODE_ENV === 'development' || process.env.LOG_RESET_CODES === 'true') {
+      logger.warn('⚠️ REGISTRATION VERIFICATION CODE (Email failed, but code generated):', {
+        email: email,
+        code: verificationCode,
+        expiresAt: codeExpires,
+        note: 'This code is logged because email sending failed. Use this code to test registration.'
+      });
+      console.log('\n⚠️ ============================================');
+      console.log('⚠️ REGISTRATION VERIFICATION CODE GENERATED');
+      console.log('⚠️ Email:', email);
+      console.log('⚠️ Code:', verificationCode);
+      console.log('⚠️ Expires at:', codeExpires);
+      console.log('⚠️ ============================================\n');
+    }
+  }
+
+  logger.info('Registration verification code generated:', { email, code: verificationCode });
+
+  res.json({ 
+    message: 'Verification code sent to your email',
+    // Include code in development mode for testing
+    ...(process.env.NODE_ENV === 'development' || process.env.LOG_RESET_CODES === 'true' ? { 
+      code: verificationCode,
+      note: 'Code included in response for development/testing. Remove in production!'
+    } : {})
+  });
+}));
+
+// Verify registration code
+router.post('/verify-registration-code', asyncHandler(async (req, res) => {
+  const { email, code } = req.body;
+
+  if (!email || !code) {
+    return res.status(400).json({ 
+      error: 'Email and code are required',
+      code: 'MISSING_FIELDS'
+    });
+  }
+
+  if (!/^\d{6}$/.test(code)) {
+    return res.status(400).json({ 
+      error: 'Invalid code format. Code must be 6 digits',
+      code: 'INVALID_CODE_FORMAT'
+    });
+  }
+
+  const user = await db('users')
+    .where('email', email)
+    .where('email_verification_code', code)
+    .where('email_verification_code_expires_at', '>', new Date())
+    .whereNull('password_hash') // Only pending registrations
+    .first();
+
+  if (!user) {
+    return res.status(400).json({ 
+      error: 'Invalid or expired verification code',
+      code: 'INVALID_VERIFICATION_CODE'
+    });
+  }
+
+  logger.info('Registration code verified:', { email, userId: user.id });
+
+  res.json({ 
+    message: 'Verification code is valid',
+    verified: true,
+    email: user.email
+  });
+}));
+
+// Complete registration - Set password after email verification
+router.post('/complete-registration', asyncHandler(async (req, res) => {
+  const { email, code, password } = req.body;
+
+  if (!email || !code || !password) {
+    return res.status(400).json({ 
+      error: 'Email, code, and password are required',
+      code: 'MISSING_FIELDS'
+    });
+  }
+
+  if (!/^\d{6}$/.test(code)) {
+    return res.status(400).json({ 
+      error: 'Invalid code format. Code must be 6 digits',
+      code: 'INVALID_CODE_FORMAT'
+    });
+  }
+
+  if (password.length < 6) {
+    return res.status(400).json({ 
+      error: 'Password must be at least 6 characters',
+      code: 'PASSWORD_TOO_SHORT'
+    });
+  }
+
+  // Verify code is valid and not expired
+  const user = await db('users')
+    .where('email', email)
+    .where('email_verification_code', code)
+    .where('email_verification_code_expires_at', '>', new Date())
+    .whereNull('password_hash') // Only pending registrations
+    .first();
+
+  if (!user) {
+    return res.status(400).json({ 
+      error: 'Invalid or expired verification code',
+      code: 'INVALID_VERIFICATION_CODE'
+    });
+  }
+
+  // Hash password
+  const saltRounds = 12;
+  const passwordHash = await bcrypt.hash(password, saltRounds);
+
+  // Complete registration by setting password and clearing verification code
+  await db('users')
+    .where('id', user.id)
+    .update({
+      password_hash: passwordHash,
+      email_verification_code: null,
+      email_verification_code_expires_at: null,
+      is_active: true,
+      is_verified: true,
+    });
+
+  // Generate JWT token
+  const token = jwt.sign(
+    { userId: user.id },
+    process.env.JWT_SECRET,
+    { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+  );
+
+  // Get updated user (without password)
+  const updatedUser = await db('users')
+    .select('id', 'email', 'first_name', 'last_name', 'display_name', 'language_preference', 'subscription_plan', 'created_at')
+    .where('id', user.id)
+    .first();
+
+  logger.info('Registration completed:', { email, userId: user.id });
+
+  res.status(201).json({
+    message: 'Registration completed successfully',
+    user: updatedUser,
+    token
+  });
+}));
+
+// Register new user (DEPRECATED - Use new multi-step flow)
+// Keeping for backward compatibility but should use send-registration-code -> verify-registration-code -> complete-registration
 router.post('/register', validateRegistration, asyncHandler(async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {

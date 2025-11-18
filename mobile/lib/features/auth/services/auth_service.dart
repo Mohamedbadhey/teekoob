@@ -300,9 +300,177 @@ class AuthService {
         
         return user;
       } else {
+        // Check if it's a 400 (user exists) error
+        if (response.statusCode == 400) {
+          final responseData = response.data;
+          if (responseData is Map && responseData['code'] == 'USER_EXISTS') {
+            throw Exception('This email already exists');
+          }
+        }
         throw Exception('Registration failed: ${response.statusMessage}');
       }
+    } on DioException catch (e) {
+      // Handle DioException with response data
+      if (e.response?.statusCode == 400) {
+        final responseData = e.response?.data;
+        if (responseData is Map && responseData['code'] == 'USER_EXISTS') {
+          throw Exception('This email already exists');
+        }
+        // Extract error message from response if available
+        if (responseData is Map && responseData['error'] != null) {
+          final errorMsg = responseData['error'].toString();
+          if (errorMsg.contains('already exists') || errorMsg.contains('User with this email')) {
+            throw Exception('This email already exists');
+          }
+        }
+      }
+      throw Exception('Registration failed: ${e.message ?? e.toString()}');
     } catch (e) {
+      // Re-throw if already has the correct message
+      if (e.toString().contains('already exists')) {
+        rethrow;
+      }
+      throw Exception('Registration failed: $e');
+    }
+  }
+
+  // Send registration verification code
+  Future<void> sendRegistrationCode({
+    required String email,
+    required String displayName,
+    String? phoneNumber,
+    String preferredLanguage = 'en',
+    String themePreference = 'light',
+  }) async {
+    try {
+      // Parse display name into firstName and lastName
+      String firstName = displayName.trim();
+      String lastName = '';
+      
+      if (displayName.contains(' ')) {
+        final nameParts = displayName.trim().split(' ');
+        firstName = nameParts.first;
+        lastName = nameParts.skip(1).join(' ');
+      }
+      
+      if (lastName.isEmpty) {
+        lastName = firstName;
+      }
+
+      final response = await _networkService.post('/auth/send-registration-code', data: {
+        'email': email,
+        'firstName': firstName,
+        'lastName': lastName,
+        'phoneNumber': phoneNumber,
+        'preferredLanguage': preferredLanguage,
+        'themePreference': themePreference,
+      });
+
+      if (response.statusCode != 200) {
+        if (response.statusCode == 400) {
+          final responseData = response.data;
+          if (responseData is Map && responseData['code'] == 'USER_EXISTS') {
+            throw Exception('This email already exists');
+          }
+        }
+        throw Exception('Failed to send verification code');
+      }
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 400) {
+        final responseData = e.response?.data;
+        if (responseData is Map && responseData['code'] == 'USER_EXISTS') {
+          throw Exception('This email already exists');
+        }
+        if (responseData is Map && responseData['error'] != null) {
+          final errorMsg = responseData['error'].toString();
+          if (errorMsg.contains('already exists') || errorMsg.contains('User with this email')) {
+            throw Exception('This email already exists');
+          }
+        }
+      }
+      throw Exception('Failed to send verification code: ${e.message ?? e.toString()}');
+    } catch (e) {
+      if (e.toString().contains('already exists')) {
+        rethrow;
+      }
+      throw Exception('Failed to send verification code: $e');
+    }
+  }
+
+  // Verify registration code
+  Future<void> verifyRegistrationCode({
+    required String email,
+    required String code,
+  }) async {
+    try {
+      final response = await _networkService.post('/auth/verify-registration-code', data: {
+        'email': email,
+        'code': code,
+      });
+
+      if (response.statusCode != 200) {
+        throw Exception('Invalid or expired verification code');
+      }
+    } catch (e) {
+      throw Exception('Code verification failed: $e');
+    }
+  }
+
+  // Complete registration with password
+  Future<Map<String, dynamic>?> completeRegistration({
+    required String email,
+    required String code,
+    required String password,
+    required String confirmPassword,
+  }) async {
+    try {
+      if (password != confirmPassword) {
+        throw Exception('Passwords do not match');
+      }
+
+      final response = await _networkService.post('/auth/complete-registration', data: {
+        'email': email,
+        'code': code,
+        'password': password,
+      });
+
+      if (response.statusCode == 201) {
+        final userData = response.data['user'] as Map<String, dynamic>;
+        final token = response.data['token'] as String;
+
+        final user = User.fromJson(userData);
+        await _secureStorage.write(key: _tokenKey, value: token);
+        await _secureStorage.write(key: _userEmailKey, value: user.email);
+        _networkService.setAuthToken(token);
+        
+        // Register user for notifications
+        await _registerUserForNotifications();
+        
+        return {
+          'user': userData,
+          'token': token,
+        };
+      } else {
+        if (response.statusCode == 400) {
+          final responseData = response.data;
+          if (responseData is Map && responseData['code'] == 'INVALID_VERIFICATION_CODE') {
+            throw Exception('Invalid or expired verification code');
+          }
+        }
+        throw Exception('Registration failed: ${response.statusMessage}');
+      }
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 400) {
+        final responseData = e.response?.data;
+        if (responseData is Map && responseData['code'] == 'INVALID_VERIFICATION_CODE') {
+          throw Exception('Invalid or expired verification code');
+        }
+      }
+      throw Exception('Registration failed: ${e.message ?? e.toString()}');
+    } catch (e) {
+      if (e.toString().contains('Invalid or expired')) {
+        rethrow;
+      }
       throw Exception('Registration failed: $e');
     }
   }
@@ -392,9 +560,36 @@ class AuthService {
       });
 
       if (response.statusCode != 200) {
+        // Check if it's a 404 (user not found) error
+        if (response.statusCode == 404) {
+          final responseData = response.data;
+          if (responseData is Map && responseData['code'] == 'USER_NOT_FOUND') {
+            throw Exception('This email is not registered');
+          }
+        }
         throw Exception('Password reset request failed');
       }
+    } on DioException catch (e) {
+      // Handle DioException with response data
+      if (e.response?.statusCode == 404) {
+        final responseData = e.response?.data;
+        if (responseData is Map && responseData['code'] == 'USER_NOT_FOUND') {
+          throw Exception('This email is not registered');
+        }
+      }
+      // Extract error message from response if available
+      if (e.response?.data is Map && e.response!.data['error'] != null) {
+        final errorMsg = e.response!.data['error'].toString();
+        if (errorMsg.contains('account') && errorMsg.contains('email')) {
+          throw Exception('This email is not registered');
+        }
+      }
+      throw Exception('Password reset request failed: ${e.message ?? e.toString()}');
     } catch (e) {
+      // Re-throw if already has the correct message
+      if (e.toString().contains('not registered')) {
+        rethrow;
+      }
       throw Exception('Password reset request failed: $e');
     }
   }
