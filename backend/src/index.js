@@ -78,7 +78,7 @@ try {
   console.log('🚀 Creating Express app...');
   const app = express();
   const PORT = process.env.PORT || 3000;
-  
+  app.set('trust proxy', 1);
   console.log('🔧 Setting up middleware...');
   // Rate limiting
   const limiter = rateLimit({
