@@ -352,6 +352,14 @@ router.post('/login', validateLogin, asyncHandler(async (req, res) => {
     });
   }
 
+  // Check if user has completed registration (has password_hash)
+  if (!user.password_hash) {
+    return res.status(401).json({ 
+      error: 'Registration incomplete. Please complete your registration first.',
+      code: 'REGISTRATION_INCOMPLETE'
+    });
+  }
+
   // Note: Admin check removed - all users can login via email/password
   // Admin-only access should be checked at the route level, not during login
 

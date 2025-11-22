@@ -310,6 +310,14 @@ router.put('/password', asyncHandler(async (req, res) => {
     });
   }
   
+  // Check if user has a password (should always be true for authenticated users)
+  if (!user.password_hash) {
+    return res.status(400).json({ 
+      error: 'Registration incomplete. Please complete your registration first.',
+      code: 'REGISTRATION_INCOMPLETE'
+    });
+  }
+  
   // Verify current password
   const bcrypt = require('bcryptjs');
   const isValidPassword = await bcrypt.compare(currentPassword, user.password_hash);
@@ -462,6 +470,14 @@ router.delete('/account', asyncHandler(async (req, res) => {
     return res.status(404).json({ 
       error: 'User not found',
       code: 'USER_NOT_FOUND'
+    });
+  }
+  
+  // Check if user has a password (should always be true for authenticated users)
+  if (!user.password_hash) {
+    return res.status(400).json({ 
+      error: 'Registration incomplete. Please complete your registration first.',
+      code: 'REGISTRATION_INCOMPLETE'
     });
   }
   
