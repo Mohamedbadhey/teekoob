@@ -123,6 +123,11 @@ try {
         return callback(null, true);
       }
       
+      // Allow kismayoict.com domains (admin panel)
+      if(origin.includes('kismayoict.com')) {
+        return callback(null, true);
+      }
+      
       // Allow custom domains from environment
       const allowedOrigins = process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',') : [];
       if(allowedOrigins.includes(origin)) {

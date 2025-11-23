@@ -102,7 +102,7 @@ const LoginPage: React.FC = () => {
         >
           <BookIcon sx={{ fontSize: 60, color: 'primary.main', mb: 2 }} />
           <Typography component="h1" variant="h4" fontWeight="bold">
-            Teekoob Admin
+            Bookdoon Admin
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
             Multilingual eBook & Audiobook Platform
@@ -194,7 +194,7 @@ const LoginPage: React.FC = () => {
         {/* Footer */}
         <Box sx={{ mt: 3, textAlign: 'center' }}>
           <Typography variant="body2" color="text.secondary">
-            © 2024 Teekoob. All rights reserved.
+            © 2024 Bookdoon. All rights reserved.
           </Typography>
         </Box>
       </Box>
