@@ -41,7 +41,7 @@
   },
   "scripts": {
     "start": "vite",
-    "build": "vite build",
+    "build": "chmod +x node_modules/.bin/vite || true && vite build",
     "preview": "vite preview",
     "serve": "serve -s dist -l 3001",
     "deploy": "npm run build && npm run serve",
