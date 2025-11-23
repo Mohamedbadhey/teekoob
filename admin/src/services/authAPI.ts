@@ -1,8 +1,8 @@
 import axios from 'axios'
 
-// Use production API URL by default (same as mobile app)
-// Can be overridden with VITE_API_URL environment variable for local backend testing
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://teekoob-production.up.railway.app/api/v1'
+// Use environment variable for API URL, fallback to production URL
+// Set VITE_API_URL in Railway environment variables
+const API_BASE_URL = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || 'https://teekoob-production.up.railway.app/api/v1'
 
 // Create axios instance
 const api = axios.create({
